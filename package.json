@@ -15,7 +15,13 @@
     "test:dev": "vitest dev",
     "test:cov": "vitest run --coverage",
     "release": "semantic-release",
-    "prepare": "husky"
+    "prepare": "husky",
+    "create:api": "node scripts/create-api.js $1",
+    "create:model": "node scripts/create-api.js model $1",
+    "create:service": "node scripts/create-api.js service $1",
+    "create:controller": "node scripts/create-api.js controller $1",
+    "create:route": "node scripts/create-api.js route $1",
+    "create:contract": "node scripts/create-api.js contract $1"
   },
   "keywords": [],
   "author": "",
