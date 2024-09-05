@@ -1,0 +1,9 @@
+node_modules
+public
+.env*
+!.env.template
+*.log
+.DS_Store
+storage/public
+.vercel
+dist
