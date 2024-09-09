@@ -20,7 +20,7 @@ export const authController = {
       const { email, password } = req.body;
       const { dashboard } = req.query;
 
-      const user = await userService.getByEmail(email);
+      const user = await userService.getByEmail(email, "+password");
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({
           message: ReasonPhrases.NOT_FOUND,
@@ -41,9 +41,9 @@ export const authController = {
         });
       }
 
-      const { accessToken } = jwtSign(user.id);
+      const { accessToken, refreshToken } = jwtSign(user.id);
       return res.status(StatusCodes.OK).json({
-        data: { accessToken, user: user.toJSON() },
+        data: { accessToken, refreshToken, user: user.toJSON() },
         message: ReasonPhrases.OK,
         status: StatusCodes.OK,
       });
@@ -56,7 +56,7 @@ export const authController = {
     }
   },
 
-  signUp: async ({ body: { email, password, name } }: IBodyRequest<SignUpPayload>, res: Response) => {
+  signUp: async ({ body: { email, password, name, role } }: IBodyRequest<SignUpPayload>, res: Response) => {
     try {
       const exists = await userService.getByEmail(email);
       if (exists) {
@@ -68,11 +68,29 @@ export const authController = {
 
       const hash = await createHash(password);
 
-      await userService.create({ email, password: hash, name });
+      await userService.create({ email, password: hash, name, role });
 
       return res.status(StatusCodes.CREATED).json({
         message: ReasonPhrases.CREATED,
         status: StatusCodes.CREATED,
+      });
+    } catch (err) {
+      console.log(err);
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        message: ReasonPhrases.BAD_REQUEST,
+        status: StatusCodes.BAD_REQUEST,
+      });
+    }
+  },
+
+  refreshToken: async ({ context: { user } }: IContextRequest<IUserRequest>, res: Response) => {
+    try {
+      const { accessToken } = jwtSign(user.id);
+
+      return res.status(StatusCodes.OK).json({
+        data: { accessToken },
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
       });
     } catch (err) {
       console.log(err);

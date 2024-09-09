@@ -8,7 +8,11 @@ export const jwtSign = (id: ObjectId): IAccessToken => {
     expiresIn: process.env.JWT_EXPIRATION,
   });
 
-  return { accessToken };
+  const refreshToken = jwt.sign({ id }, process.env.JWT_SECRET || "", {
+    expiresIn: process.env.JWT_REFRESH_EXPIRATION,
+  });
+
+  return { accessToken, refreshToken };
 };
 
 export const jwtVerify = ({ accessToken }: { accessToken: string }) => {

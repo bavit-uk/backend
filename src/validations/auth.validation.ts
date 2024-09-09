@@ -2,108 +2,100 @@ import { ENUMS } from "@/constants/enum";
 import { REGEX } from "@/constants/regex";
 import { SignInPayload, SignUpPayload } from "@/contracts/auth.contract";
 import { IBodyRequest, ICombinedRequest, IUserRequest } from "@/contracts/request.contract";
+import { getZodErrors } from "@/utils/get-zod-errors";
 import { NextFunction, Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
+import { z, ZodSchema } from "zod";
 
 export const authValidation = {
   signIn: async (req: IBodyRequest<SignInPayload>, res: Response, next: NextFunction) => {
+    const schema: ZodSchema<SignInPayload> = z.object({
+      email: z
+        .string({
+          message: "Email is required but it was not provided",
+        })
+        .regex(REGEX.EMAIL, { message: "Invalid email format" }),
+      password: z
+        .string({
+          message: "Password is required but it was not provided",
+        })
+        .regex(REGEX.PASSWORD, {
+          message: "Password must contain at least 8 characters, including uppercase, lowercase letters and numbers",
+        }),
+    });
+
     try {
-      const issues = [];
+      const validatedData = schema.parse(req.body);
 
-      if (!req.body.email) {
-        issues.push("Email is required but it was not provided");
-      }
+      Object.assign(req.body, validatedData);
 
-      if (!req.body.password) {
-        issues.push("Password is required but it was not provided");
-      }
+      next();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
 
-      if (issues.length > 0) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           message: ReasonPhrases.BAD_REQUEST,
           status: StatusCodes.BAD_REQUEST,
-          issueMessage: issues.join(", "),
-          issues,
+          issueMessage: message,
+          issues: issues,
+        });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
         });
       }
-
-      let email = req.body.email;
-      email = email.trim().toLowerCase();
-
-      Object.assign(req.body, { email });
-
-      next();
-    } catch (err) {
-      console.log(err);
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        message: ReasonPhrases.BAD_REQUEST,
-        status: StatusCodes.BAD_REQUEST,
-      });
     }
   },
 
   signUp: async (req: IBodyRequest<SignUpPayload>, res: Response, next: NextFunction) => {
+    const schema: ZodSchema<SignUpPayload> = z.object({
+      // email: z.string().email()
+      // add error message
+      email: z
+        .string({
+          message: "Email is required but it was not provided",
+        })
+        .regex(REGEX.EMAIL, { message: "Invalid email format" }),
+      name: z
+        .string({
+          message: "Name is required but it was not provided",
+        })
+        .min(3, { message: "Name must be at least 3 characters long" }),
+      password: z
+        .string({
+          message: "Password is required but it was not provided",
+        })
+        .regex(REGEX.PASSWORD, {
+          message: "Password must contain at least 8 characters, including uppercase, lowercase letters and numbers",
+        }),
+      role: z.enum(ENUMS.USER_TYPES, { message: "Invalid role" }).optional(),
+    });
+
     try {
-      const issues = [];
+      const validatedData = schema.parse(req.body);
 
-      if (!req.body.email) {
-        issues.push("Email is required but it was not provided");
-      } else {
-        const validate = REGEX.EMAIL.test(req.body.email);
-        if (!validate) {
-          issues.push("Provided email is not valid");
-        }
-      }
+      Object.assign(req.body, validatedData);
 
-      if (!req.body.password) {
-        issues.push("Password is required but it was not provided");
-      } else {
-        const validate = REGEX.PASSWORD.test(req.body.password);
-        if (!validate) {
-          issues.push(
-            "Password must contain at least 8 characters, including uppercase, lowercase letters and numbers"
-          );
-        }
-      }
+      next();
+    } catch (error: any) {
+      console.log(error);
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
 
-      if (!req.body.name) {
-        issues.push("Name is required but it was not provided");
-      } else {
-        const validate = REGEX.NAME.test(req.body.name);
-        if (!validate) {
-          issues.push("Name must contain only letters");
-        }
-      }
-
-      if (!req.body.role) {
-        req.body.role = "user";
-      } else {
-        if (!ENUMS.USER_TYPES.includes(req.body.role)) {
-          issues.push("Role is not valid");
-        }
-      }
-
-      if (issues.length > 0) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           message: ReasonPhrases.BAD_REQUEST,
           status: StatusCodes.BAD_REQUEST,
-          issueMessage: issues.join(", "),
+          issueMessage: message,
           issues: issues,
         });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
       }
-
-      let email = req.body.email;
-      email = email.trim().toLowerCase();
-
-      Object.assign(req.body, { email });
-
-      next();
-    } catch (err) {
-      console.log(err);
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        message: ReasonPhrases.BAD_REQUEST,
-        status: StatusCodes.BAD_REQUEST,
-      });
     }
   },
 
