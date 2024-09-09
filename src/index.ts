@@ -7,6 +7,7 @@ import { mongoose } from "./datasources";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import { rateLimitHandler } from "./utils/rate-limit-handler";
+import fs from "fs";
 
 // Configure dotenv to use .env file like .env.dev or .env.prod
 dotenv.config({
@@ -17,10 +18,13 @@ dotenv.config({
 mongoose.run();
 
 const app: Express = express();
+const accessLogStream = fs.createWriteStream(__dirname + "/access.log", { flags: "a" });
+
 app.use(
   express.json({ limit: "10mb" }),
   express.urlencoded({ limit: "10mb", extended: true }),
   morgan("dev"),
+  morgan("combined", { stream: accessLogStream }),
   corsMiddleware,
   authMiddleware,
   helmet(),
