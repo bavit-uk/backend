@@ -1,28 +1,16 @@
 import { ClientSession } from "mongoose";
 
 import { User, PasswordReset } from "@/models";
-import { UserUpdatePayload } from "@/contracts/user.contract";
+import { UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract";
+import { SignUpPayload } from "@/contracts/auth.contract";
 
 export const userService = {
-  create: (
-    {
-      name,
-      email,
-      password,
-      verified = false,
-    }: {
-      name: string;
-      email: string;
-      password: string;
-      verified?: boolean;
-    },
-    session?: ClientSession
-  ) =>
+  create: ({ name, email, password, role = "user" }: SignUpPayload, session?: ClientSession) =>
     new User({
       name,
       email,
       password,
-      verified,
+      role,
     }).save({ session }),
 
   getAll: () => User.find(),
@@ -58,7 +46,12 @@ export const userService = {
 
   getById: (userId: string) => User.findById(userId),
 
-  getByEmail: (email: string) => User.findOne({ email }),
+  getByEmail: (email: string, select?: string) => {
+    if (select) {
+      return User.findOne({ email }).select(select);
+    }
+    return User.findOne({ email });
+  },
 
   isExistByEmail: (email: string) => User.exists({ email }),
 
