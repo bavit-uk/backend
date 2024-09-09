@@ -240,4 +240,82 @@ export const authValidation = {
       });
     }
   },
+  requestEmailVerification: async (
+    req: IBodyRequest<{
+      email: string;
+    }>,
+    res: Response,
+    next: NextFunction
+  ) => {
+    const schema: ZodSchema<{ email: string }> = z.object({
+      email: z
+        .string({
+          message: "Email is required but it was not provided",
+        })
+        .regex(REGEX.EMAIL, { message: "Invalid email format" })
+        .toLowerCase(),
+    });
+
+    try {
+      const validatedData = schema.parse(req.body);
+
+      Object.assign(req.body, validatedData);
+
+      next();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
+
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+          issueMessage: message,
+          issues: issues,
+        });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
+    }
+  },
+
+  verifyEmail: async (req: IBodyRequest<{ email: string; otp: number }>, res: Response, next: NextFunction) => {
+    const schema: ZodSchema<{ email: string; otp: number }> = z.object({
+      email: z
+        .string({
+          message: "Email is required but it was not provided",
+        })
+        .regex(REGEX.EMAIL, { message: "Invalid email format" })
+        .toLowerCase(),
+      otp: z.number({
+        message: "OTP is required but it was not provided",
+      }),
+    });
+
+    try {
+      const validatedData = schema.parse(req.body);
+
+      Object.assign(req.body, validatedData);
+
+      next();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
+
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+          issueMessage: message,
+          issues: issues,
+        });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
+    }
+  },
 };

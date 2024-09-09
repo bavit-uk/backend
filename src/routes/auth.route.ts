@@ -18,4 +18,12 @@ export const auth = (router: Router) => {
   router.get("/me", authMiddleware, authGuard.isAuth, authController.me);
 
   router.patch("/update-password", authGuard.isAuth, authValidation.updatePassword, authController.updatePassword);
+
+  router.post(
+    "/request-email-verification",
+    authValidation.requestEmailVerification,
+    authController.requestEmailVerification
+  );
+
+  router.post("/verify-email", authValidation.verifyEmail, authController.verifyEmail);
 };

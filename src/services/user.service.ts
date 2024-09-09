@@ -5,14 +5,26 @@ import { UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract"
 import { SignUpPayload } from "@/contracts/auth.contract";
 
 export const userService = {
-  create: ({ name, email, password, role = "user" }: SignUpPayload, session?: ClientSession) =>
+  create: (
+    {
+      name,
+      email,
+      password,
+      role = "user",
+      otp,
+    }: SignUpPayload & {
+      otp?: number;
+    },
+    session?: ClientSession
+  ) =>
     new User({
       name,
       email,
       password,
       role,
+      otp: otp ?? null,
+      otpExpiresAt: otp ?? new Date(Date.now() + 10 * 60 * 1000),
     }).save({ session }),
-
   getAll: () => User.find(),
 
   getAllWithPasswordRequests: () => {
@@ -44,7 +56,12 @@ export const userService = {
     ]);
   },
 
-  getById: (userId: string) => User.findById(userId),
+  getById: (userId: string, select?: string) => {
+    if (select) {
+      return User.findById(userId).select(select);
+    }
+    return User.findById(userId);
+  },
 
   getByEmail: (email: string, select?: string) => {
     if (select) {
@@ -127,4 +144,10 @@ export const userService = {
 
   deletePasswordResetByEmail: (email: string, session?: ClientSession) =>
     PasswordReset.deleteOne({ email }, { session }),
+
+  updateEmailVerificationStatus: (id: string, status: boolean, session?: ClientSession) =>
+    User.updateOne({ _id: id }, { emailVerified: status, emailVerifiedAt: new Date() }, { session }),
+
+  updateEmailVerificationOtp: (id: string, otp: number, session?: ClientSession) =>
+    User.updateOne({ _id: id }, { otp, otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000) }, { session }),
 };

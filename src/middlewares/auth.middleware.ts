@@ -14,7 +14,7 @@ export const authMiddleware = async (req: Request, _: Response, next: NextFuncti
     const { id } = jwtVerify({ accessToken });
     if (!id) return next();
 
-    const user = await userService.getById(id.toString());
+    const user = await userService.getById(id.toString(), "+password");
     if (!user) return next();
 
     Object.assign(req, {

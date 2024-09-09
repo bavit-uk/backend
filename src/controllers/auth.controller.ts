@@ -1,6 +1,6 @@
 import { SignUpPayload } from "./../contracts/auth.contract";
 import { userService } from "@/services";
-import { Response } from "express";
+import { request, Response } from "express";
 import { IBodyRequest, ICombinedRequest, IContextRequest, IUserRequest } from "@/contracts/request.contract";
 import { SignInPayload } from "@/contracts/auth.contract";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
@@ -13,6 +13,7 @@ import { comparePassword } from "@/utils/compare-password.util";
 
 import formData from "form-data";
 import Mailgun from "mailgun.js";
+import { verify } from "jsonwebtoken";
 
 export const authController = {
   signIn: async (req: ICombinedRequest<unknown, SignInPayload, unknown, { dashboard?: boolean }>, res: Response) => {
@@ -49,9 +50,9 @@ export const authController = {
       });
     } catch (err) {
       console.log(err);
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        message: ReasonPhrases.BAD_REQUEST,
-        status: StatusCodes.BAD_REQUEST,
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     }
   },
@@ -68,7 +69,11 @@ export const authController = {
 
       const hash = await createHash(password);
 
-      await userService.create({ email, password: hash, name, role });
+      const otp = Math.floor(100000 + Math.random() * 900000);
+
+      await userService.create({ email, password: hash, name, role, otp });
+
+      // TODO: Send email verification code with otp and time to expire
 
       return res.status(StatusCodes.CREATED).json({
         message: ReasonPhrases.CREATED,
@@ -76,9 +81,9 @@ export const authController = {
       });
     } catch (err) {
       console.log(err);
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        message: ReasonPhrases.BAD_REQUEST,
-        status: StatusCodes.BAD_REQUEST,
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     }
   },
@@ -94,9 +99,9 @@ export const authController = {
       });
     } catch (err) {
       console.log(err);
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        message: ReasonPhrases.BAD_REQUEST,
-        status: StatusCodes.BAD_REQUEST,
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     }
   },
@@ -138,9 +143,9 @@ export const authController = {
       });
     } catch (err) {
       console.log(err);
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        message: ReasonPhrases.BAD_REQUEST,
-        status: StatusCodes.BAD_REQUEST,
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     }
   },
@@ -183,9 +188,9 @@ export const authController = {
       });
     } catch (err) {
       console.log(err);
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        message: ReasonPhrases.BAD_REQUEST,
-        status: StatusCodes.BAD_REQUEST,
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     }
   },
@@ -199,9 +204,9 @@ export const authController = {
       });
     } catch (err) {
       console.log(err);
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        message: ReasonPhrases.BAD_REQUEST,
-        status: StatusCodes.BAD_REQUEST,
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     }
   },
@@ -237,9 +242,107 @@ export const authController = {
       });
     } catch (err) {
       console.log(err);
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        message: ReasonPhrases.BAD_REQUEST,
-        status: StatusCodes.BAD_REQUEST,
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
+
+  requestEmailVerification: async (req: ICombinedRequest<null, { email: string }>, res: Response) => {
+    try {
+      const { email } = req.body;
+
+      const user = await userService.getByEmail(email);
+      if (!user) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          message: ReasonPhrases.NOT_FOUND,
+          status: StatusCodes.NOT_FOUND,
+        });
+      }
+
+      if (user.emailVerified) {
+        return res.status(StatusCodes.OK).json({
+          message: ReasonPhrases.OK,
+          status: StatusCodes.OK,
+        });
+      }
+
+      const otp = Math.floor(100000 + Math.random() * 900000);
+
+      await userService.updateEmailVerificationOtp(user.id, otp);
+
+      // TODO: Send email with OTP
+
+      return res.status(StatusCodes.OK).json({
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+        otp,
+      });
+    } catch (err) {
+      console.log(err);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
+
+  verifyEmail: async (
+    req: IBodyRequest<{
+      email: string;
+      otp: number;
+    }>,
+    res: Response
+  ) => {
+    try {
+      const { email, otp } = req.body;
+
+      const foundUser = await userService.getByEmail(email, "+otp +otpExpiresAt +emailVerified");
+
+      console.log(foundUser);
+
+      if (!foundUser) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          message: ReasonPhrases.NOT_FOUND,
+          status: StatusCodes.NOT_FOUND,
+        });
+      }
+
+      if (foundUser.emailVerified) {
+        return res.status(StatusCodes.OK).json({
+          message: ReasonPhrases.OK,
+          status: StatusCodes.OK,
+        });
+      }
+
+      if (!foundUser.otp || !foundUser.otpExpiresAt) {
+        console.log("OTP not found");
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
+
+      const matchedToken = foundUser.otp.toString() === otp.toString() && foundUser.otpExpiresAt > new Date();
+      if (!matchedToken) {
+        return res.status(StatusCodes.UNAUTHORIZED).json({
+          message: ReasonPhrases.UNAUTHORIZED,
+          status: StatusCodes.UNAUTHORIZED,
+        });
+      }
+
+      await userService.updateEmailVerificationStatus(foundUser.id, true);
+
+      return res.status(StatusCodes.OK).json({
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+      });
+    } catch (err) {
+      console.log(err);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     }
   },
