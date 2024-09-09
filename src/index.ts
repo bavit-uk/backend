@@ -4,6 +4,9 @@ import morgan from "morgan";
 import { authMiddleware, corsMiddleware } from "./middlewares";
 import { router } from "./routes/index.route";
 import { mongoose } from "./datasources";
+import helmet from "helmet";
+import { rateLimit } from "express-rate-limit";
+import { rateLimitHandler } from "./utils/rate-limit-handler";
 
 // Configure dotenv to use .env file like .env.dev or .env.prod
 dotenv.config({
@@ -19,7 +22,13 @@ app.use(
   express.urlencoded({ limit: "10mb", extended: true }),
   morgan("dev"),
   corsMiddleware,
-  authMiddleware
+  authMiddleware,
+  helmet(),
+  rateLimit({
+    windowMs: 1000,
+    max: 100,
+    handler: rateLimitHandler,
+  })
 );
 
 app.use("/api", router);
