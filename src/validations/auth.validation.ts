@@ -14,7 +14,8 @@ export const authValidation = {
         .string({
           message: "Email is required but it was not provided",
         })
-        .regex(REGEX.EMAIL, { message: "Invalid email format" }),
+        .regex(REGEX.EMAIL, { message: "Invalid email format" })
+        .toLowerCase(),
       password: z
         .string({
           message: "Password is required but it was not provided",
@@ -51,13 +52,12 @@ export const authValidation = {
 
   signUp: async (req: IBodyRequest<SignUpPayload>, res: Response, next: NextFunction) => {
     const schema: ZodSchema<SignUpPayload> = z.object({
-      // email: z.string().email()
-      // add error message
       email: z
         .string({
           message: "Email is required but it was not provided",
         })
-        .regex(REGEX.EMAIL, { message: "Invalid email format" }),
+        .regex(REGEX.EMAIL, { message: "Invalid email format" })
+        .toLowerCase(),
       name: z
         .string({
           message: "Name is required but it was not provided",
@@ -100,39 +100,96 @@ export const authValidation = {
   },
 
   forgotPassword: async (req: IBodyRequest<{ email: string }>, res: Response, next: NextFunction) => {
+    const schema: ZodSchema<{ email: string }> = z.object({
+      email: z
+        .string({
+          message: "Email is required but it was not provided",
+        })
+        .regex(REGEX.EMAIL, { message: "Invalid email format" })
+        .toLowerCase(),
+    });
+
     try {
-      const issues = [];
+      const validatedData = schema.parse(req.body);
 
-      if (!req.body.email) {
-        issues.push("Email is required but it was not provided");
-      } else {
-        const validate = REGEX.EMAIL.test(req.body.email);
-        if (!validate) {
-          issues.push("Provided email is not valid");
-        }
-      }
+      console.log(validatedData);
 
-      if (issues.length > 0) {
+      Object.assign(req.body, validatedData);
+
+      next();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
+
         return res.status(StatusCodes.BAD_REQUEST).json({
           message: ReasonPhrases.BAD_REQUEST,
           status: StatusCodes.BAD_REQUEST,
-          issueMessage: issues.join(", "),
+          issueMessage: message,
           issues: issues,
         });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
       }
+    }
+  },
 
-      let email = req.body.email;
-      email = email.trim().toLowerCase();
+  resetPassword: async (
+    req: ICombinedRequest<
+      IUserRequest,
+      {
+        email: string;
+        token: string;
+        newPassword: string;
+      }
+    >,
+    res: Response,
+    next: NextFunction
+  ) => {
+    const schema: ZodSchema<{ email: string; token: string; newPassword: string }> = z.object({
+      email: z
+        .string({
+          message: "Email is required but it was not provided",
+        })
+        .regex(REGEX.EMAIL, { message: "Invalid email format" })
+        .toLowerCase(),
+      token: z.string({
+        message: "Token is required but it was not provided",
+      }),
+      newPassword: z
+        .string({
+          message: "New password is required but it was not provided",
+        })
+        .regex(REGEX.PASSWORD, {
+          message:
+            "New password must contain at least 8 characters, including uppercase, lowercase letters and numbers",
+        }),
+    });
 
-      Object.assign(req.body, { email });
+    try {
+      const validatedData = schema.parse(req.body);
+
+      Object.assign(req.body, validatedData);
 
       next();
-    } catch (err) {
-      console.log(err);
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        message: ReasonPhrases.BAD_REQUEST,
-        status: StatusCodes.BAD_REQUEST,
-      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
+
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+          issueMessage: message,
+          issues: issues,
+        });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
     }
   },
 

@@ -113,16 +113,16 @@ export const authController = {
 
       const resetRequest = await PasswordReset.findOne({ email, isUsed: false, expireAt: { $gte: new Date() } });
       if (resetRequest) {
-        return res.status(StatusCodes.TOO_MANY_REQUESTS).json({
-          message: ReasonPhrases.TOO_MANY_REQUESTS,
-          status: StatusCodes.TOO_MANY_REQUESTS,
-        });
+        await resetRequest.updateOne({ isUsed: true });
       }
 
-      const token = crypto.randomBytes(8).toString("hex");
+      // Genearte 6 digit OTP
+      const token = Math.floor(100000 + Math.random() * 900000).toString();
 
       // Expire time for password reset token (1 hour)
       const EXPIRY_TIME = 1000 * 60 * 60;
+
+      // TODO: Send email with generated OTP
 
       await userService.createPasswordReset({
         email: user.email,
@@ -130,32 +130,11 @@ export const authController = {
         expireAt: new Date(Date.now() + EXPIRY_TIME),
       });
 
-      try {
-        const mailgun = new Mailgun(formData);
-        const mg = mailgun.client({ username: "api", key: process.env.MAILGUN_API_KEY || "" });
-
-        const messageObject = {
-          from: `HideAndSeek Support <bdc@support.rons-automotive.com>`,
-          to: [user.email],
-          subject: "Request to reset password",
-          text: "You have requested to reset your password",
-          html: `
-            <p>You have requested to reset your password. If you did not request this, please contact support.</p>
-
-            <p>Thank you</p>
-            <p>HideAndSeek Support</p>
-          `,
-        };
-
-        const message = await mg.messages.create("support.rons-automotive.com", messageObject);
-      } catch (err) {
-        console.log(err);
-      }
-
       // Send email with reset password link
       return res.status(StatusCodes.OK).json({
         message: ReasonPhrases.OK,
         status: StatusCodes.OK,
+        token,
       });
     } catch (err) {
       console.log(err);
@@ -166,9 +145,17 @@ export const authController = {
     }
   },
 
-  resetPassword: async ({ body: { token, newPassword } }: IBodyRequest<PasswordUpdatePayload>, res: Response) => {
+  resetPassword: async (
+    { body: { email, token, newPassword } }: IBodyRequest<PasswordUpdatePayload>,
+    res: Response
+  ) => {
     try {
-      const reset = await PasswordReset.findOne({ token, isUsed: false, expireAt: { $gte: new Date() } });
+      const reset = await PasswordReset.findOne({
+        email,
+        token,
+        isUsed: false,
+        expireAt: { $gte: new Date() },
+      });
       if (!reset) {
         return res.status(StatusCodes.NOT_FOUND).json({
           message: ReasonPhrases.NOT_FOUND,

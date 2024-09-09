@@ -15,6 +15,7 @@ interface UpdatePasswordPayload {
 
 export type PasswordResetPayload = Pick<IPasswordReset, "email">;
 
-export type PasswordUpdatePayload = Pick<IPasswordReset, "token"> & Pick<UpdatePasswordPayload, "newPassword">;
+export type PasswordUpdatePayload = Pick<IPasswordReset, "email" | "token"> &
+  Pick<UpdatePasswordPayload, "newPassword">;
 
 export type PasswordResetModel = Model<IPasswordReset, unknown>;

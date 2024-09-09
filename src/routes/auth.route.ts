@@ -11,7 +11,9 @@ export const auth = (router: Router) => {
 
   router.get("/refresh-token", authMiddleware, authGuard.isAuth, authController.refreshToken);
 
-  router.post("/forgot-password", authValidation.forgotPassword, authController.forgotPassword);
+  router.post("/request-password-reset", authValidation.forgotPassword, authController.forgotPassword);
+
+  router.post("/reset-password", authValidation.resetPassword, authController.resetPassword);
 
   router.get("/me", authMiddleware, authGuard.isAuth, authController.me);
 
