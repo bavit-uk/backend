@@ -4,9 +4,6 @@ const path = require("path");
 let componentName = process.argv[3];
 let createSpecificFiles = process.argv[2];
 
-console.log("Component Name: ", componentName);
-console.log("Create Specific Files: ", createSpecificFiles);
-
 if (!["model", "controller", "service", "route", "contract"].includes(createSpecificFiles)) {
   if (!componentName) {
     componentName = createSpecificFiles;
@@ -17,6 +14,9 @@ if (!["model", "controller", "service", "route", "contract"].includes(createSpec
   }
 }
 
+console.log("Component Name: ", componentName);
+console.log("Create Specific Files: ", createSpecificFiles ? createSpecificFiles : "All");
+
 // convert componentName to kebab-case
 componentName = componentName.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
 
@@ -25,6 +25,7 @@ const controllerPath = path.join(__dirname, "..", "src", "controllers", `${compo
 const servicePath = path.join(__dirname, "..", "src", "services", `${componentName}.service.ts`);
 const routePath = path.join(__dirname, "..", "src", "routes", `${componentName}.route.ts`);
 const contractPath = path.join(__dirname, "..", "src", "contracts", `${componentName}.contract.ts`);
+const validationPath = path.join(__dirname, "..", "src", "validations", `${componentName}.validation.ts`);
 
 if (!createSpecificFiles || createSpecificFiles === "model") {
   if (!fs.existsSync(modelPath)) {
@@ -63,6 +64,14 @@ if (!createSpecificFiles || createSpecificFiles === "contract") {
     fs.writeFileSync(contractPath, "");
   } else {
     console.log("contract file already exists, skipping...");
+  }
+}
+
+if (!createSpecificFiles || createSpecificFiles === "validation") {
+  if (!fs.existsSync(validationPath)) {
+    fs.writeFileSync(validationPath, "");
+  } else {
+    console.log("validation file already exists, skipping...");
   }
 }
 
