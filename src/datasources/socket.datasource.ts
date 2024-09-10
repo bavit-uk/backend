@@ -13,17 +13,38 @@ interface SocketWithUser extends Socket {
   user: User;
 }
 
-export const socket = {
-  run: async (server: HttpServer) => {
-    const io = new Server(server, {
-      cors: {
-        origin: "*",
-      },
+class SocketManager {
+  private connections: Map<string, string> = new Map();
+  private io: Server | null = null;
+
+  getConnections(): Map<string, string> {
+    return this.connections;
+  }
+
+  setConnection(userId: string, socketId: string): void {
+    this.connections.set(userId, socketId);
+  }
+
+  removeConnection(userId: string): void {
+    this.connections.delete(userId);
+  }
+
+  getSocketId(userId: string): string | undefined {
+    return this.connections.get(userId);
+  }
+
+  getIo(): Server | null {
+    return this.io;
+  }
+
+  private initializeServer(server: HttpServer): void {
+    this.io = new Server(server, {
+      cors: { origin: "*" },
     });
+  }
 
-    const connections = new Map<string, string>();
-
-    io.use((socket: Socket, next) => {
+  private setupMiddleware(): void {
+    this.io!.use((socket: Socket, next) => {
       const { accessToken } = getAccessTokenFromHeaders(socket.handshake.headers);
       if (!accessToken) {
         return next(new Error("Authentication error"));
@@ -31,8 +52,6 @@ export const socket = {
 
       try {
         const user = jwtVerify({ accessToken: accessToken });
-        // Cast the socket to SocketWithUser and assign the user
-        // (socket as SocketWithUser).user.id = user.id.toString();
         Object.assign(socket, { user: { id: user.id.toString() } }) as SocketWithUser;
         next();
       } catch (error) {
@@ -40,48 +59,61 @@ export const socket = {
         next(new Error("Authentication error"));
       }
     });
+  }
 
-    io.on("connection", (socket: Socket) => {
-      // Cast the socket to SocketWithUser
-      const socketWithUser = socket as SocketWithUser;
+  private handleConnection(socket: Socket): void {
+    const socketWithUser = socket as SocketWithUser;
 
-      if (!socketWithUser.user) {
-        io.to(socket.id).emit("error", "Authentication error");
-        return socket.disconnect();
+    if (!socketWithUser.user) {
+      this.io!.to(socket.id).emit("error", "Authentication error");
+      socket.disconnect();
+      return;
+    }
+
+    this.io!.to(socket.id).emit("message", "Welcome to the chat");
+    this.setConnection(socketWithUser.user.id, socket.id);
+    console.log("Connected Users list", this.connections);
+
+    this.setupMessageHandler(socketWithUser);
+    this.setupDisconnectHandler(socketWithUser);
+  }
+
+  private setupMessageHandler(socket: SocketWithUser): void {
+    socket.on("message", async (message: string, receiverId: string) => {
+      if (!receiverId) {
+        return this.io!.to(socket.id).emit("error", "Receiver not found");
+      }
+      const receiverSocketId = this.getSocketId(receiverId);
+      if (!receiverSocketId) {
+        return this.io!.to(socket.id).emit("error", "Receiver not found");
       }
 
-      io.to(socket.id).emit("message", "Welcome to the chat");
+      this.io!.to(receiverSocketId).emit("message", message);
 
-      connections.set(socketWithUser.user.id, socket.id);
+      console.log("sender id", socket.user.id);
+      console.log("receiver id", receiverId);
 
-      console.log("Connected Users list", connections);
-
-      socket.on("message", async (message: string, receiverId: string) => {
-        if (!receiverId) {
-          return io.to(socket.id).emit("error", "Receiver not found");
-        }
-        const receiverSocketId = connections.get(receiverId);
-        if (!receiverSocketId) {
-          return io.to(socket.id).emit("error", "Receiver not found");
-        }
-
-        io.to(receiverSocketId).emit("message", message);
-
-        console.log("sender id", socketWithUser.user.id);
-        console.log("receiver id", receiverId);
-
-        await messageService.create({
-          content: message,
-          sender: new mongoose.Types.ObjectId(socketWithUser.user.id),
-          receiver: new mongoose.Types.ObjectId(receiverId),
-        });
-      });
-
-      socket.on("disconnect", () => {
-        console.log("A user disconnected");
+      await messageService.create({
+        content: message,
+        sender: new mongoose.Types.ObjectId(socket.user.id),
+        receiver: new mongoose.Types.ObjectId(receiverId),
       });
     });
+  }
 
+  private setupDisconnectHandler(socket: SocketWithUser): void {
+    socket.on("disconnect", () => {
+      this.removeConnection(socket.user.id);
+      console.log("A user disconnected");
+    });
+  }
+
+  run = async (server: HttpServer): Promise<void> => {
+    this.initializeServer(server);
+    this.setupMiddleware();
+    this.io!.on("connection", this.handleConnection.bind(this));
     console.log("Socket.io server is up and running");
-  },
-};
+  };
+}
+
+export const socketManager = new SocketManager();

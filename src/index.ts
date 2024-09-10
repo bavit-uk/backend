@@ -8,7 +8,7 @@ import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import { rateLimitHandler } from "./utils/rate-limit-handler";
 import fs from "fs";
-import { socket } from "./datasources/socket.datasource";
+import { socketManager } from "./datasources/socket.datasource";
 import path from "path";
 
 // Configure dotenv to use .env file like .env.dev or .env.prod
@@ -39,6 +39,19 @@ app.use(
 );
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.get("/api/connections", (req, res) => {
+  const connections = socketManager.getConnections();
+  // convert to object
+  const connectionsObj = Array.from(connections).reduce(
+    (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+      acc[key] = value;
+      return acc;
+    },
+    {}
+  );
+  res.json({ connectionsObj });
+});
+
 app.use("/api", router);
 
 const port = process.env.PORT || 5000;
@@ -48,7 +61,8 @@ const httpServer = app.listen(port, () => {
 });
 
 // Add socket.io to the server
-socket.run(httpServer);
+// socket.run(httpServer);
+socketManager.run(httpServer);
 
 // Graceful shutdown
 ["SIGINT", "SIGTERM"].forEach((signal) => {
