@@ -1,4 +1,4 @@
-import { messageService } from "@/services";
+import { conversationService, messageService } from "@/services";
 import { getAccessTokenFromHeaders } from "@/utils/headers.util";
 import { jwtVerify } from "@/utils/jwt.util";
 import { Server as HttpServer } from "http";
@@ -16,6 +16,7 @@ interface SocketWithUser extends Socket {
 class SocketManager {
   private connections: Map<string, string> = new Map();
   private io: Server | null = null;
+  private groupRooms: Map<string, Set<string>> = new Map();
 
   getConnections(): Map<string, string> {
     return this.connections;
@@ -72,31 +73,106 @@ class SocketManager {
 
     this.io!.to(socket.id).emit("message", "Welcome to the chat");
     this.setConnection(socketWithUser.user.id, socket.id);
-    console.log("Connected Users list", this.connections);
 
     this.setupMessageHandler(socketWithUser);
     this.setupDisconnectHandler(socketWithUser);
+    this.setupGroupChatHandlers(socketWithUser);
+  }
+
+  private setupGroupChatHandlers(socket: SocketWithUser): void {
+    socket.on("joinGroup", async (conversationId: string) => {
+      if (!this.groupRooms.has(conversationId)) {
+        // this.groupRooms.set(groupId, new Set());
+        this.groupRooms.set(conversationId, new Set([socket.user.id]));
+      }
+      this.groupRooms.get(conversationId)!.add(socket.user.id);
+      socket.join(conversationId);
+      this.io!.to(conversationId).emit("userJoinedGroup", { userId: socket.user.id, groupId: conversationId });
+    });
+
+    socket.on("leaveGroup", async (conversationId: string) => {
+      const group = this.groupRooms.get(conversationId);
+      if (group) {
+        group.delete(socket.user.id);
+        if (group.size === 0) {
+          this.groupRooms.delete(conversationId);
+        }
+      }
+      socket.leave(conversationId);
+      this.io!.to(conversationId).emit("userLeftGroup", { userId: socket.user.id, groupId: conversationId });
+    });
   }
 
   private setupMessageHandler(socket: SocketWithUser): void {
-    socket.on("message", async (message: string, receiverId: string) => {
+    socket.on("message", async (conversationId: string, message: string, files?: string[]) => {
+      const conversation = await conversationService.getConversation(socket.user.id, conversationId);
+      if (!conversation) {
+        return this.io!.to(socket.id).emit("error", "Conversation not found");
+      }
+
+      if (conversation.isGroup) {
+        // Throw error to say that you should use group chat API
+        return this.io!.to(socket.id).emit("error", "Use group chat API to send message to group");
+      }
+
+      // Find receiver id
+      const receiverId = conversation.members.find((member) => member.toString() !== socket.user.id);
+
       if (!receiverId) {
         return this.io!.to(socket.id).emit("error", "Receiver not found");
       }
-      const receiverSocketId = this.getSocketId(receiverId);
+      const receiverSocketId = this.getSocketId(receiverId.toString());
       if (!receiverSocketId) {
-        return this.io!.to(socket.id).emit("error", "Receiver not found");
+        // TODO: Save message to database
+        // TODO: Send push notification to receiver
+        return this.io!.to(socket.id).emit("error", "Receiver is not connected to the server");
       }
 
-      this.io!.to(receiverSocketId).emit("message", message);
-
-      console.log("sender id", socket.user.id);
-      console.log("receiver id", receiverId);
+      this.io!.to(receiverSocketId).emit("message", {
+        senderId: socket.user.id,
+        message: message,
+        conversationId,
+        files,
+      });
 
       await messageService.create({
         content: message,
         sender: new mongoose.Types.ObjectId(socket.user.id),
-        receiver: new mongoose.Types.ObjectId(receiverId),
+        conversation: new mongoose.Types.ObjectId(conversationId),
+        files,
+      });
+    });
+
+    socket.on("groupMessage", async (conversationId: string, message: string, files?: string[]) => {
+      if (!conversationId) {
+        return this.io!.to(socket.id).emit("error", "Group not found");
+      }
+
+      const group = this.groupRooms.get(conversationId);
+      if (!group) {
+        return this.io!.to(socket.id).emit("error", "Group not found");
+      }
+
+      // const offlineUsers = conversation.members.filter((member) => !group.has(member.toString()));
+      // offlineUsers.forEach((userId) => {
+      //   //TODO Send push notification to offline users
+      // });
+
+      this.io!.to(conversationId).emit("groupMessage", {
+        senderId: socket.user.id,
+        message: message,
+        groupId: conversationId,
+        files,
+      });
+
+      console.log("Group message", message);
+
+      // Save the group message to the database
+      await messageService.create({
+        content: message,
+        sender: new mongoose.Types.ObjectId(socket.user.id),
+        conversation: new mongoose.Types.ObjectId(conversationId),
+        files,
       });
     });
   }
@@ -104,6 +180,16 @@ class SocketManager {
   private setupDisconnectHandler(socket: SocketWithUser): void {
     socket.on("disconnect", () => {
       this.removeConnection(socket.user.id);
+      // Remove user from each connected group
+      this.groupRooms.forEach((group, groupId) => {
+        if (group.has(socket.user.id)) {
+          group.delete(socket.user.id);
+          if (group.size === 0) {
+            this.groupRooms.delete(groupId);
+          }
+          this.io!.to(groupId).emit("userLeftGroup", { userId: socket.user.id, groupId });
+        }
+      });
       console.log("A user disconnected");
     });
   }
@@ -113,6 +199,11 @@ class SocketManager {
     this.setupMiddleware();
     this.io!.on("connection", this.handleConnection.bind(this));
     console.log("Socket.io server is up and running");
+
+    setInterval(() => {
+      console.log("Group rooms", this.groupRooms);
+      console.log("Connections", this.connections);
+    }, 5000);
   };
 }
 
