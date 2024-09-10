@@ -7,7 +7,7 @@ const schema = new Schema<IConversation>(
     isGroup: { type: Boolean, required: [true, "isGroup is required"] },
     blocked: { type: [Schema.Types.ObjectId], ref: "User", default: [] },
     archived: { type: Boolean, default: false },
-    title: { type: String, required: [true, "Title is required"] },
+    title: { type: String, required: false, default: "" },
     description: { type: String, required: false, default: "" },
     image: { type: String, required: false, default: "" },
   },
