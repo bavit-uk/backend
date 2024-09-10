@@ -25,18 +25,36 @@ export const conversationController = {
     }
   },
   createConversation: async (
-    { body, context: { user } }: ICombinedRequest<IUserRequest, CreateConversationPayload>,
+    {
+      body: { isGroup, members, description, image, title },
+      context: { user },
+    }: ICombinedRequest<IUserRequest, CreateConversationPayload>,
     res: Response
   ) => {
     try {
-      if (!body.members.length) {
+      if (!members.length) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           status: StatusCodes.BAD_REQUEST,
           message: ReasonPhrases.BAD_REQUEST,
         });
       }
 
-      const conversation = await conversationService.create({ ...body, userId: user.id });
+      if (members.length > 10) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          status: StatusCodes.BAD_REQUEST,
+          message: ReasonPhrases.BAD_REQUEST,
+          error: "You can only create a group with at max 10 members",
+        });
+      }
+
+      const conversation = await conversationService.create({
+        isGroup,
+        members,
+        description,
+        image,
+        title,
+        userId: user.id,
+      });
       return res.status(StatusCodes.CREATED).json({
         status: StatusCodes.CREATED,
         message: ReasonPhrases.CREATED,
