@@ -4,7 +4,6 @@ import { Schema, model } from "mongoose";
 const schema = new Schema<IMessage>(
   {
     sender: { type: Schema.Types.ObjectId, ref: "User", required: [true, "Sender is required"] },
-    receiver: { type: Schema.Types.ObjectId, ref: "User", required: [true, "Receiver is required"] },
     content: {
       type: String,
       required: function () {
@@ -22,6 +21,7 @@ const schema = new Schema<IMessage>(
     read: { type: Boolean, default: false },
     sent: { type: Boolean, default: true },
     received: { type: Boolean, default: false },
+    conversation: { type: Schema.Types.ObjectId, ref: "Conversation", required: [true, "Conversation is required"] },
   },
   { timestamps: true }
 );

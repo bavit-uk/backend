@@ -3,33 +3,40 @@ import { Message } from "@/models";
 import { ClientSession } from "mongoose";
 
 export const messageService = {
-  create: ({ content, sender, receiver, files }: CreateMessagePayload, session?: ClientSession) =>
+  create: ({ content, conversation, files }: CreateMessagePayload, session?: ClientSession) =>
     new Message({
       content,
-      sender,
-      receiver,
+      conversation,
       files,
     }).save({ session }),
 
   getMessageById: (messageId: string) => Message.findById(messageId),
 
-  update: async ({ content, sender, receiver, files }: UpdateMessagePayload) => {
-    Message.findOneAndUpdate({ sender, receiver }, { content, files });
+  update: async ({ content, conversation, files, id }: UpdateMessagePayload) => {
+    Message.findOneAndUpdate({ conversation, _id: id }, { content, files });
   },
 
-  updateMessageReceived: async ({ sender, receiver }: GetMessagePayload) => {
-    Message.findOneAndUpdate({ sender, receiver }, { received: true });
+  updateMessageReceived: async ({ conversation, id }: GetMessagePayload) => {
+    Message.findOneAndUpdate(
+      {
+        conversation,
+        _id: id,
+      },
+      { received: true }
+    );
   },
 
-  updateMessageRead: async ({ sender, receiver }: GetMessagePayload) => {
-    Message.findOneAndUpdate({ sender, receiver }, { read: true });
+  updateMessageRead: async ({ conversation, id }: GetMessagePayload) => {
+    Message.findOneAndUpdate(
+      {
+        conversation,
+        _id: id,
+      },
+      { read: true }
+    );
   },
 
-  getAll: ({ sender, receiver }: GetMessagePayload) =>
-    Message.find({
-      $or: [
-        { sender, receiver },
-        { sender: receiver, receiver: sender },
-      ],
-    }),
+  getAll: ({ conversation }: Pick<GetMessagePayload, "conversation">) => Message.find({ conversation }),
+
+  getByConversationId: ({ conversation }: GetMessagePayload) => Message.find({ conversation }),
 };
