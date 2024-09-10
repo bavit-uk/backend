@@ -1,7 +1,7 @@
-import { ObjectId } from "mongoose";
+import { Types } from "mongoose";
 
 export interface IJwtUser {
-  id: ObjectId;
+  id: Types.ObjectId;
 }
 
 export interface IAccessToken {
