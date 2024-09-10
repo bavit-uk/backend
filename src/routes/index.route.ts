@@ -6,6 +6,7 @@ import { healthcheck } from "./healthcheck.route";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { user as users } from "./user.route";
 import { multer as files } from "./multer.route";
+import { conversation as conversations } from "./conversation.route";
 
 // Create a new router to handle all routes
 const router: Router = Router();
@@ -13,7 +14,7 @@ const router: Router = Router();
 // Define all routes
 const routes: {
   [key: string]: (router: Router) => void;
-} = { auth, healthcheck, users, files };
+} = { auth, healthcheck, users, files, conversations };
 
 // Loop through all routes and pass the router to each route
 for (const route in routes) {
