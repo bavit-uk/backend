@@ -1,20 +1,33 @@
 import { conversationController } from "@/controllers";
 import { authGuard } from "@/guards";
 import { authMiddleware } from "@/middlewares";
+import { conversationValidation } from "@/validations";
 import { Router } from "express";
 
-export const auth = (router: Router) => {
-  router.get("/", authMiddleware, authGuard.isAuth, conversationController.getConversations);
-  router.post("/", authMiddleware, authGuard.isAuth, conversationController.createConversation);
-  router.get("/:conversationId", authMiddleware, authGuard.isAuth, conversationController.getConversation);
-  router.patch("/:conversationId", authMiddleware, authGuard.isAuth, conversationController.updateConversation);
-  router.delete("/:conversationId", authMiddleware, authGuard.isAuth, conversationController.deleteConversation);
-  router.get("/:conversationId/messages", authMiddleware, authGuard.isAuth, conversationController.getMessages);
-  router.patch("/:conversationId/block", authMiddleware, authGuard.isAuth, conversationController.blockConversation);
+export const conversation = (router: Router) => {
+  router.use(authMiddleware, authGuard.isAuth);
+  router.get("/", conversationController.getConversations);
+  router.post("/", conversationValidation.createConversation, conversationController.createConversation);
+  router.get("/:conversationId", conversationValidation.getConversation, conversationController.getConversation);
+  router.patch(
+    "/:conversationId",
+    conversationValidation.updateConversation,
+    conversationController.updateConversation
+  );
+  router.delete(
+    "/:conversationId",
+    conversationValidation.deleteConversation,
+    conversationController.deleteConversation
+  );
+  router.get("/:conversationId/messages", conversationValidation.getMessages, conversationController.getMessages);
+  router.patch(
+    "/:conversationId/block",
+    conversationValidation.blockConversation,
+    conversationController.blockConversation
+  );
   router.patch(
     "/:conversationId/unblock",
-    authMiddleware,
-    authGuard.isAuth,
+    conversationValidation.unblockConversation,
     conversationController.unblockConversation
   );
 };
