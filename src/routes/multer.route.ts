@@ -1,7 +1,9 @@
 import { multerController } from "@/controllers/multer.controller";
+import { authGuard } from "@/guards";
+import { authMiddleware } from "@/middlewares";
 import { uploadMiddleware } from "@/middlewares/multer.middleware";
 import { Router } from "express";
 
 export const multer = (router: Router) => {
-  router.post("/upload", uploadMiddleware, multerController.upload);
+  router.post("/upload", authMiddleware, authGuard.isAuth, uploadMiddleware, multerController.upload);
 };
