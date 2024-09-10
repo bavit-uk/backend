@@ -3,11 +3,12 @@ import { Message } from "@/models";
 import { ClientSession } from "mongoose";
 
 export const messageService = {
-  create: ({ content, conversation, files }: CreateMessagePayload, session?: ClientSession) =>
+  create: ({ content, conversation, files, sender }: CreateMessagePayload, session?: ClientSession) =>
     new Message({
       content,
       conversation,
       files,
+      sender,
     }).save({ session }),
 
   getMessageById: (messageId: string) => Message.findById(messageId),
