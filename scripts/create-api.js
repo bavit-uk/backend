@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 
 let componentName = process.argv[3];
-const createSpecificFiles = process.argv[2];
+let createSpecificFiles = process.argv[2];
 
 console.log("Component Name: ", componentName);
 console.log("Create Specific Files: ", createSpecificFiles);
