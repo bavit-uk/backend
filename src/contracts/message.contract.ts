@@ -15,6 +15,6 @@ export interface IMessage {
 
 export type GetMessagePayload = Pick<IMessage, "conversation" | "id">;
 
-export type CreateMessagePayload = Pick<IMessage, "content" | "files" | "conversation">;
+export type CreateMessagePayload = Pick<IMessage, "content" | "files" | "conversation" | "sender">;
 
 export type UpdateMessagePayload = Partial<Pick<IMessage, "content" | "files">> & Pick<IMessage, "conversation" | "id">;
