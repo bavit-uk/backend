@@ -39,5 +39,17 @@ export const messageService = {
 
   getAll: ({ conversation }: Pick<GetMessagePayload, "conversation">) => Message.find({ conversation }),
 
-  getByConversationId: ({ conversation }: GetMessagePayload) => Message.find({ conversation }),
+  getByConversationId: ({ conversation }: Pick<GetMessagePayload, "conversation">) => Message.find({ conversation }),
+
+  getLastMessage: ({ conversation }: Pick<GetMessagePayload, "conversation">) =>
+    Message.findOne({ conversation }).sort({ createdAt: -1 }).select("content createdAt"),
+
+  getTotalAndUnreadMessages: async (conversationId: string) => {
+    const totalMessagesPromise = Message.countDocuments({ conversation: conversationId });
+    const unreadMessagesPromise = Message.countDocuments({ conversation: conversationId, read: false });
+
+    const [totalMessages, unreadMessages] = await Promise.all([totalMessagesPromise, unreadMessagesPromise]);
+
+    return { totalMessages, unreadMessages };
+  },
 };

@@ -48,6 +48,7 @@ class SocketManager {
     this.io!.use((socket: Socket, next) => {
       const { accessToken } = getAccessTokenFromHeaders(socket.handshake.headers);
       if (!accessToken) {
+        console.log("No access token");
         return next(new Error("Authentication error"));
       }
 
@@ -105,8 +106,10 @@ class SocketManager {
 
   private setupMessageHandler(socket: SocketWithUser): void {
     socket.on("message", async (conversationId: string, message: string, files?: string[]) => {
+      console.log("Message", message);
       const conversation = await conversationService.getConversation(socket.user.id, conversationId);
       if (!conversation) {
+        console.log("Conversation not found");
         return this.io!.to(socket.id).emit("error", "Conversation not found");
       }
 
@@ -116,24 +119,28 @@ class SocketManager {
       }
 
       // Find receiver id
-      const receiverId = conversation.members.find((member) => member.toString() !== socket.user.id);
+      const receiverId = conversation.members.find((member) => member._id.toString() !== socket.user.id);
 
-      if (!receiverId) {
+      if (!receiverId?._id) {
+        console.log("Receiver not found");
         return this.io!.to(socket.id).emit("error", "Receiver not found");
       }
-      const receiverSocketId = this.getSocketId(receiverId.toString());
+      console.log("Receiver id", receiverId);
+
+      const receiverSocketId = this.getSocketId(receiverId._id.toString());
       if (!receiverSocketId) {
         // TODO: Save message to database
         // TODO: Send push notification to receiver
-        return this.io!.to(socket.id).emit("error", "Receiver is not connected to the server");
+        console.log("Receiver is not connected to the server");
+        // return this.io!.to(socket.id).emit("error", "Receiver is not connected to the server");
+      } else {
+        this.io!.to(receiverSocketId).emit("message", {
+          senderId: socket.user.id,
+          message: message,
+          conversationId,
+          files,
+        });
       }
-
-      this.io!.to(receiverSocketId).emit("message", {
-        senderId: socket.user.id,
-        message: message,
-        conversationId,
-        files,
-      });
 
       await messageService.create({
         content: message,

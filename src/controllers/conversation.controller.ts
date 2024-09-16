@@ -172,7 +172,7 @@ export const conversationController = {
   ) => {
     try {
       const conversation = await conversationService.getConversation(user.id, conversationId);
-
+      console.log("conversation", conversation);
       if (!conversation) {
         return res.status(StatusCodes.NOT_FOUND).json({
           status: StatusCodes.NOT_FOUND,

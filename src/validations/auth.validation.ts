@@ -51,6 +51,7 @@ export const authValidation = {
   },
 
   signUp: async (req: IBodyRequest<SignUpPayload>, res: Response, next: NextFunction) => {
+    console.log(req.body);
     const schema: ZodSchema<SignUpPayload> = z.object({
       email: z
         .string({
