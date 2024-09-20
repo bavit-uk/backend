@@ -4,7 +4,7 @@ export interface IMessage {
   id: Types.ObjectId;
   content?: string;
   sender: Types.ObjectId;
-  files?: string[];
+  files?: any[];
   sent: boolean;
   received: boolean;
   read: boolean;

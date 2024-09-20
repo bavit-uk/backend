@@ -105,8 +105,8 @@ class SocketManager {
   }
 
   private setupMessageHandler(socket: SocketWithUser): void {
-    socket.on("message", async (conversationId: string, message: string, files?: string[]) => {
-      console.log("Message", message);
+    socket.on("message", async (conversationId: string, message: string, files?: any[]) => {
+      console.log("Message Data", JSON.stringify({ conversationId, message, files }));
       const conversation = await conversationService.getConversation(socket.user.id, conversationId);
       if (!conversation) {
         console.log("Conversation not found");

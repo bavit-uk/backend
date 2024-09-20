@@ -1,6 +1,15 @@
 import { IMessage } from "@/contracts/message.contract";
 import { Schema, model } from "mongoose";
 
+const fileSchema = {
+  originalname: { type: String, required: true },
+  encoding: { type: String, required: true },
+  mimetype: { type: String, required: true },
+  size: { type: Number, required: true },
+  url: { type: String, required: true },
+  filename: { type: String, required: true },
+};
+
 const schema = new Schema<IMessage>(
   {
     sender: { type: Schema.Types.ObjectId, ref: "User", required: [true, "Sender is required"] },
@@ -12,7 +21,7 @@ const schema = new Schema<IMessage>(
       default: "",
     },
     files: {
-      type: [String],
+      type: [fileSchema],
       required: function () {
         return !this.content || this.content === "";
       },

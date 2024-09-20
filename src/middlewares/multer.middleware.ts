@@ -96,6 +96,7 @@ export const uploadMiddleware = (req: Request, res: Response, next: NextFunction
           });
       }
     } else if (err) {
+      console.error(err);
       // An unknown error occurred when uploading.
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         status: StatusCodes.INTERNAL_SERVER_ERROR,
