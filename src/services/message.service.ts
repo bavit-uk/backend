@@ -42,7 +42,7 @@ export const messageService = {
   getByConversationId: ({ conversation }: Pick<GetMessagePayload, "conversation">) => Message.find({ conversation }),
 
   getLastMessage: ({ conversation }: Pick<GetMessagePayload, "conversation">) =>
-    Message.findOne({ conversation }).sort({ createdAt: -1 }).select("content createdAt"),
+    Message.findOne({ conversation }).sort({ createdAt: -1 }).select("content createdAt files"),
 
   getTotalAndUnreadMessages: async (conversationId: string) => {
     const totalMessagesPromise = Message.countDocuments({ conversation: conversationId });
