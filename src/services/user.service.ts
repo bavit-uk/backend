@@ -5,23 +5,11 @@ import { UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract"
 import { SignUpPayload } from "@/contracts/auth.contract";
 
 export const userService = {
-  create: (
-    {
-      name,
-      email,
-      password,
-      role = "user",
-      otp,
-    }: SignUpPayload & {
-      otp?: number;
-    },
-    session?: ClientSession
-  ) =>
+  create: ({ email, name, password, otp }: UserCreatePayload, session?: ClientSession) =>
     new User({
       name,
       email,
       password,
-      role,
       otp: otp ?? null,
       otpExpiresAt: otp ?? new Date(Date.now() + 10 * 60 * 1000),
     }).save({ session }),
@@ -150,4 +138,13 @@ export const userService = {
 
   updateEmailVerificationOtp: (id: string, otp: number, session?: ClientSession) =>
     User.updateOne({ _id: id }, { otp, otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000) }, { session }),
+
+  getRegisteredContacts: (contacts: string[]) =>
+    User.find({
+      mobileNumber: {
+        $exists: true,
+        $nin: [null, ""],
+        $in: contacts,
+      },
+    }).select("mobileNumber"),
 };
