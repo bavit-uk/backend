@@ -1,5 +1,5 @@
 import { IBodyRequest, ICombinedRequest, IParamsRequest } from "@/contracts/request.contract";
-import { UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract";
+import { IUser, UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract";
 import { PasswordReset } from "@/models";
 import { userService } from "@/services";
 import { createHash } from "@/utils/hash.util";
@@ -53,7 +53,10 @@ export const userController = {
     });
   },
 
-  update: async (req: ICombinedRequest<unknown, UserUpdatePayload, { id: string }>, res: Response) => {
+  update: async (
+    req: ICombinedRequest<unknown, UserUpdatePayload & Pick<UserCreatePayload, "password">, { id: string }>,
+    res: Response
+  ) => {
     if (req.body.password) {
       req.body.password = await createHash(req.body.password);
     }
@@ -123,6 +126,32 @@ export const userController = {
       status: StatusCodes.OK,
       message: ReasonPhrases.OK,
       data: user,
+    });
+  },
+
+  getRegisteredContacts: async (
+    req: ICombinedRequest<
+      IUser,
+      {
+        contacts: string[];
+      }
+    >,
+    res: Response
+  ) => {
+    req.body.contacts = (req.body.contacts || []).map((contact) => contact.replace(/\D/g, ""));
+
+    let registeredContacts = await userService.getRegisteredContacts(req.body.contacts);
+
+    const registeredMobileNumbers = registeredContacts.map((contact) => contact.mobileNumber);
+    const unregisteredMobileNumbers = req.body.contacts.filter((contact) => !registeredMobileNumbers.includes(contact));
+
+    return res.status(StatusCodes.OK).json({
+      status: StatusCodes.OK,
+      message: ReasonPhrases.OK,
+      data: {
+        registeredMobileNumbers: registeredContacts,
+        unregisteredMobileNumbers,
+      },
     });
   },
 };
