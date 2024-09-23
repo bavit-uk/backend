@@ -13,6 +13,7 @@ export const conversation = (router: Router) => {
     conversationValidation.updateConversation,
     conversationController.updateConversation
   );
+  router.patch("/:conversationId/read", conversationController.readConversation);
   router.delete(
     "/:conversationId",
     conversationValidation.deleteConversation,

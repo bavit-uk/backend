@@ -146,6 +146,38 @@ export const conversationController = {
     }
   },
 
+  readConversation: async (
+    {
+      context: { user },
+      params: { conversationId },
+    }: ICombinedRequest<IUserRequest, IParamsRequest<{ conversationId: string }>>,
+    res: Response
+  ) => {
+    try {
+      const conversation = await conversationService.getConversation(user.id, conversationId);
+
+      if (!conversation) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          status: StatusCodes.NOT_FOUND,
+          message: ReasonPhrases.NOT_FOUND,
+        });
+      }
+
+      const updatedConversation = await conversationService.readConversation(user.id, conversationId);
+
+      return res.status(StatusCodes.OK).json({
+        status: StatusCodes.OK,
+        message: ReasonPhrases.OK,
+        data: updatedConversation,
+      });
+    } catch (error) {
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
+
   deleteConversation: async (
     {
       context: { user },
