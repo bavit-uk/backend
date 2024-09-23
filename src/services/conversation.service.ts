@@ -29,6 +29,14 @@ export const conversationService = {
     }).save({ session });
   },
 
+  checkConversationExists: async (userId: string, members: string[]) => {
+    const uniqueMembers = [...new Set([...members, userId])];
+    return Conversation.findOne({
+      isGroup: false,
+      members: { $size: uniqueMembers.length, $all: uniqueMembers },
+    }).exec();
+  },
+
   getConversations: async (userId: string) => {
     const conversations = await Conversation.find({ members: userId }).populate("members").exec();
     const conversationsWithLastMessage = await Promise.all(
