@@ -5,5 +5,5 @@ import { uploadMiddleware } from "@/middlewares/multer.middleware";
 import { Router } from "express";
 
 export const multer = (router: Router) => {
-  router.post("/upload", authMiddleware, authGuard.isAuth, uploadMiddleware, multerController.upload);
+  router.post("/upload", authGuard.isAuth, uploadMiddleware, multerController.upload);
 };

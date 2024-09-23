@@ -1,3 +1,4 @@
+import { user } from "./../routes/user.route";
 import { SignUpPayload } from "./../contracts/auth.contract";
 import { userService } from "@/services";
 import { request, Response } from "express";

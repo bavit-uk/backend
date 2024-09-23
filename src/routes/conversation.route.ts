@@ -1,11 +1,10 @@
 import { conversationController } from "@/controllers";
 import { authGuard } from "@/guards";
-import { authMiddleware } from "@/middlewares";
 import { conversationValidation } from "@/validations";
 import { Router } from "express";
 
 export const conversation = (router: Router) => {
-  router.use(authMiddleware, authGuard.isAuth);
+  router.use(authGuard.isAuth);
   router.get("/", conversationController.getConversations);
   router.post("/", conversationValidation.createConversation, conversationController.createConversation);
   router.get("/:conversationId", conversationValidation.getConversation, conversationController.getConversation);
