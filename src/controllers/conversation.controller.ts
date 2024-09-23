@@ -47,6 +47,19 @@ export const conversationController = {
         });
       }
 
+      const alreadyExists = await conversationService.checkConversationExists(
+        user.id,
+        members.map((member) => member.toString())
+      );
+
+      if (alreadyExists) {
+        return res.status(StatusCodes.CONFLICT).json({
+          status: StatusCodes.CONFLICT,
+          message: ReasonPhrases.CONFLICT,
+          data: alreadyExists,
+        });
+      }
+
       const conversation = await conversationService.create({
         isGroup,
         members,
@@ -61,6 +74,7 @@ export const conversationController = {
         data: conversation,
       });
     } catch (error) {
+      console.log(error);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         status: StatusCodes.INTERNAL_SERVER_ERROR,
         message: ReasonPhrases.INTERNAL_SERVER_ERROR,
