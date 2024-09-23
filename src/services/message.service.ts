@@ -44,12 +44,20 @@ export const messageService = {
   getLastMessage: ({ conversation }: Pick<GetMessagePayload, "conversation">) =>
     Message.findOne({ conversation }).sort({ createdAt: -1 }).select("content createdAt files"),
 
-  getTotalAndUnreadMessages: async (conversationId: string) => {
+  getTotalAndUnreadMessages: async (conversationId: string, to: string) => {
     const totalMessagesPromise = Message.countDocuments({ conversation: conversationId });
-    const unreadMessagesPromise = Message.countDocuments({ conversation: conversationId, read: false });
+    const unreadMessagesPromise = Message.countDocuments({
+      conversation: conversationId,
+      read: false,
+      sender: { $ne: to },
+    });
 
     const [totalMessages, unreadMessages] = await Promise.all([totalMessagesPromise, unreadMessagesPromise]);
 
     return { totalMessages, unreadMessages };
+  },
+
+  readMessages: async ({ conversationId, to }: { conversationId: string; to: string }) => {
+    return Message.updateMany({ conversation: conversationId, sender: { $ne: to } }, { read: true });
   },
 };

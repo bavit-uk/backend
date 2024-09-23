@@ -42,7 +42,10 @@ export const conversationService = {
     const conversationsWithLastMessage = await Promise.all(
       conversations.map(async (conversation) => {
         const lastMessage = await messageService.getLastMessage({ conversation: conversation._id });
-        const { totalMessages, unreadMessages } = await messageService.getTotalAndUnreadMessages(conversation.id);
+        const { totalMessages, unreadMessages } = await messageService.getTotalAndUnreadMessages(
+          conversation.id,
+          userId
+        );
         return { ...conversation.toObject(), lastMessage, totalMessages, unreadMessages };
       })
     );
@@ -66,6 +69,10 @@ export const conversationService = {
       { $set: payload },
       { new: true }
     ).exec();
+  },
+
+  readConversation: (userId: string, conversationId: string) => {
+    return messageService.readMessages({ conversationId: conversationId, to: userId });
   },
 
   deleteConversation: (userId: string, conversationId: string) => {
