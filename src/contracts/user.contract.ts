@@ -43,12 +43,12 @@ export interface IUserMethods {
   hashPassword: (password: string) => string;
 }
 
-export type UserCreatePayload = Pick<
-  IUser,
-  "name" | "email" | "password" | "otp" | "mobileNumber" | "countryCode" | "countryCodeName"
->;
+export type UserCreatePayload = Pick<IUser, "name" | "email" | "password" | "otp">;
 
-export type UserUpdatePayload = Partial<UserCreatePayload>;
+export type UserUpdatePayload = Omit<
+  Partial<UserCreatePayload> & Pick<IUser, "bio" | "dob" | "mobileNumber" | "countryCode" | "countryCodeName">,
+  "password" | "otp"
+>;
 
 export type UserModel = Model<IUser, unknown, IUserMethods>;
 

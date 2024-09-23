@@ -16,6 +16,8 @@ export const auth = (router: Router) => {
 
   router.get("/me", authGuard.isAuth, authController.me);
 
+  router.patch("/update-profile", authGuard.isAuth, authValidation.updateProfile, authController.updateProfile);
+
   router.patch("/update-password", authGuard.isAuth, authValidation.updatePassword, authController.updatePassword);
 
   router.post(

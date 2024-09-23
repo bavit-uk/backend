@@ -15,6 +15,8 @@ import { comparePassword } from "@/utils/compare-password.util";
 import formData from "form-data";
 import Mailgun from "mailgun.js";
 import { verify } from "jsonwebtoken";
+import { sendEmail } from "@/utils/send-email.util";
+import { UserUpdatePayload } from "@/contracts/user.contract";
 
 export const authController = {
   signIn: async (req: ICombinedRequest<unknown, SignInPayload, unknown, { dashboard?: boolean }>, res: Response) => {
@@ -107,6 +109,44 @@ export const authController = {
     }
   },
 
+  updateProfile: async (req: ICombinedRequest<IUserRequest, UserUpdatePayload>, res: Response) => {
+    try {
+      const { name, email, countryCode, countryCodeName, mobileNumber, dob, bio } = req.body;
+      const { user } = req.context;
+
+      if (email !== user.email) {
+        const exists = await userService.getByEmail(email as string);
+        if (exists) {
+          return res.status(StatusCodes.CONFLICT).json({
+            message: ReasonPhrases.CONFLICT,
+            status: StatusCodes.CONFLICT,
+          });
+        }
+      }
+
+      await userService.updateProfileByUserId(user.id, {
+        name,
+        email,
+        dob,
+        countryCode,
+        countryCodeName,
+        mobileNumber,
+        bio,
+      });
+
+      return res.status(StatusCodes.OK).json({
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+      });
+    } catch (err) {
+      console.log(err);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
+
   forgotPassword: async ({ body: { email } }: IBodyRequest<PasswordResetPayload>, res: Response) => {
     try {
       const user = await userService.getByEmail(email);
@@ -136,11 +176,22 @@ export const authController = {
         expireAt: new Date(Date.now() + EXPIRY_TIME),
       });
 
+      const html = `
+        <h1>Reset your password</h1>
+        <p>Hello ${user.name},</p>
+        <p>Bellow is your password reset token. Please use it to reset your password.</p>
+        <p><strong>${token}</strong></p>
+        <p>This token will expire in 1 hour.</p>
+        <p>Thanks</p>
+      `;
+
+      await sendEmail(user.email, "QR Exchange Support: Password Reset", "Password Reset", html);
+
       // Send email with reset password link
       return res.status(StatusCodes.OK).json({
         message: ReasonPhrases.OK,
         status: StatusCodes.OK,
-        token,
+        // token,
       });
     } catch (err) {
       console.log(err);
