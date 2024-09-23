@@ -2,6 +2,7 @@ import { ENUMS } from "@/constants/enum";
 import { REGEX } from "@/constants/regex";
 import { SignInPayload, SignUpPayload } from "@/contracts/auth.contract";
 import { IBodyRequest, ICombinedRequest, IUserRequest } from "@/contracts/request.contract";
+import { UserUpdatePayload } from "@/contracts/user.contract";
 import { getZodErrors } from "@/utils/get-zod-errors";
 import { NextFunction, Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
@@ -82,6 +83,64 @@ export const authValidation = {
       next();
     } catch (error: any) {
       console.log(error);
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
+
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+          issueMessage: message,
+          issues: issues,
+        });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
+    }
+  },
+
+  updateProfile: async (req: ICombinedRequest<IUserRequest, UserUpdatePayload>, res: Response, next: NextFunction) => {
+    const schema: ZodSchema<{
+      name: string;
+      dob: string;
+      mobileNumber: string;
+      countryCode: string;
+      countryCodeName: string;
+      bio?: string;
+    }> = z.object({
+      name: z
+        .string({
+          message: "Name is required but it was not provided",
+        })
+        .min(3, { message: "Name must be at least 3 characters long" }),
+      dob: z.string({
+        message: "Date of birth is required but it was not provided",
+      }),
+      mobileNumber: z.string({
+        message: "Mobile number is required but it was not provided",
+      }),
+      countryCode: z.string({
+        message: "Country code is required but it was not provided",
+      }),
+      countryCodeName: z.string({
+        message: "Country code name is required but it was not provided",
+      }),
+      bio: z
+        .string({
+          message: "Bio is required but it was not provided",
+        })
+        .optional(),
+    });
+
+    try {
+      const validatedData = schema.parse(req.body);
+
+      Object.assign(req.body, validatedData);
+
+      next();
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         const { message, issues } = getZodErrors(error);
 
