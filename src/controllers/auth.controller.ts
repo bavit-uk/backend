@@ -74,7 +74,7 @@ export const authController = {
 
       const otp = Math.floor(100000 + Math.random() * 900000);
 
-      await userService.create({ email, password: hash, name, role, otp });
+      await userService.create({ email, password: hash, name, otp: otp.toString() });
 
       // TODO: Send email verification code with otp and time to expire
 
