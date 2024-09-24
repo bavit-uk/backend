@@ -24,13 +24,13 @@ const app: Express = express();
 // Connect to MongoDB
 mongoose.run();
 
-const accessLogStream = fs.createWriteStream(__dirname + "/access.log", { flags: "a" });
+// const accessLogStream = fs.createWriteStream(__dirname + "/access.log", { flags: "a" });
 
 app.use(
   express.json({ limit: "10mb" }),
   express.urlencoded({ limit: "10mb", extended: true }),
   morgan("dev"),
-  morgan("combined", { stream: accessLogStream }),
+  // morgan("combined", { stream: accessLogStream }),
   corsMiddleware,
   authMiddleware,
   helmet(),
