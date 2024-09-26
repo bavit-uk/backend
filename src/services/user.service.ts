@@ -118,16 +118,6 @@ export const userService = {
 
   deleteById: (userId: string, session?: ClientSession) => User.deleteOne({ user: userId }, { session }),
 
-  createPasswordReset: (
-    { email, token, expireAt }: { email: string; token: string; expireAt: Date },
-    session?: ClientSession
-  ) =>
-    new PasswordReset({
-      email,
-      token,
-      expireAt,
-    }).save({ session }),
-
   getPasswordResetByEmail: (email: string) => PasswordReset.findOne({ email }),
 
   deletePasswordResetByEmail: (email: string, session?: ClientSession) =>

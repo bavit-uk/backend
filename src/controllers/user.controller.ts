@@ -1,7 +1,7 @@
 import { IBodyRequest, ICombinedRequest, IParamsRequest } from "@/contracts/request.contract";
 import { IUser, UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract";
 import { PasswordReset } from "@/models";
-import { userService } from "@/services";
+import { passwordResetService, userService } from "@/services";
 import { createHash } from "@/utils/hash.util";
 import { Request, Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
@@ -82,21 +82,10 @@ export const userController = {
       });
     }
 
-    const passwordReset = await PasswordReset.find({
-      email: user.email,
-      isUsed: false,
-      expireAt: { $gte: new Date() },
-    })
-      .sort({ createdAt: -1 })
-      .limit(1);
+    const passwordReset = await passwordResetService.findAllUnusedPasswordResetsByEmail(user.email);
 
     if (passwordReset.length) {
-      await PasswordReset.updateOne(
-        { _id: passwordReset[0]._id },
-        {
-          isUsed: true,
-        }
-      );
+      await passwordResetService.updateAllUnusedPasswordResetsToUsed(user.email);
     }
 
     try {

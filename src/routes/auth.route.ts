@@ -12,6 +12,8 @@ export const auth = (router: Router) => {
 
   router.post("/request-password-reset", authValidation.forgotPassword, authController.forgotPassword);
 
+  router.post("/verify-otp", authValidation.verifyOtp, authController.verifyOtp);
+
   router.post("/reset-password", authValidation.resetPassword, authController.resetPassword);
 
   router.get("/me", authGuard.isAuth, authController.me);

@@ -1,6 +1,6 @@
 import { user } from "./../routes/user.route";
 import { SignUpPayload } from "./../contracts/auth.contract";
-import { userService } from "@/services";
+import { passwordResetService, userService } from "@/services";
 import { request, Response } from "express";
 import { IBodyRequest, ICombinedRequest, IContextRequest, IUserRequest } from "@/contracts/request.contract";
 import { SignInPayload } from "@/contracts/auth.contract";
@@ -157,10 +157,7 @@ export const authController = {
         });
       }
 
-      const resetRequest = await PasswordReset.findOne({ email, isUsed: false, expireAt: { $gte: new Date() } });
-      if (resetRequest) {
-        await resetRequest.updateOne({ isUsed: true });
-      }
+      await passwordResetService.updateAllUnusedPasswordResetsToUsed(email);
 
       // Genearte 6 digit OTP
       const token = Math.floor(100000 + Math.random() * 900000).toString();
@@ -170,7 +167,7 @@ export const authController = {
 
       // TODO: Send email with generated OTP
 
-      await userService.createPasswordReset({
+      await passwordResetService.createPasswordReset({
         email: user.email,
         token,
         expireAt: new Date(Date.now() + EXPIRY_TIME),
@@ -202,17 +199,19 @@ export const authController = {
     }
   },
 
-  resetPassword: async (
-    { body: { email, token, newPassword } }: IBodyRequest<PasswordUpdatePayload>,
-    res: Response
-  ) => {
+  verifyOtp: async (req: IBodyRequest<{ email: string; otp: number }>, res: Response) => {
     try {
-      const reset = await PasswordReset.findOne({
-        email,
-        token,
-        isUsed: false,
-        expireAt: { $gte: new Date() },
-      });
+      const { email, otp } = req.body;
+
+      const user = await userService.getByEmail(email);
+      if (!user) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          message: ReasonPhrases.NOT_FOUND,
+          status: StatusCodes.NOT_FOUND,
+        });
+      }
+
+      const reset = await passwordResetService.findPasswordResetByEmailAndToken(email, otp.toString());
       if (!reset) {
         return res.status(StatusCodes.NOT_FOUND).json({
           message: ReasonPhrases.NOT_FOUND,
@@ -220,7 +219,40 @@ export const authController = {
         });
       }
 
-      const user = await userService.getByEmail(reset.email);
+      if (reset.isUsed || reset.expireAt < new Date()) {
+        return res.status(StatusCodes.UNAUTHORIZED).json({
+          message: ReasonPhrases.UNAUTHORIZED,
+          status: StatusCodes.UNAUTHORIZED,
+        });
+      }
+
+      return res.status(StatusCodes.OK).json({
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+      });
+    } catch (err) {
+      console.log(err);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
+
+  resetPassword: async (
+    { body: { email, token, newPassword } }: IBodyRequest<PasswordUpdatePayload>,
+    res: Response
+  ) => {
+    try {
+      const reset = passwordResetService.findPasswordResetByEmailAndToken(email, token);
+      if (!reset) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          message: ReasonPhrases.NOT_FOUND,
+          status: StatusCodes.NOT_FOUND,
+        });
+      }
+
+      const user = await userService.getByEmail(email);
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({
           message: ReasonPhrases.NOT_FOUND,
@@ -232,7 +264,7 @@ export const authController = {
 
       await userService.updatePasswordByUserId(user.id, hash);
 
-      await PasswordReset.updateOne({ token }, { isUsed: true });
+      await passwordResetService.updatePasswordResetToUsed(email, token);
 
       return res.status(StatusCodes.OK).json({
         message: ReasonPhrases.OK,
