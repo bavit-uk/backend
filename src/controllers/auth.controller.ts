@@ -72,9 +72,9 @@ export const authController = {
 
       const hash = await createHash(password);
 
-      const otp = Math.floor(100000 + Math.random() * 900000);
+      const otp = Math.floor(10000 + Math.random() * 90000).toString();
 
-      await userService.create({ email, password: hash, name, otp: otp.toString() });
+      await userService.create({ email, password: hash, name, otp });
 
       // TODO: Send email verification code with otp and time to expire
 
@@ -159,8 +159,8 @@ export const authController = {
 
       await passwordResetService.updateAllUnusedPasswordResetsToUsed(email);
 
-      // Genearte 6 digit OTP
-      const token = Math.floor(100000 + Math.random() * 900000).toString();
+      // Genearte 5 digit OTP
+      const token = Math.floor(10000 + Math.random() * 90000).toString();
 
       // Expire time for password reset token (1 hour)
       const EXPIRY_TIME = 1000 * 60 * 60;
@@ -350,7 +350,7 @@ export const authController = {
         });
       }
 
-      const otp = Math.floor(100000 + Math.random() * 900000);
+      const otp = Math.floor(10000 + Math.random() * 90000);
 
       await userService.updateEmailVerificationOtp(user.id, otp);
 
