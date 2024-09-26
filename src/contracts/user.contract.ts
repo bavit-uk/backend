@@ -36,6 +36,7 @@ export interface IUser {
   planExpiredAt?: Date;
   deviceType?: (typeof ENUMS.DEVICE_TYPES)[number];
   deviceUniqueId?: string;
+  allowResetPassword: boolean;
 }
 
 export interface IUserMethods {
@@ -46,7 +47,8 @@ export interface IUserMethods {
 export type UserCreatePayload = Pick<IUser, "name" | "email" | "password" | "otp">;
 
 export type UserUpdatePayload = Omit<
-  Partial<UserCreatePayload> & Pick<IUser, "bio" | "dob" | "mobileNumber" | "countryCode" | "countryCodeName">,
+  Partial<UserCreatePayload> &
+    Partial<Pick<IUser, "bio" | "dob" | "mobileNumber" | "countryCode" | "countryCodeName" | "allowResetPassword">>,
   "password" | "otp"
 >;
 

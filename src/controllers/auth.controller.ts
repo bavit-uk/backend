@@ -226,6 +226,10 @@ export const authController = {
         });
       }
 
+      await userService.updateProfileByUserId(user.id, {
+        allowResetPassword: true,
+      });
+
       return res.status(StatusCodes.OK).json({
         message: ReasonPhrases.OK,
         status: StatusCodes.OK,
@@ -239,19 +243,8 @@ export const authController = {
     }
   },
 
-  resetPassword: async (
-    { body: { email, token, newPassword } }: IBodyRequest<PasswordUpdatePayload>,
-    res: Response
-  ) => {
+  resetPassword: async ({ body: { email, newPassword } }: IBodyRequest<PasswordUpdatePayload>, res: Response) => {
     try {
-      const reset = passwordResetService.findPasswordResetByEmailAndToken(email, token);
-      if (!reset) {
-        return res.status(StatusCodes.NOT_FOUND).json({
-          message: ReasonPhrases.NOT_FOUND,
-          status: StatusCodes.NOT_FOUND,
-        });
-      }
-
       const user = await userService.getByEmail(email);
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -260,11 +253,16 @@ export const authController = {
         });
       }
 
+      if (!user.allowResetPassword) {
+        return res.status(StatusCodes.PRECONDITION_FAILED).json({
+          message: ReasonPhrases.PRECONDITION_FAILED,
+          status: StatusCodes.PRECONDITION_FAILED,
+        });
+      }
+
       const hash = await createHash(newPassword);
 
       await userService.updatePasswordByUserId(user.id, hash);
-
-      await passwordResetService.updatePasswordResetToUsed(email, token);
 
       return res.status(StatusCodes.OK).json({
         message: ReasonPhrases.OK,

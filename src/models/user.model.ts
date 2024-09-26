@@ -61,6 +61,7 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     passwordResetAt: { type: Date, select: false },
     deviceType: { type: String, enum: ENUMS.DEVICE_TYPES },
     deviceUniqueId: String,
+    allowResetPassword: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
