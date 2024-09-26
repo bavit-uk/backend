@@ -208,7 +208,6 @@ export const authValidation = {
         message: "OTP is required but it was not provided",
       }),
     });
-
     try {
       const validatedData = schema.parse(req.body);
 
@@ -239,23 +238,20 @@ export const authValidation = {
       IUserRequest,
       {
         email: string;
-        token: string;
         newPassword: string;
       }
     >,
     res: Response,
     next: NextFunction
   ) => {
-    const schema: ZodSchema<{ email: string; token: string; newPassword: string }> = z.object({
+    const schema: ZodSchema<{ email: string; newPassword: string }> = z.object({
       email: z
         .string({
           message: "Email is required but it was not provided",
         })
         .regex(REGEX.EMAIL, { message: "Invalid email format" })
         .toLowerCase(),
-      token: z.string({
-        message: "Token is required but it was not provided",
-      }),
+
       newPassword: z
         .string({
           message: "New password is required but it was not provided",
