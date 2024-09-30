@@ -106,7 +106,7 @@ class SocketManager {
 
   private setupMessageHandler(socket: SocketWithUser): void {
     socket.on("message", async (conversationId: string, message: string, files?: any[], lockChat: boolean = false) => {
-      console.log("Message Data", JSON.stringify({ conversationId, message, files }));
+      console.log("Message Data", JSON.stringify({ conversationId, message, files, lockChat }));
       const conversation = await conversationService.getConversation(socket.user.id, conversationId);
       if (!conversation) {
         console.log("Conversation not found");
@@ -150,7 +150,7 @@ class SocketManager {
         isQrCode: lockChat,
       });
 
-      if (lockChat && files?.length) {
+      if (lockChat) {
         await conversationService.lockConversation(socket.user.id, conversationId);
       }
     });

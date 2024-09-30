@@ -3,12 +3,13 @@ import { Message } from "@/models";
 import { ClientSession } from "mongoose";
 
 export const messageService = {
-  create: ({ content, conversation, files, sender }: CreateMessagePayload, session?: ClientSession) =>
+  create: ({ content, conversation, files, sender, isQrCode }: CreateMessagePayload, session?: ClientSession) =>
     new Message({
       content,
       conversation,
       files,
       sender,
+      isQrCode,
     }).save({ session }),
 
   getMessageById: (messageId: string) => Message.findById(messageId),
@@ -42,7 +43,7 @@ export const messageService = {
   getByConversationId: ({ conversation }: Pick<GetMessagePayload, "conversation">) => Message.find({ conversation }),
 
   getLastMessage: ({ conversation }: Pick<GetMessagePayload, "conversation">) =>
-    Message.findOne({ conversation }).sort({ createdAt: -1 }).select("content createdAt files"),
+    Message.findOne({ conversation }).sort({ createdAt: -1 }).select("content createdAt files isQrCode"),
 
   getTotalAndUnreadMessages: async (conversationId: string, to: string) => {
     const totalMessagesPromise = Message.countDocuments({ conversation: conversationId });
