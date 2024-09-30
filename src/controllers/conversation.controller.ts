@@ -12,6 +12,8 @@ export const conversationController = {
     try {
       const conversations = await conversationService.getConversations(user.id);
 
+      console.log("conversations", JSON.stringify(conversations, null, 2));
+
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
         message: ReasonPhrases.OK,
@@ -302,4 +304,36 @@ export const conversationController = {
       });
     }
   },
+
+  unlockConversation: async (
+    {
+      context: { user },
+      params: { conversationId },
+    }: ICombinedRequest<IUserRequest, IParamsRequest<{ conversationId: string }>>,
+    res: Response
+  ) => {
+    try {
+      const conversation = await conversationService.getConversation(user.id, conversationId);
+
+      if (!conversation) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          status: StatusCodes.NOT_FOUND,
+          message: ReasonPhrases.NOT_FOUND,
+        });
+      }
+
+      const unlockedConversation = await conversationService.unlockConversation(user.id, conversationId);
+
+      return res.status(StatusCodes.OK).json({
+        status: StatusCodes.OK,
+        message: ReasonPhrases.OK,
+        data: unlockedConversation,
+      });
+    } catch (error) {
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+      });
+    }
+  }
 };

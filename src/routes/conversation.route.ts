@@ -21,6 +21,11 @@ export const conversation = (router: Router) => {
   );
   router.get("/:conversationId/messages", conversationValidation.getMessages, conversationController.getMessages);
   router.patch(
+    "/:conversationId/unlock",
+    conversationValidation.unlockConversation,
+    conversationController.unlockConversation
+  );
+  router.patch(
     "/:conversationId/block",
     conversationValidation.blockConversation,
     conversationController.blockConversation

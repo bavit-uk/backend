@@ -306,4 +306,43 @@ export const conversationValidation = {
       }
     }
   },
+
+  unlockConversation: async (
+    {
+      context: { user },
+      params: { conversationId },
+    }: ICombinedRequest<IUserRequest, IParamsRequest<{ conversationId: string }>>,
+    res: Response,
+    next: NextFunction
+  ) => {
+    const schema: ZodSchema<{ conversationId: string }> = z.object({
+      conversationId: z.string({
+        message: "Conversation ID is required but it was not provided",
+      }),
+    });
+
+    try {
+      const validatedData = schema.parse({ conversationId });
+
+      Object.assign({ conversationId }, validatedData);
+
+      next();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
+
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+          issueMessage: message,
+          issues: issues,
+        });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
+    }
+  },
 };
