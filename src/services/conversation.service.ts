@@ -92,4 +92,8 @@ export const conversationService = {
       { $pull: { blocked: userId } }
     ).exec();
   },
+
+  lockConversation: (userId: string, conversationId: string) => {
+    return Conversation.findOneAndUpdate({ members: userId, _id: conversationId }, { locked: true }).exec();
+  },
 };

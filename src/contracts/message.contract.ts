@@ -11,10 +11,11 @@ export interface IMessage {
   createdAt: Date;
   updatedAt: Date;
   conversation: Types.ObjectId;
+  isQrCode: boolean;
 }
 
 export type GetMessagePayload = Pick<IMessage, "conversation" | "id">;
 
-export type CreateMessagePayload = Pick<IMessage, "content" | "files" | "conversation" | "sender">;
+export type CreateMessagePayload = Pick<IMessage, "content" | "files" | "conversation" | "sender" | "isQrCode">;
 
 export type UpdateMessagePayload = Partial<Pick<IMessage, "content" | "files">> & Pick<IMessage, "conversation" | "id">;

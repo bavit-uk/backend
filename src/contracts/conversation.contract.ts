@@ -11,6 +11,7 @@ export interface IConversation {
   description?: string;
   image?: string;
   archived: boolean;
+  locked: boolean;
 }
 
 export type CreateConversationPayload = Pick<IConversation, "members" | "title" | "description" | "image" | "isGroup">;

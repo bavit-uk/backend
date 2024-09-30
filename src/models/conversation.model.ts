@@ -10,6 +10,7 @@ const schema = new Schema<IConversation>(
     title: { type: String, required: false, default: "" },
     description: { type: String, required: false, default: "" },
     image: { type: String, required: false, default: "" },
+    locked: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

@@ -105,7 +105,7 @@ class SocketManager {
   }
 
   private setupMessageHandler(socket: SocketWithUser): void {
-    socket.on("message", async (conversationId: string, message: string, files?: any[]) => {
+    socket.on("message", async (conversationId: string, message: string, files?: any[], lockChat: boolean = false) => {
       console.log("Message Data", JSON.stringify({ conversationId, message, files }));
       const conversation = await conversationService.getConversation(socket.user.id, conversationId);
       if (!conversation) {
@@ -147,41 +147,50 @@ class SocketManager {
         sender: new mongoose.Types.ObjectId(socket.user.id),
         conversation: new mongoose.Types.ObjectId(conversationId),
         files,
+        isQrCode: lockChat,
       });
+
+      if (lockChat && files?.length) {
+        await conversationService.lockConversation(socket.user.id, conversationId);
+      }
     });
 
-    socket.on("groupMessage", async (conversationId: string, message: string, files?: string[]) => {
-      if (!conversationId) {
-        return this.io!.to(socket.id).emit("error", "Group not found");
+    socket.on(
+      "groupMessage",
+      async (conversationId: string, message: string, files?: string[], lockChat: boolean = false) => {
+        if (!conversationId) {
+          return this.io!.to(socket.id).emit("error", "Group not found");
+        }
+
+        const group = this.groupRooms.get(conversationId);
+        if (!group) {
+          return this.io!.to(socket.id).emit("error", "Group not found");
+        }
+
+        // const offlineUsers = conversation.members.filter((member) => !group.has(member.toString()));
+        // offlineUsers.forEach((userId) => {
+        //   //TODO Send push notification to offline users
+        // });
+
+        this.io!.to(conversationId).emit("groupMessage", {
+          senderId: socket.user.id,
+          message: message,
+          groupId: conversationId,
+          files,
+        });
+
+        console.log("Group message", message);
+
+        // Save the group message to the database
+        await messageService.create({
+          content: message,
+          sender: new mongoose.Types.ObjectId(socket.user.id),
+          conversation: new mongoose.Types.ObjectId(conversationId),
+          files,
+          isQrCode: lockChat,
+        });
       }
-
-      const group = this.groupRooms.get(conversationId);
-      if (!group) {
-        return this.io!.to(socket.id).emit("error", "Group not found");
-      }
-
-      // const offlineUsers = conversation.members.filter((member) => !group.has(member.toString()));
-      // offlineUsers.forEach((userId) => {
-      //   //TODO Send push notification to offline users
-      // });
-
-      this.io!.to(conversationId).emit("groupMessage", {
-        senderId: socket.user.id,
-        message: message,
-        groupId: conversationId,
-        files,
-      });
-
-      console.log("Group message", message);
-
-      // Save the group message to the database
-      await messageService.create({
-        content: message,
-        sender: new mongoose.Types.ObjectId(socket.user.id),
-        conversation: new mongoose.Types.ObjectId(conversationId),
-        files,
-      });
-    });
+    );
   }
 
   private setupDisconnectHandler(socket: SocketWithUser): void {
