@@ -41,23 +41,64 @@ export const conversationService = {
     const conversations = await Conversation.find({ members: userId }).populate("members").exec();
     const conversationsWithLastMessage = await Promise.all(
       conversations.map(async (conversation) => {
-        const lastMessage = await messageService.getLastMessage({ conversation: conversation._id });
+        let lastMessageTime = Date.now();
+        const unscannedMessages = await messageService.findUnscannedMessages({
+          conversation: conversation._id,
+          scannedBy: new Types.ObjectId(userId),
+        });
+        if (unscannedMessages.length > 0) {
+          console.log(unscannedMessages[0]);
+          const lastUnscannedMessageCreatedAt = unscannedMessages[0].createdAt;
+          lastMessageTime = new Date(lastUnscannedMessageCreatedAt).getTime();
+        }
+        const lastMessage = await messageService.getLastMessage({
+          conversation: conversation._id,
+          lastMessageDate: lastMessageTime,
+        });
         const { totalMessages, unreadMessages } = await messageService.getTotalAndUnreadMessages(
           conversation.id,
-          userId
+          userId,
+          lastMessageTime
         );
-        return { ...conversation.toObject(), lastMessage, totalMessages, unreadMessages };
+
+        return {
+          ...conversation.toObject(),
+          lastMessage,
+          totalMessages,
+          unreadMessages,
+          locked: unscannedMessages.length > 0 ? true : false,
+        };
       })
     );
     return conversationsWithLastMessage;
   },
-  getConversation: (userId: string, conversationId: string) => {
+  getConversation: async (userId: string, conversationId: string) => {
     const conversation = Conversation.findOne({ members: userId, _id: conversationId }).populate("members").exec();
-    const lastMessage = messageService.getLastMessage({ conversation: new Types.ObjectId(conversationId) });
+
+    const unscannedMessages = await messageService.findUnscannedMessages({
+      conversation: new Types.ObjectId(conversationId),
+    });
+
+    let lastMessageTime = Date.now();
+
+    if (unscannedMessages.length > 0) {
+      const lastUnscannedMessageCreatedAt = unscannedMessages[0].createdAt;
+      lastMessageTime = new Date(lastUnscannedMessageCreatedAt).getTime();
+    }
+
+    const lastMessage = messageService.getLastMessage({
+      conversation: new Types.ObjectId(conversationId),
+      lastMessageDate: lastMessageTime,
+    });
 
     const conversationWithLastMessage = Promise.all([conversation, lastMessage]).then(([conversation, lastMessage]) => {
       if (!conversation) return null;
-      return { ...conversation.toObject(), lastMessage };
+      return {
+        ...conversation.toObject(),
+        lastMessage,
+        lastMessageTime,
+        locked: unscannedMessages.length > 0 ? true : false,
+      };
     });
 
     return conversationWithLastMessage;
@@ -71,8 +112,21 @@ export const conversationService = {
     ).exec();
   },
 
-  readConversation: (userId: string, conversationId: string) => {
-    return messageService.readMessages({ conversationId: conversationId, to: userId });
+  readConversation: async (userId: string, conversationId: string) => {
+    let lastMessageTime = Date.now();
+    const unscannedMessages = await messageService.findUnscannedMessages({
+      conversation: new Types.ObjectId(conversationId),
+      scannedBy: new Types.ObjectId(userId),
+    });
+    if (unscannedMessages.length > 0) {
+      const lastUnscannedMessageCreatedAt = unscannedMessages[0].createdAt;
+      lastMessageTime = new Date(lastUnscannedMessageCreatedAt).getTime();
+    }
+    return messageService.readMessages({
+      conversationId: conversationId,
+      to: userId,
+      lastMessageDate: lastMessageTime,
+    });
   },
 
   deleteConversation: (userId: string, conversationId: string) => {
@@ -91,13 +145,5 @@ export const conversationService = {
       { members: userId, _id: conversationId },
       { $pull: { blocked: userId } }
     ).exec();
-  },
-
-  lockConversation: (userId: string, conversationId: string) => {
-    return Conversation.findOneAndUpdate({ members: userId, _id: conversationId }, { locked: true }).exec();
-  },
-
-  unlockConversation: (userId: string, conversationId: string) => {
-    return Conversation.findOneAndUpdate({ members: userId, _id: conversationId }, { locked: false }).exec();
   },
 };
