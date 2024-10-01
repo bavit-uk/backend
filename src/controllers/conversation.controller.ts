@@ -12,8 +12,6 @@ export const conversationController = {
     try {
       const conversations = await conversationService.getConversations(user.id);
 
-      console.log("conversations", JSON.stringify(conversations, null, 2));
-
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
         message: ReasonPhrases.OK,
@@ -220,7 +218,6 @@ export const conversationController = {
   ) => {
     try {
       const conversation = await conversationService.getConversation(user.id, conversationId);
-      console.log("conversation", conversation);
       if (!conversation) {
         return res.status(StatusCodes.NOT_FOUND).json({
           status: StatusCodes.NOT_FOUND,
@@ -228,7 +225,11 @@ export const conversationController = {
         });
       }
 
-      const messages = await messageService.getAll({ conversation: new Types.ObjectId(conversationId) });
+      const messages = await messageService.getAll({
+        conversation: new Types.ObjectId(conversationId),
+        lastMessageDate: conversation.lastMessageTime,
+      });
+
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
         message: ReasonPhrases.OK,
@@ -322,12 +323,30 @@ export const conversationController = {
         });
       }
 
-      const unlockedConversation = await conversationService.unlockConversation(user.id, conversationId);
+      const unscannedMessages = await messageService.findUnscannedMessages({
+        conversation: new Types.ObjectId(conversationId),
+        scannedBy: user.id,
+      });
+
+      if (!unscannedMessages.length) {
+        return res.status(StatusCodes.OK).json({
+          status: StatusCodes.OK,
+          message: ReasonPhrases.OK,
+          data: conversation,
+        });
+      }
+
+      const unscannedMessage = unscannedMessages[0];
+
+      await messageService.addScannedBy({
+        id: unscannedMessage.id,
+        conversation: new Types.ObjectId(conversationId),
+        scannedBy: new Types.ObjectId(user.id),
+      });
 
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
         message: ReasonPhrases.OK,
-        data: unlockedConversation,
       });
     } catch (error) {
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -335,5 +354,5 @@ export const conversationController = {
         message: ReasonPhrases.INTERNAL_SERVER_ERROR,
       });
     }
-  }
+  },
 };
