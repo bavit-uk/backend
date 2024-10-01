@@ -3,6 +3,7 @@ import { Schema, model } from "mongoose";
 
 const schema = new Schema<IConversation>(
   {
+    admin: { type: [Schema.Types.ObjectId], ref: "User", required: [true, "Admin is required"] },
     members: { type: [Schema.Types.ObjectId], ref: "User", required: [true, "Members are required"] },
     isGroup: { type: Boolean, required: [true, "isGroup is required"] },
     blocked: { type: [Schema.Types.ObjectId], ref: "User", default: [] },
@@ -10,7 +11,6 @@ const schema = new Schema<IConversation>(
     title: { type: String, required: false, default: "" },
     description: { type: String, required: false, default: "" },
     image: { type: String, required: false, default: "" },
-    locked: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
