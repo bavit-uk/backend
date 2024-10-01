@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 
 export interface IConversation {
   id: Types.ObjectId;
+  admin: Types.ObjectId[];
   members: Types.ObjectId[];
   blocked: Types.ObjectId[];
   createdAt: Date;
@@ -11,7 +12,6 @@ export interface IConversation {
   description?: string;
   image?: string;
   archived: boolean;
-  locked: boolean;
 }
 
 export type CreateConversationPayload = Pick<IConversation, "members" | "title" | "description" | "image" | "isGroup">;
