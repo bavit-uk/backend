@@ -140,6 +140,10 @@ class SocketManager {
           conversationId,
           files,
         });
+
+        if (lockChat) {
+          this.io!.to(receiverSocketId).emit("lockChat");
+        }
       }
 
       await messageService.create({
@@ -148,11 +152,13 @@ class SocketManager {
         conversation: new mongoose.Types.ObjectId(conversationId),
         files,
         isQrCode: lockChat,
+        scannedBy: lockChat ? [new mongoose.Types.ObjectId(socket.user.id)] : [],
       });
 
-      if (lockChat) {
-        await conversationService.lockConversation(socket.user.id, conversationId);
-      }
+      // if (lockChat) {
+      //   // await conversationService.lockConversation(socket.user.id, conversationId);
+
+      // }
     });
 
     socket.on(
@@ -188,6 +194,7 @@ class SocketManager {
           conversation: new mongoose.Types.ObjectId(conversationId),
           files,
           isQrCode: lockChat,
+          scannedBy: lockChat ? [new mongoose.Types.ObjectId(socket.user.id)] : [],
         });
       }
     );
