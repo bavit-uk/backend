@@ -1,9 +1,9 @@
 import { ENUMS } from "@/constants/enum";
 import { REGEX } from "@/constants/regex";
-import { SignInPayload, SignUpPayload } from "@/contracts/auth.contract";
+import { SignInPayload, SignInWithQRPayload, SignUpPayload } from "@/contracts/auth.contract";
 import { IBodyRequest, ICombinedRequest, IUserRequest } from "@/contracts/request.contract";
 import { UserUpdatePayload } from "@/contracts/user.contract";
-import { getZodErrors } from "@/utils/get-zod-errors";
+import { getZodErrors } from "@/utils/get-zod-errors.util";
 import { NextFunction, Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { z, ZodSchema } from "zod";
@@ -17,13 +17,39 @@ export const authValidation = {
         })
         .regex(REGEX.EMAIL, { message: "Invalid email format" })
         .toLowerCase(),
-      password: z
-        .string({
-          message: "Password is required but it was not provided",
-        })
-        .regex(REGEX.PASSWORD, {
-          message: "Password must contain at least 8 characters, including uppercase, lowercase letters and numbers",
-        }),
+      password: z.string({
+        message: "Password is required but it was not provided",
+      }),
+    });
+
+    try {
+      const validatedData = schema.parse(req.body);
+
+      Object.assign(req.body, validatedData);
+
+      next();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
+
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+          issueMessage: message,
+          issues: issues,
+        });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
+    }
+  },
+
+  signInWithQrCode: async (req: IBodyRequest<SignInWithQRPayload>, res: Response, next: NextFunction) => {
+    const schema: ZodSchema<SignInWithQRPayload> = z.object({
+      loginQRCode: z.string({ message: "QR code is required but it was not provided" }),
     });
 
     try {
@@ -52,7 +78,6 @@ export const authValidation = {
   },
 
   signUp: async (req: IBodyRequest<SignUpPayload>, res: Response, next: NextFunction) => {
-    console.log(req.body);
     const schema: ZodSchema<SignUpPayload> = z.object({
       email: z
         .string({
@@ -171,8 +196,6 @@ export const authValidation = {
 
     try {
       const validatedData = schema.parse(req.body);
-
-      console.log(validatedData);
 
       Object.assign(req.body, validatedData);
 
