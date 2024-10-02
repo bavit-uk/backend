@@ -47,7 +47,6 @@ export const conversationService = {
           scannedBy: new Types.ObjectId(userId),
         });
         if (unscannedMessages.length > 0) {
-          console.log(unscannedMessages[0]);
           const lastUnscannedMessageCreatedAt = unscannedMessages[0].createdAt;
           lastMessageTime = new Date(lastUnscannedMessageCreatedAt).getTime();
         }
@@ -77,6 +76,7 @@ export const conversationService = {
 
     const unscannedMessages = await messageService.findUnscannedMessages({
       conversation: new Types.ObjectId(conversationId),
+      scannedBy: new Types.ObjectId(userId),
     });
 
     let lastMessageTime = Date.now();
@@ -145,5 +145,10 @@ export const conversationService = {
       { members: userId, _id: conversationId },
       { $pull: { blocked: userId } }
     ).exec();
+  },
+
+  getAllConversationIds: async (userId: string) => {
+    const conversations = await Conversation.find({ members: userId }).exec();
+    return conversations.map((conversation) => conversation.id);
   },
 };
