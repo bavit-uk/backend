@@ -1,6 +1,7 @@
 import { CreateMessagePayload, GetMessagePayload, UpdateMessagePayload } from "@/contracts/message.contract";
 import { Message } from "@/models";
-import { ClientSession } from "mongoose";
+import { ClientSession, Types } from "mongoose";
+import { conversationService } from "./conversation.service";
 
 export const messageService = {
   create: (
@@ -106,5 +107,168 @@ export const messageService = {
     scannedBy,
   }: Pick<UpdateMessagePayload, "conversation" | "id" | "scannedBy">) => {
     return Message.findOneAndUpdate({ conversation, _id: id, isQrCode: true }, { $addToSet: { scannedBy } });
+  },
+
+  getAllMashupsSentByUser: async (sender: string) => {
+    return Message.aggregate([
+      {
+        $match: {
+          sender: new Types.ObjectId(sender),
+          isQrCode: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "conversations",
+          localField: "conversation",
+          foreignField: "_id",
+          as: "conversation",
+        },
+      },
+      { $unwind: "$conversation" },
+      {
+        $lookup: {
+          from: "users",
+          let: { members: "$conversation.members", isGroup: "$conversation.isGroup" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $in: ["$_id", "$$members"] },
+                    {
+                      $cond: {
+                        if: { $eq: ["$$isGroup", false] },
+                        then: { $ne: ["$_id", new Types.ObjectId(sender)] },
+                        else: true,
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+          as: "members",
+        },
+      },
+      {
+        $unwind: "$members",
+      },
+      {
+        $group: {
+          _id: "$_id",
+          content: { $first: "$content" },
+          createdAt: { $first: "$createdAt" },
+          files: { $first: "$files" },
+          isQrCode: { $first: "$isQrCode" },
+          scannedBy: { $first: "$scannedBy" },
+          title: { $first: "$conversation.title" },
+          description: { $first: "$conversation.description" },
+          members: { $first: "$members" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          content: 1,
+          createdAt: 1,
+          files: 1,
+          isQrCode: 1,
+          title: 1,
+          description: 1,
+          receiver: {
+            $cond: {
+              if: { $eq: ["$members", null] },
+              then: "$title",
+              else: "$members.name",
+            },
+          },
+          id: "$_id",
+        },
+      },
+    ]).exec();
+  },
+
+  getAllMashupsReceivedByUser: async (receiver: string) => {
+    const allConversationIds = await conversationService.getAllConversationIds(receiver);
+
+    return Message.aggregate([
+      {
+        $match: {
+          conversation: { $in: allConversationIds.map((id) => new Types.ObjectId(id)) },
+          sender: { $ne: new Types.ObjectId(receiver) },
+          isQrCode: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "conversations",
+          localField: "conversation",
+          foreignField: "_id",
+          as: "conversation",
+        },
+      },
+      { $unwind: "$conversation" },
+      {
+        $lookup: {
+          from: "users",
+          let: { members: "$conversation.members", isGroup: "$conversation.isGroup" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $in: ["$_id", "$$members"] },
+                    {
+                      $cond: {
+                        if: { $eq: ["$$isGroup", false] },
+                        then: { $ne: ["$_id", new Types.ObjectId(receiver)] },
+                        else: true,
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+          as: "members",
+        },
+      },
+      {
+        $unwind: "$members",
+      },
+      {
+        $group: {
+          _id: "$_id",
+          content: { $first: "$content" },
+          createdAt: { $first: "$createdAt" },
+          files: { $first: "$files" },
+          isQrCode: { $first: "$isQrCode" },
+          scannedBy: { $first: "$scannedBy" },
+          title: { $first: "$conversation.title" },
+          description: { $first: "$conversation.description" },
+          members: { $first: "$members" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          content: 1,
+          createdAt: 1,
+          files: 1,
+          isQrCode: 1,
+          title: 1,
+          description: 1,
+          sender: {
+            $cond: {
+              if: { $eq: ["$members", null] },
+              then: "$title",
+              else: "$members.name",
+            },
+          },
+          id: "$_id",
+        },
+      },
+    ]).exec();
   },
 };
