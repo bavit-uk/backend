@@ -83,8 +83,7 @@ class SocketManager {
   private setupGroupChatHandlers(socket: SocketWithUser): void {
     socket.on("joinGroup", async (conversationId: string) => {
       if (!this.groupRooms.has(conversationId)) {
-        // this.groupRooms.set(groupId, new Set());
-        this.groupRooms.set(conversationId, new Set([socket.user.id]));
+        this.groupRooms.set(conversationId, new Set());
       }
       this.groupRooms.get(conversationId)!.add(socket.user.id);
       socket.join(conversationId);
@@ -92,24 +91,28 @@ class SocketManager {
     });
 
     socket.on("leaveGroup", async (conversationId: string) => {
+      console.log("Leave group", conversationId);
       const group = this.groupRooms.get(conversationId);
       if (group) {
+        console.log("Group before leave", group);
         group.delete(socket.user.id);
+        console.log("Group after leave", group);
         if (group.size === 0) {
+          console.log("Group size is 0, deleting group");
           this.groupRooms.delete(conversationId);
         }
       }
       socket.leave(conversationId);
       this.io!.to(conversationId).emit("userLeftGroup", { userId: socket.user.id, groupId: conversationId });
+      console.log("User left group", socket.user.id, conversationId);
+      console.log("Updated group rooms", this.groupRooms);
     });
   }
 
   private setupMessageHandler(socket: SocketWithUser): void {
     socket.on("message", async (conversationId: string, message: string, files?: any[], lockChat: boolean = false) => {
-      console.log("Message Data", JSON.stringify({ conversationId, message, files, lockChat }));
       const conversation = await conversationService.getConversation(socket.user.id, conversationId);
       if (!conversation) {
-        console.log("Conversation not found");
         return this.io!.to(socket.id).emit("error", "Conversation not found");
       }
 
@@ -168,21 +171,36 @@ class SocketManager {
           return this.io!.to(socket.id).emit("error", "Group not found");
         }
 
+        const conversation = await conversationService.getConversation(socket.user.id, conversationId);
+        if (!conversation) {
+          return this.io!.to(socket.id).emit("error", "Conversation not found");
+        }
+
         const group = this.groupRooms.get(conversationId);
         if (!group) {
           return this.io!.to(socket.id).emit("error", "Group not found");
         }
 
-        // const offlineUsers = conversation.members.filter((member) => !group.has(member.toString()));
-        // offlineUsers.forEach((userId) => {
-        //   //TODO Send push notification to offline users
-        // });
+        const offlineUsers = conversation.members.filter((member) => !group.has(member._id.toString()));
+        const onlineUsers = conversation.members.filter((member) => group.has(member._id.toString()));
+        offlineUsers.forEach((userId) => {
+          //TODO Send push notification to offline users
+        });
 
-        this.io!.to(conversationId).emit("groupMessage", {
-          senderId: socket.user.id,
-          message: message,
-          groupId: conversationId,
-          files,
+        onlineUsers.forEach((member) => {
+          // Don't send message to the sender
+          if (member._id.toString() === socket.user.id) {
+            return;
+          }
+          const userSocketId = this.getSocketId(member._id.toString());
+          if (userSocketId) {
+            this.io!.to(userSocketId).emit("groupMessage", {
+              senderId: socket.user.id,
+              message: message,
+              conversationId,
+              files,
+            });
+          }
         });
 
         console.log("Group message", message);
