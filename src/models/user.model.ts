@@ -4,6 +4,7 @@ import { compareSync, hashSync } from "bcrypt";
 import { IUser, IUserMethods, UserModel } from "@/contracts/user.contract";
 import { REGEX } from "@/constants/regex";
 import { ENUMS } from "@/constants/enum";
+import { encryptLoginQR, generateLoginQR } from "@/utils/generate-login-qr.util";
 
 const schema = new Schema<IUser, UserModel, IUserMethods>(
   {
@@ -63,7 +64,7 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     deviceUniqueId: String,
     allowResetPassword: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 schema.methods.hashPassword = function (password: string) {
@@ -74,10 +75,18 @@ schema.methods.comparePassword = function (password: string) {
   return compareSync(password, this.password);
 };
 
+schema.virtual("loginQRCodeData").get(function () {
+  if (!this.loginQRCode) {
+    return null;
+  }
+  return encryptLoginQR(this.loginQRCode);
+});
+
 schema.methods.toJSON = function () {
   const obj = this.toObject();
 
   obj.id = obj._id;
+
   delete obj.password;
 
   return obj;
