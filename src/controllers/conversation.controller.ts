@@ -52,7 +52,7 @@ export const conversationController = {
         members.map((member) => member.toString())
       );
 
-      if (alreadyExists) {
+      if (alreadyExists && isGroup === false) {
         return res.status(StatusCodes.CONFLICT).json({
           status: StatusCodes.CONFLICT,
           message: ReasonPhrases.CONFLICT,
