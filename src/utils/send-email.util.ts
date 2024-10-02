@@ -95,7 +95,6 @@ export const sendEmail = async (to: string | string[], subject: string, text: st
     };
 
     const message = await sgMail.send(messageObject);
-    console.log("message", message);
   } catch (err) {
     console.log(err);
   }

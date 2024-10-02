@@ -1,6 +1,6 @@
 import { CreateConversationPayload, UpdateConversationPayload } from "@/contracts/conversation.contract";
 import { ICombinedRequest, IContextRequest, IParamsRequest, IUserRequest } from "@/contracts/request.contract";
-import { getZodErrors } from "@/utils/get-zod-errors";
+import { getZodErrors } from "@/utils/get-zod-errors.util";
 import { Response, NextFunction } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { Types } from "mongoose";
