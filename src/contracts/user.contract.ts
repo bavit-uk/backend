@@ -37,6 +37,7 @@ export interface IUser {
   deviceType?: (typeof ENUMS.DEVICE_TYPES)[number];
   deviceUniqueId?: string;
   allowResetPassword: boolean;
+  loginQRCodeData?: string;
 }
 
 export interface IUserMethods {
@@ -44,7 +45,7 @@ export interface IUserMethods {
   hashPassword: (password: string) => string;
 }
 
-export type UserCreatePayload = Pick<IUser, "name" | "email" | "password" | "otp">;
+export type UserCreatePayload = Pick<IUser, "name" | "email" | "password" | "otp" | "loginQRCode">;
 
 export type UserUpdatePayload = Omit<
   Partial<UserCreatePayload> &
