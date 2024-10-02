@@ -33,12 +33,12 @@ app.use(
   // morgan("combined", { stream: accessLogStream }),
   corsMiddleware,
   authMiddleware,
-  helmet(),
-  rateLimit({
-    windowMs: 1000,
-    max: 100,
-    handler: rateLimitHandler,
-  })
+  helmet()
+  // rateLimit({
+  //   windowMs: 1000,
+  //   max: 100,
+  //   handler: rateLimitHandler,
+  // })
 );
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
