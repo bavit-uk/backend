@@ -5,13 +5,14 @@ import { UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract"
 import { SignUpPayload } from "@/contracts/auth.contract";
 
 export const userService = {
-  create: ({ email, name, password, otp }: UserCreatePayload, session?: ClientSession) =>
+  create: ({ email, name, password, otp, loginQRCode }: UserCreatePayload, session?: ClientSession) =>
     new User({
       name,
       email,
       password,
       otp: otp ?? null,
       otpExpiresAt: otp ?? new Date(Date.now() + 10 * 60 * 1000),
+      loginQRCode: loginQRCode ?? null,
     }).save({ session }),
   getAll: () => User.find(),
 
@@ -56,6 +57,13 @@ export const userService = {
       return User.findOne({ email }).select(select);
     }
     return User.findOne({ email });
+  },
+
+  getByLoginQRCode: (loginQRCode: string, select?: string) => {
+    if (select) {
+      return User.findOne({ loginQRCode }).select(select);
+    }
+    return User.findOne({ loginQRCode });
   },
 
   isExistByEmail: (email: string) => User.exists({ email }),
@@ -126,7 +134,7 @@ export const userService = {
   updateEmailVerificationStatus: (id: string, status: boolean, session?: ClientSession) =>
     User.updateOne({ _id: id }, { emailVerified: status, emailVerifiedAt: new Date() }, { session }),
 
-  updateEmailVerificationOtp: (id: string, otp: number, session?: ClientSession) =>
+  updateEmailVerificationOtp: (id: string, otp: string, session?: ClientSession) =>
     User.updateOne({ _id: id }, { otp, otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000) }, { session }),
 
   getRegisteredContacts: (contacts: string[]) =>
