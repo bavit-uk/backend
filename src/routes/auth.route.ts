@@ -6,6 +6,8 @@ import { Router } from "express";
 export const auth = (router: Router) => {
   router.post("/login", authValidation.signIn, authController.signIn);
 
+  router.post("/login-with-qr", authValidation.signInWithQrCode, authController.signInWithQrCode);
+
   router.post("/register", authValidation.signUp, authController.signUp);
 
   router.get("/refresh-token", authGuard.isAuth, authController.refreshToken);
