@@ -1,22 +1,18 @@
-import { user } from "./../routes/user.route";
-import { SignUpPayload } from "./../contracts/auth.contract";
-import { passwordResetService, userService } from "@/services";
-import { request, Response } from "express";
-import { IBodyRequest, ICombinedRequest, IContextRequest, IUserRequest } from "@/contracts/request.contract";
-import { SignInPayload } from "@/contracts/auth.contract";
-import { ReasonPhrases, StatusCodes } from "http-status-codes";
-import { jwtSign } from "@/utils/jwt.util";
-import { createHash } from "@/utils/hash.util";
-import { PasswordReset } from "@/models";
-import crypto from "crypto";
+import { SignInPayload, SignInWithQRPayload } from "@/contracts/auth.contract";
 import { PasswordResetPayload, PasswordUpdatePayload } from "@/contracts/password-reset.contract";
+import { IBodyRequest, ICombinedRequest, IContextRequest, IUserRequest } from "@/contracts/request.contract";
+import { passwordResetService, userService } from "@/services";
 import { comparePassword } from "@/utils/compare-password.util";
+import { createHash } from "@/utils/hash.util";
+import { jwtSign } from "@/utils/jwt.util";
+import { Response } from "express";
+import { ReasonPhrases, StatusCodes } from "http-status-codes";
+import { SignUpPayload } from "./../contracts/auth.contract";
 
-import formData from "form-data";
-import Mailgun from "mailgun.js";
-import { verify } from "jsonwebtoken";
-import { sendEmail } from "@/utils/send-email.util";
 import { UserUpdatePayload } from "@/contracts/user.contract";
+import { generateOTP } from "@/utils/generate-otp.util";
+import { sendEmail } from "@/utils/send-email.util";
+import { decryptLoginQR, generateLoginQR } from "@/utils/generate-login-qr.util";
 
 export const authController = {
   signIn: async (req: ICombinedRequest<unknown, SignInPayload, unknown, { dashboard?: boolean }>, res: Response) => {
@@ -60,7 +56,54 @@ export const authController = {
     }
   },
 
-  signUp: async ({ body: { email, password, name, role } }: IBodyRequest<SignUpPayload>, res: Response) => {
+  signInWithQrCode: async (
+    req: ICombinedRequest<unknown, SignInWithQRPayload, unknown, { dashboard?: boolean }>,
+    res: Response
+  ) => {
+    try {
+      const { loginQRCode } = req.body;
+      const { dashboard } = req.query;
+      let qrCode;
+      try {
+        qrCode = decryptLoginQR(loginQRCode!);
+      } catch (err) {
+        console.log(err);
+        return res.status(StatusCodes.UNAUTHORIZED).json({
+          message: ReasonPhrases.UNAUTHORIZED,
+          status: StatusCodes.UNAUTHORIZED,
+        });
+      }
+      const user = await userService.getByLoginQRCode(qrCode);
+      if (!user) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          message: ReasonPhrases.NOT_FOUND,
+          status: StatusCodes.NOT_FOUND,
+        });
+      }
+
+      if (dashboard && user.role !== "admin") {
+        return res.status(StatusCodes.PRECONDITION_FAILED).json({
+          message: ReasonPhrases.PRECONDITION_FAILED,
+          status: StatusCodes.PRECONDITION_FAILED,
+        });
+      }
+
+      const { accessToken, refreshToken } = jwtSign(user.id);
+      return res.status(StatusCodes.OK).json({
+        data: { accessToken, refreshToken, user: user.toJSON() },
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+      });
+    } catch (err) {
+      console.log(err);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
+
+  signUp: async ({ body: { email, password, name } }: IBodyRequest<SignUpPayload>, res: Response) => {
     try {
       const exists = await userService.getByEmail(email);
       if (exists) {
@@ -72,9 +115,11 @@ export const authController = {
 
       const hash = await createHash(password);
 
-      const otp = Math.floor(10000 + Math.random() * 90000).toString();
+      const otp = generateOTP(5);
 
-      await userService.create({ email, password: hash, name, otp });
+      const { qrId } = generateLoginQR();
+
+      await userService.create({ email, password: hash, name, otp, loginQRCode: qrId });
 
       // TODO: Send email verification code with otp and time to expire
 
@@ -160,7 +205,7 @@ export const authController = {
       await passwordResetService.updateAllUnusedPasswordResetsToUsed(email);
 
       // Genearte 5 digit OTP
-      const token = Math.floor(10000 + Math.random() * 90000).toString();
+      const token = generateOTP(5);
 
       // Expire time for password reset token (1 hour)
       const EXPIRY_TIME = 1000 * 60 * 60;
@@ -350,7 +395,7 @@ export const authController = {
         });
       }
 
-      const otp = Math.floor(10000 + Math.random() * 90000);
+      const otp = generateOTP(5);
 
       await userService.updateEmailVerificationOtp(user.id, otp);
 
