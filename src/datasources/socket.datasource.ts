@@ -41,7 +41,6 @@ class SocketManager {
   private initializeServer(server: HttpServer): void {
     this.io = new Server(server, {
       cors: { origin: "*" },
-
     });
   }
 
