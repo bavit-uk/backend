@@ -22,6 +22,14 @@ export const encryptLoginQR = (qrId: string) => {
 };
 
 export const decryptLoginQR = (encrypted: string) => {
+  if (!encrypted || encrypted === "" || encrypted === null) {
+    throw new Error("Invalid encrypted data");
+  }
+
+  if (!encrypted.includes(":")) {
+    throw new Error("Invalid encrypted data");
+  }
+
   const algorithm = "aes-256-cbc";
   const key = process.env.ENCRYPTION_KEY || "";
   const [iv, encryptedData] = encrypted.split(":");

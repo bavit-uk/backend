@@ -9,7 +9,7 @@ import { Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { SignUpPayload } from "./../contracts/auth.contract";
 
-import { UserUpdatePayload } from "@/contracts/user.contract";
+import { IUser, UserUpdatePayload } from "@/contracts/user.contract";
 import { generateOTP } from "@/utils/generate-otp.util";
 import { sendEmail } from "@/utils/send-email.util";
 import { decryptLoginQR, generateLoginQR } from "@/utils/generate-login-qr.util";
@@ -468,6 +468,28 @@ export const authController = {
       }
 
       await userService.updateEmailVerificationStatus(foundUser.id, true);
+
+      return res.status(StatusCodes.OK).json({
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+      });
+    } catch (err) {
+      console.log(err);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
+
+  modifyLoginStatus: async (req: ICombinedRequest<IUserRequest, Pick<IUser, "loginWithQRCode">>, res: Response) => {
+    try {
+      const { loginWithQRCode } = req.body;
+      const { user } = req.context;
+
+      console.log("loginWithQRCode", loginWithQRCode);
+
+      await userService.updateLoginWithQRCode(user.id, loginWithQRCode);
 
       return res.status(StatusCodes.OK).json({
         message: ReasonPhrases.OK,

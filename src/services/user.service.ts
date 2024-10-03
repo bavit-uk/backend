@@ -145,4 +145,7 @@ export const userService = {
         $in: contacts,
       },
     }).select("mobileNumber"),
+
+  updateLoginWithQRCode: (userId: string, loginWithQRCode: boolean, session?: ClientSession) =>
+    User.updateOne({ _id: userId }, { loginWithQRCode }, { session }),
 };
