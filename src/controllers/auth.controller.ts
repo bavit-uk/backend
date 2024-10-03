@@ -64,6 +64,7 @@ export const authController = {
       const { loginQRCode } = req.body;
       const { dashboard } = req.query;
       let qrCode;
+
       try {
         qrCode = decryptLoginQR(loginQRCode!);
       } catch (err) {
@@ -78,6 +79,13 @@ export const authController = {
         return res.status(StatusCodes.NOT_FOUND).json({
           message: ReasonPhrases.NOT_FOUND,
           status: StatusCodes.NOT_FOUND,
+        });
+      }
+
+      if (!user.loginWithQRCode) {
+        return res.status(StatusCodes.UNAUTHORIZED).json({
+          message: ReasonPhrases.UNAUTHORIZED,
+          status: StatusCodes.UNAUTHORIZED,
         });
       }
 
