@@ -151,4 +151,45 @@ export const conversationService = {
     const conversations = await Conversation.find({ members: userId }).exec();
     return conversations.map((conversation) => conversation.id);
   },
+
+  getBlockedUsers: async (userId: string) => {
+    return Conversation.aggregate([
+      {
+        $match: {
+          members: { $in: [new Types.ObjectId(userId)] },
+          blocked: { $in: [new Types.ObjectId(userId)] },
+          isGroup: false,
+        },
+      },
+      //  Get the first member that is not the user
+      {
+        $project: {
+          members: {
+            $filter: {
+              input: "$members",
+              as: "member",
+              cond: { $ne: ["$$member", new Types.ObjectId(userId)] },
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "members",
+          foreignField: "_id",
+          as: "user",
+          pipeline: [{ $project: { name: 1, email: 1, mobileNumber: 1, countryCode: 1, countryCodeName: 1 } }],
+        },
+      },
+      { $unwind: "$user" },
+      {
+        $project: {
+          user: 1,
+          _id: 0,
+          conversationId: "$_id",
+        },
+      },
+    ]).exec();
+  },
 };

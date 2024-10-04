@@ -371,4 +371,21 @@ export const conversationController = {
       });
     }
   },
+
+  getBlockedUsers: async ({ context: { user } }: IContextRequest<IUserRequest>, res: Response) => {
+    try {
+      const blockedUsers = await conversationService.getBlockedUsers(user.id);
+
+      return res.status(StatusCodes.OK).json({
+        status: StatusCodes.OK,
+        message: ReasonPhrases.OK,
+        data: blockedUsers,
+      });
+    } catch (error) {
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
 };
