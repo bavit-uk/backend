@@ -259,6 +259,14 @@ export const conversationController = {
         });
       }
 
+      if (conversation.isGroup) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          status: StatusCodes.BAD_REQUEST,
+          message: ReasonPhrases.BAD_REQUEST,
+          reason: "IS_GROUP_CONVERSATION",
+        });
+      }
+
       const blockedConversation = await conversationService.blockConversation(user.id, conversationId);
 
       return res.status(StatusCodes.OK).json({
@@ -288,6 +296,14 @@ export const conversationController = {
         return res.status(StatusCodes.NOT_FOUND).json({
           status: StatusCodes.NOT_FOUND,
           message: ReasonPhrases.NOT_FOUND,
+        });
+      }
+
+      if (conversation.isGroup) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          status: StatusCodes.BAD_REQUEST,
+          message: ReasonPhrases.BAD_REQUEST,
+          reason: "IS_GROUP_CONVERSATION",
         });
       }
 
