@@ -129,17 +129,22 @@ export const messageService = {
       {
         $lookup: {
           from: "users",
-          let: { members: "$conversation.members", isGroup: "$conversation.isGroup" },
+          let: {
+            members: "$conversation.members",
+            isGroup: "$conversation.isGroup",
+            sender: new Types.ObjectId(sender),
+          },
           pipeline: [
             {
               $match: {
                 $expr: {
                   $and: [
                     { $in: ["$_id", "$$members"] },
+                    { $ne: ["$_id", "$$sender"] },
                     {
                       $cond: {
                         if: { $eq: ["$$isGroup", false] },
-                        then: { $ne: ["$_id", new Types.ObjectId(sender)] },
+                        then: { $ne: ["$_id", "$$sender"] },
                         else: true,
                       },
                     },
@@ -148,11 +153,14 @@ export const messageService = {
               },
             },
           ],
-          as: "members",
+          as: "receiverInfo",
         },
       },
       {
-        $unwind: "$members",
+        $unwind: {
+          path: "$receiverInfo",
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $group: {
@@ -164,7 +172,7 @@ export const messageService = {
           scannedBy: { $first: "$scannedBy" },
           title: { $first: "$conversation.title" },
           description: { $first: "$conversation.description" },
-          members: { $first: "$members" },
+          receiverInfo: { $first: "$receiverInfo" },
         },
       },
       {
@@ -178,9 +186,9 @@ export const messageService = {
           description: 1,
           receiver: {
             $cond: {
-              if: { $eq: ["$members", null] },
+              if: { $eq: ["$receiverInfo", null] },
               then: "$title",
-              else: "$members.name",
+              else: "$receiverInfo.name",
             },
           },
           id: "$_id",
@@ -212,13 +220,19 @@ export const messageService = {
       {
         $lookup: {
           from: "users",
-          let: { members: "$conversation.members", isGroup: "$conversation.isGroup" },
+          let: {
+            members: "$conversation.members",
+            isGroup: "$conversation.isGroup",
+            sender: "$sender",
+          },
           pipeline: [
             {
               $match: {
                 $expr: {
                   $and: [
                     { $in: ["$_id", "$$members"] },
+                    { $ne: ["$_id", new Types.ObjectId(receiver)] },
+                    { $eq: ["$_id", "$$sender"] },
                     {
                       $cond: {
                         if: { $eq: ["$$isGroup", false] },
@@ -231,11 +245,14 @@ export const messageService = {
               },
             },
           ],
-          as: "members",
+          as: "senderInfo",
         },
       },
       {
-        $unwind: "$members",
+        $unwind: {
+          path: "$senderInfo",
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $group: {
@@ -247,7 +264,7 @@ export const messageService = {
           scannedBy: { $first: "$scannedBy" },
           title: { $first: "$conversation.title" },
           description: { $first: "$conversation.description" },
-          members: { $first: "$members" },
+          senderInfo: { $first: "$senderInfo" },
         },
       },
       {
@@ -261,9 +278,9 @@ export const messageService = {
           description: 1,
           sender: {
             $cond: {
-              if: { $eq: ["$members", null] },
+              if: { $eq: ["$senderInfo", null] },
               then: "$title",
-              else: "$members.name",
+              else: "$senderInfo.name",
             },
           },
           id: "$_id",
