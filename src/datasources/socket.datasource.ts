@@ -1,6 +1,7 @@
-import { conversationService, messageService } from "@/services";
+import { conversationService, messageService, userService } from "@/services";
 import { getAccessTokenFromHeaders } from "@/utils/headers.util";
 import { jwtVerify } from "@/utils/jwt.util";
+import { sendFCM } from "@/utils/send-fcm.util";
 import { Server as HttpServer } from "http";
 import mongoose from "mongoose";
 import { Server, Socket } from "socket.io";
@@ -110,59 +111,71 @@ class SocketManager {
   }
 
   private setupMessageHandler(socket: SocketWithUser): void {
-    socket.on("message", async (conversationId: string, message: string, files?: any[], lockChat: boolean = false) => {
-      const conversation = await conversationService.getConversation(socket.user.id, conversationId);
-      if (!conversation) {
-        return this.io!.to(socket.id).emit("error", "Conversation not found");
-      }
+    socket.on(
+      "message",
+      async (conversationId: string, message: string, files?: string[], lockChat: boolean = false) => {
+        const conversation = await conversationService.getConversation(socket.user.id, conversationId);
+        if (!conversation) {
+          return this.io!.to(socket.id).emit("error", "Conversation not found");
+        }
 
-      if (conversation.isGroup) {
-        // Throw error to say that you should use group chat API
-        return this.io!.to(socket.id).emit("error", "Use group chat API to send message to group");
-      }
+        if (conversation.isGroup) {
+          // Throw error to say that you should use group chat API
+          return this.io!.to(socket.id).emit("error", "Use group chat API to send message to group");
+        }
 
-      // Find receiver id
-      const receiverId = conversation.members.find((member) => member._id.toString() !== socket.user.id);
+        // Find receiver id
+        const receiverId = conversation.members.find((member) => member._id.toString() !== socket.user.id);
 
-      if (!receiverId?._id) {
-        console.log("Receiver not found");
-        return this.io!.to(socket.id).emit("error", "Receiver not found");
-      }
-      console.log("Receiver id", receiverId);
+        if (!receiverId?._id) {
+          console.log("Receiver not found");
+          return this.io!.to(socket.id).emit("error", "Receiver not found");
+        }
+        console.log("Receiver id", receiverId);
 
-      const receiverSocketId = this.getSocketId(receiverId._id.toString());
-      if (!receiverSocketId) {
-        // TODO: Save message to database
-        // TODO: Send push notification to receiver
-        console.log("Receiver is not connected to the server");
-        // return this.io!.to(socket.id).emit("error", "Receiver is not connected to the server");
-      } else {
-        this.io!.to(receiverSocketId).emit("message", {
-          senderId: socket.user.id,
-          message: message,
-          conversationId,
+        const receiverSocketId = this.getSocketId(receiverId._id.toString());
+        if (!receiverSocketId) {
+          // TODO: Save message to database
+          // TODO: Send push notification to receiver
+          console.log("Receiver is not connected to the server");
+          // return this.io!.to(socket.id).emit("error", "Receiver is not connected to the server");
+        } else {
+          this.io!.to(receiverSocketId).emit("message", {
+            senderId: socket.user.id,
+            message: message,
+            conversationId,
+            files,
+          });
+
+          if (lockChat) {
+            this.io!.to(receiverSocketId).emit("lockChat");
+          }
+        }
+
+        await messageService.create({
+          content: message,
+          sender: new mongoose.Types.ObjectId(socket.user.id),
+          conversation: new mongoose.Types.ObjectId(conversationId),
           files,
+          isQrCode: lockChat,
+          scannedBy: lockChat ? [new mongoose.Types.ObjectId(socket.user.id)] : [],
         });
 
-        if (lockChat) {
-          this.io!.to(receiverSocketId).emit("lockChat");
+        const token = await userService.getFCMToken(receiverId._id.toString());
+
+        if (token) {
+          const receiver = await userService.getById(receiverId._id.toString());
+          await sendFCM({
+            notification: {
+              title: "New message from" + receiver?.name,
+              body: message,
+              imageUrl: files?.length ? files[0] : "",
+            },
+            token,
+          });
         }
       }
-
-      await messageService.create({
-        content: message,
-        sender: new mongoose.Types.ObjectId(socket.user.id),
-        conversation: new mongoose.Types.ObjectId(conversationId),
-        files,
-        isQrCode: lockChat,
-        scannedBy: lockChat ? [new mongoose.Types.ObjectId(socket.user.id)] : [],
-      });
-
-      // if (lockChat) {
-      //   // await conversationService.lockConversation(socket.user.id, conversationId);
-
-      // }
-    });
+    );
 
     socket.on(
       "groupMessage",
