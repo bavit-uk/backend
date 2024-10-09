@@ -471,4 +471,42 @@ export const authValidation = {
       }
     }
   },
+
+  updateFcmToken: async (
+    req: ICombinedRequest<IUserRequest, Pick<IUser, "fcmToken">>,
+    res: Response,
+    next: NextFunction
+  ) => {
+    const schema: ZodSchema<Pick<IUser, "fcmToken">> = z.object({
+      fcmToken: z
+        .string({
+          message: "FCM token is required but it was not provided",
+        })
+        .min(1, { message: "FCM token is required but it was not provided" }),
+    });
+
+    try {
+      const validatedData = schema.parse(req.body);
+
+      Object.assign(req.body, validatedData);
+
+      next();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
+
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+          issueMessage: message,
+          issues: issues,
+        });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
+    }
+  },
 };

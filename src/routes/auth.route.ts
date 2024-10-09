@@ -22,6 +22,8 @@ export const auth = (router: Router) => {
 
   router.patch("/update-profile", authGuard.isAuth, authValidation.updateProfile, authController.updateProfile);
 
+  router.patch('/update-fcm-token', authGuard.isAuth, authValidation.updateFcmToken, authController.updateFcmToken);
+
   router.patch(
     "/modify-login-status",
     authGuard.isAuth,

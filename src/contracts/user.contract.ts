@@ -36,6 +36,7 @@ export interface IUser {
   planExpiredAt?: Date;
   deviceType?: (typeof ENUMS.DEVICE_TYPES)[number];
   deviceUniqueId?: string;
+  fcmToken?: string;
   allowResetPassword: boolean;
   loginQRCodeData?: string;
 }

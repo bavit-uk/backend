@@ -62,6 +62,7 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     passwordResetAt: { type: Date, select: false },
     deviceType: { type: String, enum: ENUMS.DEVICE_TYPES },
     deviceUniqueId: String,
+    fcmToken: String,
     allowResetPassword: { type: Boolean, default: false },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
@@ -91,7 +92,5 @@ schema.methods.toJSON = function () {
 
   return obj;
 };
-
-
 
 export const User = model<IUser, UserModel>("User", schema);

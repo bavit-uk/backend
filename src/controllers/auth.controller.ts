@@ -503,4 +503,24 @@ export const authController = {
       });
     }
   },
+
+  updateFcmToken: async (req: ICombinedRequest<IUserRequest, Pick<IUser, "fcmToken">>, res: Response) => {
+    try {
+      const { fcmToken } = req.body;
+      const { user } = req.context;
+
+      await userService.updateFCMToken(user.id, fcmToken!);
+
+      return res.status(StatusCodes.OK).json({
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+      });
+    } catch (err) {
+      console.log(err);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
 };
