@@ -6,6 +6,7 @@ import { conversationService, messageService } from "@/services";
 import { Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { Types } from "mongoose";
+import { socketManager } from "@/datasources/socket.datasource";
 
 export const conversationController = {
   getConversations: async ({ context: { user } }: IContextRequest<IUserRequest>, res: Response) => {
@@ -68,6 +69,20 @@ export const conversationController = {
         title,
         userId: user.id,
       });
+
+      const io = socketManager.getIo();
+
+      if (io) {
+        const allMembers = [...new Set([...members, user.id])];
+
+        allMembers.forEach((member) => {
+          const socketId = socketManager.getSocketId(member);
+          if (socketId) {
+            io.to(socketId).emit("create-conversation", conversation);
+          }
+        });
+      }
+
       return res.status(StatusCodes.CREATED).json({
         status: StatusCodes.CREATED,
         message: ReasonPhrases.CREATED,
