@@ -1,7 +1,6 @@
 import { IUser } from "@/contracts/user.contract";
 import { CreateConversationPayload, UpdateConversationPayload } from "@/contracts/conversation.contract";
 import { ICombinedRequest, IContextRequest, IParamsRequest, IUserRequest } from "@/contracts/request.contract";
-import { Conversation } from "@/models/conversation.model";
 import { conversationService, messageService } from "@/services";
 import { Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
@@ -54,6 +53,25 @@ export const conversationController = {
       );
 
       if (alreadyExists && isGroup === false) {
+        const io = socketManager.getIo();
+
+        if (io) {
+          console.log("IO Exists");
+          const createdConversation = await conversationService.getConversation(user.id, alreadyExists.id);
+
+          const allMembers = createdConversation!.members;
+
+          allMembers.forEach((member) => {
+            const socketId = socketManager.getSocketId(member._id.toString());
+            if (socketId) {
+              console.log("Sending create-conversation event to", member.toString());
+              io.to(socketId).emit("create-conversation", createdConversation);
+            }
+          });
+        } else {
+          console.log("IO does not exist");
+        }
+
         return res.status(StatusCodes.CONFLICT).json({
           status: StatusCodes.CONFLICT,
           message: ReasonPhrases.CONFLICT,
@@ -73,12 +91,14 @@ export const conversationController = {
       const io = socketManager.getIo();
 
       if (io) {
+        const createdConversation = await conversationService.getConversation(user.id, conversation.id);
+
         const allMembers = [...new Set([...members, user.id])];
 
         allMembers.forEach((member) => {
           const socketId = socketManager.getSocketId(member);
           if (socketId) {
-            io.to(socketId).emit("create-conversation", conversation);
+            io.to(socketId).emit("create-conversation", createdConversation);
           }
         });
       }
@@ -179,6 +199,19 @@ export const conversationController = {
       }
 
       const updatedConversation = await conversationService.readConversation(user.id, conversationId);
+
+      const io = socketManager.getIo();
+
+      if (io) {
+        const allMembers = [...new Set([...conversation.members, user.id])];
+
+        allMembers.forEach((member) => {
+          const socketId = socketManager.getSocketId(member);
+          if (socketId) {
+            io.to(socketId).emit("read-conversation", conversation._id);
+          }
+        });
+      }
 
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
@@ -284,6 +317,23 @@ export const conversationController = {
 
       const blockedConversation = await conversationService.blockConversation(user.id, conversationId);
 
+      const io = socketManager.getIo();
+      if (io) {
+        const allMembers = conversation.members;
+
+        allMembers.forEach((member) => {
+          const socketId = socketManager.getSocketId(member.id.toString());
+          if (socketId) {
+            io.to(socketId).emit("block-conversation", {
+              conversationId: conversation._id,
+              blockedBy: user.id,
+            });
+          }
+        });
+      } else {
+        console.log("IO does not exist");
+      }
+
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
         message: ReasonPhrases.OK,
@@ -323,6 +373,21 @@ export const conversationController = {
       }
 
       const unblockedConversation = await conversationService.unblockConversation(user.id, conversationId);
+
+      const io = socketManager.getIo();
+      if (io) {
+        const allMembers = conversation.members;
+
+        allMembers.forEach((member) => {
+          const socketId = socketManager.getSocketId(member.id.toString());
+          if (socketId) {
+            io.to(socketId).emit("unblock-conversation", {
+              conversationId: conversation._id,
+              unblockedBy: user.id,
+            });
+          }
+        });
+      }
 
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
@@ -374,6 +439,14 @@ export const conversationController = {
         conversation: new Types.ObjectId(conversationId),
         scannedBy: new Types.ObjectId(user.id),
       });
+
+      const io = socketManager.getIo();
+      if (io) {
+        const receiverId = socketManager.getSocketId(user.id);
+        if (receiverId) {
+          io.to(receiverId).emit("unlock-conversation", conversation._id);
+        }
+      }
 
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
