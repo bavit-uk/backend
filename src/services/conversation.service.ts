@@ -26,6 +26,7 @@ export const conversationService = {
       description,
       image,
       isGroup: uniqueMembers.length > 2 ? true : isGroup,
+      admin: isGroup ? [userId] : [],
     }).save({ session });
   },
 
@@ -69,7 +70,15 @@ export const conversationService = {
         };
       })
     );
-    return conversationsWithLastMessage;
+
+    // Sort conversations based on the lastMessage createdAt timestamp
+    const sortedConversations = conversationsWithLastMessage.sort((a, b) => {
+      const aTime = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
+      const bTime = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0;
+      return bTime - aTime; // Sort in descending order (most recent first)
+    });
+
+    return sortedConversations;
   },
   getConversation: async (userId: string, conversationId: string) => {
     const conversation = Conversation.findOne({ members: userId, _id: conversationId }).populate("members").exec();
