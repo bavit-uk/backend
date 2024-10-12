@@ -3,7 +3,7 @@ import { getAccessTokenFromHeaders } from "@/utils/headers.util";
 import { jwtVerify } from "@/utils/jwt.util";
 import { sendFCM } from "@/utils/send-fcm.util";
 import { Server as HttpServer } from "http";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { Server, Socket } from "socket.io";
 
 interface User {
@@ -131,23 +131,37 @@ class SocketManager {
       }
       console.log("Receiver id", receiverId);
 
-      const receiverSocketId = this.getSocketId(receiverId._id.toString());
-      if (!receiverSocketId) {
-        // TODO: Save message to database
-        // TODO: Send push notification to receiver
-        console.log("Receiver is not connected to the server");
-        // return this.io!.to(socket.id).emit("error", "Receiver is not connected to the server");
-      } else {
-        this.io!.to(receiverSocketId).emit("message", {
-          senderId: socket.user.id,
-          message: message,
-          conversationId,
-          files,
-          isQrCode: lockChat,
-        });
+      const lastMashupMessage = await messageService.findLastMashupMessage({
+        conversation: new Types.ObjectId(conversationId),
+      });
 
-        if (lockChat) {
-          this.io!.to(receiverSocketId).emit("lock-conversation", conversationId);
+      let membersScanned = lastMashupMessage?.scannedBy || [];
+
+      console.log("Members scanned", membersScanned);
+
+      membersScanned = Array.isArray(membersScanned) ? membersScanned : [membersScanned];
+
+      const exists = membersScanned.includes(new mongoose.Types.ObjectId(receiverId._id.toString()));
+
+      if (!lastMashupMessage || exists) {
+        const receiverSocketId = this.getSocketId(receiverId._id.toString());
+        if (!receiverSocketId) {
+          // TODO: Save message to database
+          // TODO: Send push notification to receiver
+          console.log("Receiver is not connected to the server");
+          // return this.io!.to(socket.id).emit("error", "Receiver is not connected to the server");
+        } else {
+          this.io!.to(receiverSocketId).emit("message", {
+            senderId: socket.user.id,
+            message: message,
+            conversationId,
+            files,
+            isQrCode: lockChat,
+          });
+
+          if (lockChat) {
+            this.io!.to(receiverSocketId).emit("lock-conversation", conversationId);
+          }
         }
       }
 
@@ -160,32 +174,34 @@ class SocketManager {
         scannedBy: lockChat ? [new mongoose.Types.ObjectId(socket.user.id)] : [],
       });
 
-      const token = await userService.getFCMToken(receiverId._id.toString());
+      if (!lastMashupMessage || exists) {
+        const token = await userService.getFCMToken(receiverId._id.toString());
 
-      if (token) {
-        const receiver = await userService.getById(receiverId._id.toString());
-        const sender = await userService.getById(socket.user.id);
-        const notification: {
-          title: string;
-          body: string;
-          imageUrl?: string;
-        } = {
-          title: "New message from " + sender?.name,
-          body: message || "Attachment",
-          imageUrl: files?.[0]?.url,
-        };
+        if (token) {
+          const receiver = await userService.getById(receiverId._id.toString());
+          const sender = await userService.getById(socket.user.id);
+          const notification: {
+            title: string;
+            body: string;
+            imageUrl?: string;
+          } = {
+            title: "New message from " + sender?.name,
+            body: lockChat ? "Locked message" : message || "Attachment",
+            imageUrl: files?.[0]?.url,
+          };
 
-        console.log("Notification", notification);
+          console.log("Notification", notification);
 
-        if (notification.imageUrl === undefined) delete notification.imageUrl;
+          if (notification.imageUrl === undefined) delete notification.imageUrl;
 
-        await sendFCM({
-          notification,
-          data: {
-            conversationId,
-          },
-          token,
-        });
+          await sendFCM({
+            notification,
+            data: {
+              conversationId,
+            },
+            token,
+          });
+        }
       }
     });
 
@@ -201,13 +217,23 @@ class SocketManager {
           return this.io!.to(socket.id).emit("error", "Conversation not found");
         }
 
-        const group = this.groupRooms.get(conversationId);
-        if (!group) {
-          return this.io!.to(socket.id).emit("error", "Group not found");
-        }
+        let onlineUsers = conversation.members.filter((member) => this.getSocketId(member._id.toString()));
+        const offlineUsers = conversation.members.filter((member) => !this.getSocketId(member._id.toString()));
 
-        const offlineUsers = conversation.members.filter((member) => !group.has(member._id.toString()));
-        const onlineUsers = conversation.members.filter((member) => group.has(member._id.toString()));
+        console.log("Online users", onlineUsers);
+
+        const lastMashupMessage = await messageService.findLastMashupMessage({
+          conversation: new Types.ObjectId(conversationId),
+        });
+
+        let membersScanned = lastMashupMessage?.scannedBy || [];
+
+        console.log("Members scanned", membersScanned);
+
+        membersScanned = Array.isArray(membersScanned) ? membersScanned : [membersScanned];
+
+        onlineUsers = onlineUsers.filter((member) => membersScanned.includes(member._id));
+
         offlineUsers.forEach((userId) => {
           //TODO Send push notification to offline users
         });
@@ -229,7 +255,16 @@ class SocketManager {
           }
         });
 
-        console.log("Group message", message);
+        if (lockChat) {
+          const members = conversation.members.map((member) => member._id.toString());
+          const membersExceptSender = members.filter((member) => member !== socket.user.id);
+          membersExceptSender.forEach(async (member) => {
+            const receiverSocketId = this.getSocketId(member);
+            if (receiverSocketId) {
+              this.io!.to(receiverSocketId).emit("lock-conversation", conversationId);
+            }
+          });
+        }
 
         // Save the group message to the database
         await messageService.create({
@@ -258,99 +293,6 @@ class SocketManager {
         }
       });
       console.log("A user disconnected");
-    });
-  }
-
-  private setupChatStatusHandler(socket: SocketWithUser): void {
-    // Set socket listeners for lock, unlock, block, unblock
-    socket.on("lockChat", async (conversationId: string) => {
-      const conversation = await conversationService.getConversation(socket.user.id, conversationId);
-      if (!conversation) {
-        return this.io!.to(socket.id).emit("error", "Conversation not found");
-      }
-
-      const receivers = conversation.members.filter((member) => member._id.toString() !== socket.user.id);
-
-      receivers.forEach(async (receiverId) => {
-        const receiverSocketId = this.getSocketId(receiverId._id.toString());
-        if (!receiverSocketId) {
-          return;
-        }
-        this.io!.to(receiverSocketId).emit("lockChat");
-      });
-
-      this.io!.to(socket.id).emit("lockedChat");
-    });
-
-    socket.on("unlockChat", async (conversationId: string) => {
-      const conversation = await conversationService.getConversation(socket.user.id, conversationId);
-      if (!conversation) {
-        return this.io!.to(socket.id).emit("error", "Conversation not found");
-      }
-
-      const receivers = conversation.members.filter((member) => member._id.toString() !== socket.user.id);
-
-      receivers.forEach(async (receiverId) => {
-        const receiverSocketId = this.getSocketId(receiverId._id.toString());
-        if (!receiverSocketId) {
-          return;
-        }
-        this.io!.to(receiverSocketId).emit("unlockChat");
-      });
-
-      this.io!.to(socket.id).emit("unlockedChat");
-    });
-
-    socket.on("blockUser", async (conversationId: string) => {
-      const conversation = await conversationService.getConversation(socket.user.id, conversationId);
-      if (!conversation) {
-        return this.io!.to(socket.id).emit("error", "Conversation not found");
-      }
-
-      if (conversation.isGroup) {
-        return this.io!.to(socket.id).emit("error", "Cannot block user in group chat");
-      }
-
-      const receiverId = conversation.members.find((member) => member._id.toString() !== socket.user.id);
-
-      if (!receiverId?._id) {
-        return this.io!.to(socket.id).emit("error", "Receiver not found");
-      }
-
-      const receiverSocketId = this.getSocketId(receiverId._id.toString());
-
-      if (receiverSocketId) {
-        this.io!.to(receiverSocketId).emit("blockUser");
-        this.io!.to(socket.id).emit("blockedUser");
-      }
-
-      await conversationService.blockConversation(socket.user.id, conversationId);
-    });
-
-    socket.on("unblockUser", async (conversationId: string) => {
-      const conversation = await conversationService.getConversation(socket.user.id, conversationId);
-      if (!conversation) {
-        return this.io!.to(socket.id).emit("error", "Conversation not found");
-      }
-
-      if (conversation.isGroup) {
-        return this.io!.to(socket.id).emit("error", "Cannot unblock user in group chat");
-      }
-
-      const receiverId = conversation.members.find((member) => member._id.toString() !== socket.user.id);
-
-      if (!receiverId?._id) {
-        return this.io!.to(socket.id).emit("error", "Receiver not found");
-      }
-
-      const receiverSocketId = this.getSocketId(receiverId._id.toString());
-
-      if (receiverSocketId) {
-        this.io!.to(receiverSocketId).emit("unblockUser");
-        this.io!.to(socket.id).emit("unblockedUser");
-      }
-
-      await conversationService.unblockConversation(socket.user.id, conversationId);
     });
   }
 
