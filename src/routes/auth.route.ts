@@ -31,6 +31,13 @@ export const auth = (router: Router) => {
     authController.modifyLoginStatus
   );
 
+  router.patch(
+    '/modify-notification-status',
+    authGuard.isAuth,
+    authValidation.modifyNotificationStatus,
+    authController.modifyNotificationStatus
+  );
+
   router.patch("/update-password", authGuard.isAuth, authValidation.updatePassword, authController.updatePassword);
 
   router.post(

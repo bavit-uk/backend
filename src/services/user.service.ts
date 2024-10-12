@@ -149,6 +149,9 @@ export const userService = {
   updateLoginWithQRCode: (userId: string, loginWithQRCode: boolean, session?: ClientSession) =>
     User.updateOne({ _id: userId }, { loginWithQRCode }, { session }),
 
+  updateNotificationStatus: (userId: string, notificationStatus: string, session?: ClientSession) =>
+    User.updateOne({ _id: userId }, { notificationStatus }, { session }),
+
   updateFCMToken: (userId: string, fcmToken: string, session?: ClientSession) =>
     User.updateOne({ _id: userId }, { fcmToken }, { session }),
 

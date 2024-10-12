@@ -504,6 +504,29 @@ export const authController = {
     }
   },
 
+  modifyNotificationStatus: async (
+    req: ICombinedRequest<IUserRequest, Pick<IUser, "notificationStatus">>,
+    res: Response
+  ) => {
+    try {
+      const { notificationStatus } = req.body;
+      const { user } = req.context;
+
+      await userService.updateNotificationStatus(user.id, notificationStatus);
+
+      return res.status(StatusCodes.OK).json({
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+      });
+    } catch (err) {
+      console.log(err);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
+
   updateFcmToken: async (req: ICombinedRequest<IUserRequest, Pick<IUser, "fcmToken">>, res: Response) => {
     try {
       const { fcmToken } = req.body;
