@@ -440,11 +440,25 @@ export const conversationController = {
         scannedBy: new Types.ObjectId(user.id),
       });
 
-      const io = socketManager.getIo();
-      if (io) {
-        const receiverId = socketManager.getSocketId(user.id);
-        if (receiverId) {
-          io.to(receiverId).emit("unlock-conversation", conversation._id);
+      const lastMashupMessage = await messageService.findLastMashupMessage({
+        conversation: new Types.ObjectId(conversationId),
+      });
+
+      const scannedByUsers = lastMashupMessage?.scannedBy
+        ? Array.isArray(lastMashupMessage.scannedBy)
+          ? lastMashupMessage.scannedBy
+          : [lastMashupMessage.scannedBy]
+        : [];
+
+      const thisUserExists = scannedByUsers.includes(new Types.ObjectId(user.id));
+
+      if (lastMashupMessage && thisUserExists) {
+        const io = socketManager.getIo();
+        if (io) {
+          const receiverId = socketManager.getSocketId(user.id);
+          if (receiverId) {
+            io.to(receiverId).emit("unlock-conversation", conversation._id);
+          }
         }
       }
 
