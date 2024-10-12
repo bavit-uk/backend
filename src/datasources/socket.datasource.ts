@@ -282,7 +282,7 @@ class SocketManager {
               body: string;
               imageUrl?: string;
             } = {
-              title: "New message from " + sender?.name + " in group" + conversation.title,
+              title: "New message from " + sender?.name + " in " + conversation.title,
               body: lockChat ? "Locked message" : message || "Attachment",
               imageUrl: files?.[0],
             };
