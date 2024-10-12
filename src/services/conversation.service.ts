@@ -40,7 +40,7 @@ export const conversationService = {
   },
 
   getConversations: async (userId: string) => {
-    const conversations = await Conversation.find({ members: userId }).populate("members").exec();
+    const conversations = await Conversation.find({ members: userId }).populate<{ members: IUser[] }>("members").exec();
     const conversationsWithLastMessage = await Promise.all(
       conversations.map(async (conversation) => {
         let lastMessageTime = Date.now();
