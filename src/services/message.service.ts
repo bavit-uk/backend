@@ -101,6 +101,10 @@ export const messageService = {
       .limit(1);
   },
 
+  findLastMashupMessage: async ({ conversation }: Pick<UpdateMessagePayload, "conversation">) => {
+    return Message.findOne({ conversation, isQrCode: true }).sort({ createdAt: -1 }).limit(1);
+  },
+
   addScannedBy: async ({
     conversation,
     id,
