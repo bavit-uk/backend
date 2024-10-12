@@ -286,6 +286,16 @@ class SocketManager {
               body: lockChat ? "Locked message" : message || "Attachment",
               imageUrl: files?.[0],
             };
+
+            if (notification.imageUrl === undefined) delete notification.imageUrl;
+
+            await sendFCM({
+              notification,
+              data: {
+                conversationId,
+              },
+              token,
+            });
           }
         });
       }
