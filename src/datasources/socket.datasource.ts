@@ -123,13 +123,13 @@ class SocketManager {
       }
 
       // Find receiver id
-      const receiverId = conversation.members.find((member) => member._id.toString() !== socket.user.id);
+      const receiverMember = conversation.members.find((member) => member.id.toString() !== socket.user.id);
 
-      if (!receiverId?._id) {
+      if (!receiverMember?.id) {
         console.log("Receiver not found");
         return this.io!.to(socket.id).emit("error", "Receiver not found");
       }
-      console.log("Receiver id", receiverId);
+      console.log("Receiver id", receiverMember);
 
       const lastMashupMessage = await messageService.findLastMashupMessage({
         conversation: new Types.ObjectId(conversationId),
@@ -141,10 +141,10 @@ class SocketManager {
 
       membersScanned = Array.isArray(membersScanned) ? membersScanned : [membersScanned];
 
-      const exists = membersScanned.includes(new mongoose.Types.ObjectId(receiverId._id.toString()));
+      const exists = membersScanned.includes(new mongoose.Types.ObjectId(receiverMember.id.toString()));
 
       if (!lastMashupMessage || exists) {
-        const receiverSocketId = this.getSocketId(receiverId._id.toString());
+        const receiverSocketId = this.getSocketId(receiverMember.id.toString());
         if (!receiverSocketId) {
           // TODO: Save message to database
           // TODO: Send push notification to receiver
@@ -175,10 +175,9 @@ class SocketManager {
       });
 
       if (!lastMashupMessage || exists) {
-        const token = await userService.getFCMToken(receiverId._id.toString());
+        const token = await userService.getFCMToken(receiverMember.id.toString());
 
-        if (token) {
-          const receiver = await userService.getById(receiverId._id.toString());
+        if (token && receiverMember.notificationStatus) {
           const sender = await userService.getById(socket.user.id);
           const notification: {
             title: string;
@@ -217,8 +216,8 @@ class SocketManager {
           return this.io!.to(socket.id).emit("error", "Conversation not found");
         }
 
-        let onlineUsers = conversation.members.filter((member) => this.getSocketId(member._id.toString()));
-        const offlineUsers = conversation.members.filter((member) => !this.getSocketId(member._id.toString()));
+        let onlineUsers = conversation.members.filter((member) => this.getSocketId(member.id.toString()));
+        const offlineUsers = conversation.members.filter((member) => !this.getSocketId(member.id.toString()));
 
         console.log("Online users", onlineUsers);
 
@@ -232,7 +231,9 @@ class SocketManager {
 
         membersScanned = Array.isArray(membersScanned) ? membersScanned : [membersScanned];
 
-        onlineUsers = onlineUsers.filter((member) => membersScanned.includes(member._id));
+        onlineUsers = onlineUsers.filter((member) =>
+          membersScanned.includes(new mongoose.Types.ObjectId(member.id.toString()))
+        );
 
         offlineUsers.forEach((userId) => {
           //TODO Send push notification to offline users
@@ -240,10 +241,10 @@ class SocketManager {
 
         onlineUsers.forEach((member) => {
           // Don't send message to the sender
-          if (member._id.toString() === socket.user.id) {
+          if (member.id.toString() === socket.user.id) {
             return;
           }
-          const userSocketId = this.getSocketId(member._id.toString());
+          const userSocketId = this.getSocketId(member.id.toString());
           if (userSocketId) {
             this.io!.to(userSocketId).emit("groupMessage", {
               senderId: socket.user.id,
@@ -256,7 +257,7 @@ class SocketManager {
         });
 
         if (lockChat) {
-          const members = conversation.members.map((member) => member._id.toString());
+          const members = conversation.members.map((member) => member.id.toString());
           const membersExceptSender = members.filter((member) => member !== socket.user.id);
           membersExceptSender.forEach(async (member) => {
             const receiverSocketId = this.getSocketId(member);

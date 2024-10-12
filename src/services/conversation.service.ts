@@ -4,6 +4,7 @@ import { Conversation } from "@/models/conversation.model";
 import { ClientSession, get, Types } from "mongoose";
 import { messageService } from "./message.service";
 import { userService } from "./user.service";
+import { IUser } from "@/contracts/user.contract";
 
 export const conversationService = {
   create: async (
@@ -81,7 +82,9 @@ export const conversationService = {
     return sortedConversations;
   },
   getConversation: async (userId: string, conversationId: string) => {
-    const conversation = Conversation.findOne({ members: userId, _id: conversationId }).populate("members").exec();
+    const conversation = Conversation.findOne({ members: userId, _id: conversationId })
+      .populate<{ members: IUser[] }>("members")
+      .exec();
 
     const unscannedMessages = await messageService.findUnscannedMessages({
       conversation: new Types.ObjectId(conversationId),
