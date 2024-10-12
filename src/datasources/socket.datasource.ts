@@ -273,6 +273,9 @@ class SocketManager {
         });
 
         allUnlockedMembers.forEach(async (member) => {
+          if (member.id.toString() === socket.user.id) {
+            return;
+          }
           const token = await userService.getFCMToken(member.id.toString());
 
           if (token && member.notificationStatus) {
