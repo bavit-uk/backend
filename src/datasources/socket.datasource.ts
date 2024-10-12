@@ -216,28 +216,23 @@ class SocketManager {
           return this.io!.to(socket.id).emit("error", "Conversation not found");
         }
 
-        let onlineUsers = conversation.members.filter((member) => this.getSocketId(member.id.toString()));
-        const offlineUsers = conversation.members.filter((member) => !this.getSocketId(member.id.toString()));
-
-        console.log("Online users", onlineUsers);
+        let allUnlockedMembers = conversation.members;
 
         const lastMashupMessage = await messageService.findLastMashupMessage({
           conversation: new Types.ObjectId(conversationId),
         });
 
-        let membersScanned = lastMashupMessage?.scannedBy || [];
+        if (lastMashupMessage) {
+          let membersScanned = lastMashupMessage?.scannedBy || [];
 
-        console.log("Members scanned", membersScanned);
+          membersScanned = Array.isArray(membersScanned) ? membersScanned : [membersScanned];
 
-        membersScanned = Array.isArray(membersScanned) ? membersScanned : [membersScanned];
+          allUnlockedMembers = allUnlockedMembers.filter((member) =>
+            membersScanned.includes(new mongoose.Types.ObjectId(member.id.toString()))
+          );
+        }
 
-        onlineUsers = onlineUsers.filter((member) =>
-          membersScanned.includes(new mongoose.Types.ObjectId(member.id.toString()))
-        );
-
-        offlineUsers.forEach((userId) => {
-          //TODO Send push notification to offline users
-        });
+        let onlineUsers = allUnlockedMembers.filter((member) => this.getSocketId(member.id.toString()));
 
         onlineUsers.forEach((member) => {
           // Don't send message to the sender
@@ -275,6 +270,23 @@ class SocketManager {
           files,
           isQrCode: lockChat,
           scannedBy: lockChat ? [new mongoose.Types.ObjectId(socket.user.id)] : [],
+        });
+
+        allUnlockedMembers.forEach(async (member) => {
+          const token = await userService.getFCMToken(member.id.toString());
+
+          if (token && member.notificationStatus) {
+            const sender = await userService.getById(socket.user.id);
+            const notification: {
+              title: string;
+              body: string;
+              imageUrl?: string;
+            } = {
+              title: "New message from " + sender?.name,
+              body: lockChat ? "Locked message" : message || "Attachment",
+              imageUrl: files?.[0],
+            };
+          }
         });
       }
     );
