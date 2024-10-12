@@ -34,8 +34,8 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
       default: "active",
     },
     notificationStatus: {
-      type: String,
-      enum: ENUMS.NOTIFICATION_STATUS,
+      type: Boolean,
+      default: true,
     },
     locationStatus: {
       type: String,

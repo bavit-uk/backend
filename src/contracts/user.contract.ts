@@ -15,7 +15,7 @@ export interface IUser {
   profilePicture?: string;
   address?: string;
   status: (typeof ENUMS.USER_STATUS)[number];
-  notificationStatus: (typeof ENUMS.NOTIFICATION_STATUS)[number];
+  notificationStatus: boolean;
   locationStatus: (typeof ENUMS.LOCATION_STATUS)[number];
   latitude?: number;
   longitude?: number;

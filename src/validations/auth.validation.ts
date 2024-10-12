@@ -478,8 +478,8 @@ export const authValidation = {
     next: NextFunction
   ) => {
     const schema: ZodSchema<Pick<IUser, "notificationStatus">> = z.object({
-      notificationStatus: z.enum(ENUMS.NOTIFICATION_STATUS, {
-        message: "Invalid notification status",
+      notificationStatus: z.boolean({
+        message: "Notification status is required but it was not provided",
       }),
     });
 
