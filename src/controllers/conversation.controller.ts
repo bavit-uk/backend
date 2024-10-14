@@ -509,6 +509,14 @@ export const conversationController = {
         });
       }
 
+      if (!conversation.isGroup) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          status: StatusCodes.BAD_REQUEST,
+          message: ReasonPhrases.BAD_REQUEST,
+          error: "You can't leave a non-group conversation",
+        });
+      }
+
       const updatedConversation = await conversationService.leaveConversation(user.id, conversationId);
 
       return res.status(StatusCodes.OK).json({
