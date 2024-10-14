@@ -90,7 +90,7 @@ export const userController = {
 
     try {
       const mailgun = new Mailgun(formData);
-      const mg = mailgun.client({ username: "api", key: process.env.MAILGUN_API_KEY || "" });
+      const mg = mailgun.client({ username: "api", key: process.env.MAILGUN_API_KEY! });
 
       const messageObject = {
         from: `HideAndSeek Support <bdc@support.rons-automotive.com>`,
