@@ -30,15 +30,17 @@ export interface IUser {
   loginWithQRCode: boolean;
   loginQRCode?: string;
   profileQrCode?: string;
-  planId?: ObjectId;
-  isPlanActive: boolean;
-  planPurchasedAt?: Date;
-  planExpiredAt?: Date;
+  subscriptionId?: string;
+  isSubscriptionActive: boolean;
+  subscriptionActivatedAt?: Date;
+  subscriptionExpiresAt?: Date;
   deviceType?: (typeof ENUMS.DEVICE_TYPES)[number];
   deviceUniqueId?: string;
   fcmToken?: string;
   allowResetPassword: boolean;
   loginQRCodeData?: string;
+  stripeCustomerId?: string;
+  lastPaymentAt?: Date;
 }
 
 export interface IUserMethods {
