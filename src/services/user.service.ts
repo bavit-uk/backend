@@ -159,4 +159,25 @@ export const userService = {
     const user = await User.findById(userId).select("fcmToken");
     return user?.fcmToken;
   },
+
+  updateStripeCustomerId: (userId: string, stripeCustomerId: string, session?: ClientSession) =>
+    User.updateOne({ _id: userId }, { stripeCustomerId }, { session }),
+
+  updateSubscriptionId: (userId: string, subscriptionId: string, session?: ClientSession) =>
+    User.updateOne({ _id: userId }, { subscriptionId }, { session }),
+
+  activateSubscription: (stripeCustomerId: string, startDate?: Date, endDate?: Date, session?: ClientSession) =>
+    User.updateOne(
+      { stripeCustomerId },
+      {
+        isSubscriptionActive: true,
+        subscriptionActivatedAt: startDate ?? new Date(),
+        lastPaymentAt: startDate ?? new Date(),
+        subscriptionExpiresAt: endDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+      { session }
+    ),
+
+  deactivateSubscription: (stripeCustomerId: string, session?: ClientSession) =>
+    User.updateOne({ stripeCustomerId }, { isSubscriptionActive: false }, { session }),
 };
