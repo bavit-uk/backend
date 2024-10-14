@@ -837,7 +837,7 @@
   dependencies:
     undici-types "~5.26.4"
 
-"@types/node@>=13.7.0", "@types/node@^22.0.1":
+"@types/node@>=13.7.0", "@types/node@>=8.1.0", "@types/node@^22.0.1":
   version "22.7.5"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-22.7.5.tgz#cfde981727a7ab3611a481510b473ae54442b92b"
   integrity sha512-jML7s2NAzMWc//QSJ1a3prpk78cOPchGvXJsC3C6R6PSMoooztvRVQEz89gmBTBY1SPMaqo5teB4uNHPdetShQ==
@@ -3190,6 +3190,13 @@ qs@6.11.0:
   dependencies:
     side-channel "^1.0.4"
 
+qs@^6.11.0:
+  version "6.13.0"
+  resolved "https://registry.yarnpkg.com/qs/-/qs-6.13.0.tgz#6ca3bd58439f7e245655798997787b0d88a51906"
+  integrity sha512-+38qI9SOr8tfZ4QmJNplMUxqjbe7LKvvZgWdExBOmd+egZTtjLB67Gu0HRX3u/XOq7UU2Nx6nsjvS16Z9uwfpg==
+  dependencies:
+    side-channel "^1.0.6"
+
 queue-microtask@^1.2.2:
   version "1.2.3"
   resolved "https://registry.npmjs.org/queue-microtask/-/queue-microtask-1.2.3.tgz"
@@ -3462,7 +3469,7 @@ shebang-regex@^3.0.0:
   resolved "https://registry.npmjs.org/shebang-regex/-/shebang-regex-3.0.0.tgz"
   integrity sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==
 
-side-channel@^1.0.4:
+side-channel@^1.0.4, side-channel@^1.0.6:
   version "1.0.6"
   resolved "https://registry.npmjs.org/side-channel/-/side-channel-1.0.6.tgz"
   integrity sha512-fDW/EZ6Q9RiO8eFG8Hj+7u/oW+XrPTIChwCOM2+th2A6OblDtYYIpve9m+KvI9Z4C9qSEXlaGR6bTEYHReuglA==
@@ -3647,6 +3654,14 @@ strip-json-comments@^3.1.1:
   version "3.1.1"
   resolved "https://registry.npmjs.org/strip-json-comments/-/strip-json-comments-3.1.1.tgz"
   integrity sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig==
+
+stripe@^17.2.0:
+  version "17.2.0"
+  resolved "https://registry.yarnpkg.com/stripe/-/stripe-17.2.0.tgz#1b70fb60b01e64a2bf64cccb42215a1abcca9d39"
+  integrity sha512-KuDplY9WrNKi07+uEFeguis/Mh+HC+hfEMy8P5snhQzCXUv01o+4KcIJ9auFxpv4Odp2R2krs9rZ9PhQl8+Sdw==
+  dependencies:
+    "@types/node" ">=8.1.0"
+    qs "^6.11.0"
 
 strnum@^1.0.5:
   version "1.0.5"
