@@ -64,7 +64,6 @@ export const conversationController = {
           allMembers.forEach((member) => {
             const socketId = socketManager.getSocketId(member._id.toString());
             if (socketId) {
-              console.log("Sending create-conversation event to", member.toString());
               io.to(socketId).emit("create-conversation", createdConversation);
             }
           });
