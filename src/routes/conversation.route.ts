@@ -8,6 +8,7 @@ export const conversation = (router: Router) => {
   router.get("/", conversationController.getConversations);
   router.post("/", conversationValidation.createConversation, conversationController.createConversation);
   router.get("/blocked-users", conversationController.getBlockedUsers);
+  router.delete('/leave-conversation/:conversationId', conversationController.leaveConversation);
   router.get("/:conversationId", conversationValidation.getConversation, conversationController.getConversation);
   router.patch(
     "/:conversationId",

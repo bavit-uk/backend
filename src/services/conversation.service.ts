@@ -211,4 +211,11 @@ export const conversationService = {
       { $pull: { members: memberId } }
     ).exec();
   },
+
+  leaveConversation: (userId: string, conversationId: string) => {
+    return Conversation.findOneAndUpdate(
+      { members: userId, _id: conversationId },
+      { $pull: { members: userId } }
+    ).exec();
+  },
 };
