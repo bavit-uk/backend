@@ -180,4 +180,6 @@ export const userService = {
 
   deactivateSubscription: (stripeCustomerId: string, session?: ClientSession) =>
     User.updateOne({ stripeCustomerId }, { isSubscriptionActive: false }, { session }),
+
+  getUserByStripeCustomerId: (stripeCustomerId: string) => User.findOne({ stripeCustomerId }),
 };

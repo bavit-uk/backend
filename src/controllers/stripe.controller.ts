@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { userService } from "@/services";
 import { IContextRequest, IUserRequest } from "@/contracts/request.contract";
+import { socketManager } from "@/datasources/socket.datasource";
 
 const handleError = (res: Response, error: unknown) => {
   console.error("Stripe API Error:", error);
@@ -259,13 +260,24 @@ export const stripeController = {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         console.log("Payment intent, ", paymentIntent);
         const paymentIntentCustomerId = paymentIntent.customer as string;
+        await stripeController.sendSocketEvent(
+          paymentIntentCustomerId,
+          "activate_subscription",
+          "payment_intent.succeeded"
+        );
         await userService.activateSubscription(paymentIntentCustomerId);
+
         console.log("Payment was successful!");
         break;
       case "subscription_schedule.canceled":
         const subscription = await stripe.subscriptions.retrieve(event.data.object.id as string);
         console.log("Subscription, ", subscription);
         const subscriptionCustomerId = subscription.customer as string;
+        await stripeController.sendSocketEvent(
+          subscriptionCustomerId,
+          "deactivate_subscription",
+          "subscription_schedule.canceled"
+        );
         await userService.deactivateSubscription(subscriptionCustomerId);
         console.log("Subscription was canceled!");
         break;
@@ -273,6 +285,11 @@ export const stripeController = {
         const deletedSubscription = event.data.object as Stripe.Subscription;
         console.log("Deleted subscription, ", deletedSubscription);
         const deletedSubscriptionCustomerId = deletedSubscription.customer as string;
+        await stripeController.sendSocketEvent(
+          deletedSubscriptionCustomerId,
+          "deactivate_subscription",
+          "customer.subscription.deleted"
+        );
         await userService.deactivateSubscription(deletedSubscriptionCustomerId);
         break;
 
@@ -280,6 +297,11 @@ export const stripeController = {
         const pausedSubscription = event.data.object as Stripe.Subscription;
         console.log("Paused subscription, ", pausedSubscription);
         const pausedSubscriptionCustomerId = pausedSubscription.customer as string;
+        await stripeController.sendSocketEvent(
+          pausedSubscriptionCustomerId,
+          "deactivate_subscription",
+          "customer.subscription.paused"
+        );
         await userService.deactivateSubscription(pausedSubscriptionCustomerId);
         break;
 
@@ -287,6 +309,11 @@ export const stripeController = {
         const resumedSubscription = event.data.object as Stripe.Subscription;
         console.log("Resumed subscription, ", resumedSubscription);
         const resumedSubscriptionCustomerId = resumedSubscription.customer as string;
+        await stripeController.sendSocketEvent(
+          resumedSubscriptionCustomerId,
+          "activate_subscription",
+          "customer.subscription.resumed"
+        );
         await userService.activateSubscription(resumedSubscriptionCustomerId);
         break;
 
@@ -295,5 +322,22 @@ export const stripeController = {
     }
 
     res.status(StatusCodes.OK).json({ status: StatusCodes.OK, message: ReasonPhrases.OK });
+  },
+
+  sendSocketEvent: async (stripeCustomerId: string, event: string, eventCode?: string) => {
+    const io = socketManager.getIo();
+    if (!io) return;
+
+    const user = await userService.getUserByStripeCustomerId(stripeCustomerId);
+
+    if (!user) return;
+
+    const socketId = socketManager.getSocketId(user.id);
+
+    if (!socketId) return;
+
+    io.to(socketId).emit(event, eventCode);
+
+    // Send socket event to client
   },
 };
