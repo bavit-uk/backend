@@ -17,8 +17,6 @@ export const authMiddleware = async (req: Request, _: Response, next: NextFuncti
     const user = await userService.getById(id.toString(), "+password");
     if (!user) return next();
 
-    console.log("User", user.loginQRCodeData);
-
     Object.assign(req, {
       context: {
         user,
