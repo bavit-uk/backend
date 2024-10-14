@@ -162,8 +162,9 @@ export const conversationController = {
         });
       }
 
-      body.members = [...new Set([...conversation.members, ...(body.members || [])])] as Types.ObjectId[];
-      body.isGroup = body.members.length > 2 ? true : body.isGroup;
+      if (body.members) {
+        body.isGroup = body.members.length > 2 ? true : body.isGroup;
+      }
 
       const updatedConversation = await conversationService.updateConversation(user.id, conversationId, body);
 
@@ -173,6 +174,7 @@ export const conversationController = {
         data: updatedConversation,
       });
     } catch (error) {
+      console.log(error);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         status: StatusCodes.INTERNAL_SERVER_ERROR,
         message: ReasonPhrases.INTERNAL_SERVER_ERROR,

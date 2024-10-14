@@ -123,7 +123,16 @@ export const conversationValidation = {
       description: z.string().optional(),
       image: z.string().optional(),
       title: z.string().optional(),
-      members: z.array(z.instanceof(Types.ObjectId)).optional(),
+      members: z
+        .array(
+          z.string({
+            message: "members is required but was not provided",
+          }),
+          {
+            message: "members is required but was not provided",
+          }
+        )
+        .optional() as any,
       isGroup: z.boolean().optional(),
     });
 

@@ -204,4 +204,11 @@ export const conversationService = {
       },
     ]).exec();
   },
+
+  removeMember: (userId: string, conversationId: string, memberId: string) => {
+    return Conversation.findOneAndUpdate(
+      { members: userId, _id: conversationId },
+      { $pull: { members: memberId } }
+    ).exec();
+  },
 };
