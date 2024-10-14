@@ -4,7 +4,7 @@ import { ICombinedRequest, IContextRequest, IParamsRequest, IUserRequest } from 
 import { conversationService, messageService } from "@/services";
 import { Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
-import { Types } from "mongoose";
+import { ObjectId, Types } from "mongoose";
 import { socketManager } from "@/datasources/socket.datasource";
 
 export const conversationController = {
@@ -62,7 +62,7 @@ export const conversationController = {
           const allMembers = createdConversation!.members;
 
           allMembers.forEach((member) => {
-            const socketId = socketManager.getSocketId(member._id.toString());
+            const socketId = socketManager.getSocketId(member.id.toString());
             if (socketId) {
               io.to(socketId).emit("create-conversation", createdConversation);
             }
@@ -162,7 +162,7 @@ export const conversationController = {
         });
       }
 
-      body.members = [...new Set([...conversation.members, ...(body.members || [])])];
+      body.members = [...new Set([...conversation.members, ...(body.members || [])])] as Types.ObjectId[];
       body.isGroup = body.members.length > 2 ? true : body.isGroup;
 
       const updatedConversation = await conversationService.updateConversation(user.id, conversationId, body);
