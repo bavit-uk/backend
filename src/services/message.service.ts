@@ -2,6 +2,7 @@ import { CreateMessagePayload, GetMessagePayload, UpdateMessagePayload } from "@
 import { Message } from "@/models";
 import { ClientSession, Types } from "mongoose";
 import { conversationService } from "./conversation.service";
+import { IUser } from "@/contracts/user.contract";
 
 export const messageService = {
   create: (
@@ -47,7 +48,10 @@ export const messageService = {
     conversation,
     lastMessageDate = Date.now(),
   }: Pick<GetMessagePayload, "conversation"> & { lastMessageDate: Number }) =>
-    Message.find({ conversation, createdAt: { $lte: lastMessageDate } }),
+    Message.find({ conversation, createdAt: { $lte: lastMessageDate } }).populate<IUser>(
+      "sender",
+      "name profilePicture"
+    ),
 
   getByConversationId: ({ conversation }: Pick<GetMessagePayload, "conversation">) => Message.find({ conversation }),
 
