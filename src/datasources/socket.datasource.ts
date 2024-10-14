@@ -140,8 +140,14 @@ class SocketManager {
           // TODO: Send push notification to receiver
           // return this.io!.to(socket.id).emit("error", "Receiver is not connected to the server");
         } else {
+          const senderObject = conversation.members.find((member) => member.id.toString() === socket.user.id);
           this.io!.to(receiverSocketId).emit("message", {
             senderId: socket.user.id,
+            sender: {
+              _id: senderObject?.id,
+              name: senderObject?.name,
+              id: senderObject?.id,
+            },
             message: message,
             conversationId,
             files,
@@ -221,6 +227,7 @@ class SocketManager {
 
         let onlineUsers = allUnlockedMembers.filter((member) => this.getSocketId(member.id.toString()));
 
+        const senderObject = conversation.members.find((member) => member.id.toString() === socket.user.id);
         onlineUsers.forEach((member) => {
           // Don't send message to the sender
           if (member.id.toString() === socket.user.id) {
@@ -230,6 +237,11 @@ class SocketManager {
           if (userSocketId) {
             this.io!.to(userSocketId).emit("groupMessage", {
               senderId: socket.user.id,
+              sender: {
+                _id: senderObject?.id,
+                name: senderObject?.name,
+                id: senderObject?.id,
+              },
               message: message,
               conversationId,
               files,
