@@ -435,8 +435,6 @@ export const authController = {
 
       const foundUser = await userService.getByEmail(email, "+otp +otpExpiresAt +emailVerified");
 
-      console.log(foundUser);
-
       if (!foundUser) {
         return res.status(StatusCodes.NOT_FOUND).json({
           message: ReasonPhrases.NOT_FOUND,
@@ -452,7 +450,6 @@ export const authController = {
       }
 
       if (!foundUser.otp || !foundUser.otpExpiresAt) {
-        console.log("OTP not found");
         return res.status(StatusCodes.BAD_REQUEST).json({
           message: ReasonPhrases.BAD_REQUEST,
           status: StatusCodes.BAD_REQUEST,
@@ -486,8 +483,6 @@ export const authController = {
     try {
       const { loginWithQRCode } = req.body;
       const { user } = req.context;
-
-      console.log("loginWithQRCode", loginWithQRCode);
 
       await userService.updateLoginWithQRCode(user.id, loginWithQRCode);
 
