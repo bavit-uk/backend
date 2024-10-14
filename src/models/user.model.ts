@@ -53,10 +53,6 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     loginQRCode: { type: String },
     profileQrCode: { type: String },
     // TODO: Add Ref to Plan Model
-    planId: { type: Schema.Types.ObjectId },
-    isPlanActive: { type: Boolean, default: false },
-    planPurchasedAt: { type: Date },
-    planExpiredAt: { type: Date },
     emailVerified: { type: Boolean, default: false },
     emailVerifiedAt: { type: Date, select: false },
     passwordResetAt: { type: Date, select: false },
@@ -64,6 +60,12 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     deviceUniqueId: String,
     fcmToken: String,
     allowResetPassword: { type: Boolean, default: false },
+    stripeCustomerId: { type: String },
+    subscriptionId: { type: String },
+    isSubscriptionActive: { type: Boolean, default: false },
+    subscriptionActivatedAt: { type: Date },
+    lastPaymentAt: { type: Date },
+    subscriptionExpiresAt: { type: Date },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
