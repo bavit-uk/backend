@@ -92,21 +92,15 @@ class SocketManager {
     });
 
     socket.on("leaveGroup", async (conversationId: string) => {
-      console.log("Leave group", conversationId);
       const group = this.groupRooms.get(conversationId);
       if (group) {
-        console.log("Group before leave", group);
         group.delete(socket.user.id);
-        console.log("Group after leave", group);
         if (group.size === 0) {
-          console.log("Group size is 0, deleting group");
           this.groupRooms.delete(conversationId);
         }
       }
       socket.leave(conversationId);
       this.io!.to(conversationId).emit("userLeftGroup", { userId: socket.user.id, groupId: conversationId });
-      console.log("User left group", socket.user.id, conversationId);
-      console.log("Updated group rooms", this.groupRooms);
     });
   }
 
@@ -126,18 +120,14 @@ class SocketManager {
       const receiverMember = conversation.members.find((member) => member.id.toString() !== socket.user.id);
 
       if (!receiverMember?.id) {
-        console.log("Receiver not found");
         return this.io!.to(socket.id).emit("error", "Receiver not found");
       }
-      console.log("Receiver id", receiverMember);
 
       const lastMashupMessage = await messageService.findLastMashupMessage({
         conversation: new Types.ObjectId(conversationId),
       });
 
       let membersScanned = lastMashupMessage?.scannedBy || [];
-
-      console.log("Members scanned", membersScanned);
 
       membersScanned = Array.isArray(membersScanned) ? membersScanned : [membersScanned];
 
@@ -148,7 +138,6 @@ class SocketManager {
         if (!receiverSocketId) {
           // TODO: Save message to database
           // TODO: Send push notification to receiver
-          console.log("Receiver is not connected to the server");
           // return this.io!.to(socket.id).emit("error", "Receiver is not connected to the server");
         } else {
           this.io!.to(receiverSocketId).emit("message", {
@@ -188,8 +177,6 @@ class SocketManager {
             body: lockChat ? "Locked message" : message || "Attachment",
             imageUrl: files?.[0]?.url,
           };
-
-          console.log("Notification", notification);
 
           if (notification.imageUrl === undefined) delete notification.imageUrl;
 
