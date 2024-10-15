@@ -116,6 +116,18 @@ class SocketManager {
         return this.io!.to(socket.id).emit("error", "Use group chat API to send message to group");
       }
 
+      const allMemberIds = conversation.members.map((member) => member.id.toString());
+
+      const exceedingMembers = await userService.checkIfAnyConversationLimitExceeded(allMemberIds);
+
+      if (exceedingMembers.length) {
+        console.log("Exceeded Free Plan Limit");
+        return this.io!.to(socket.id).emit("subscription-error", {
+          conversationId,
+          message: "You have exceeded the conversation limit",
+        });
+      }
+
       // Find receiver id
       const receiverMember = conversation.members.find((member) => member.id.toString() !== socket.user.id);
 
@@ -169,7 +181,6 @@ class SocketManager {
         scannedBy: lockChat ? [new mongoose.Types.ObjectId(socket.user.id)] : [],
       });
 
-      const allMemberIds = conversation.members.map((member) => member.id.toString());
       await userService.decrementMessageCount(allMemberIds);
 
       if (!lastMashupMessage || exists) {
@@ -210,6 +221,18 @@ class SocketManager {
         const conversation = await conversationService.getConversation(socket.user.id, conversationId);
         if (!conversation) {
           return this.io!.to(socket.id).emit("error", "Conversation not found");
+        }
+
+        const allMemberIds = conversation.members.map((member) => member.id.toString());
+
+        const exceedingMembers = await userService.checkIfAnyConversationLimitExceeded(allMemberIds);
+
+        if (exceedingMembers.length) {
+          console.log("Exceeded Free Plan Limit");
+          return this.io!.to(socket.id).emit("subscription-error", {
+            conversationId,
+            message: "You have exceeded the conversation limit",
+          });
         }
 
         let allUnlockedMembers = conversation.members;
@@ -279,7 +302,6 @@ class SocketManager {
           scannedBy: lockChat ? [new mongoose.Types.ObjectId(socket.user.id)] : [],
         });
 
-        const allMemberIds = conversation.members.map((member) => member.id.toString());
         await userService.decrementMessageCount(allMemberIds);
 
         allUnlockedMembers.forEach(async (member) => {
