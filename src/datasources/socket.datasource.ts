@@ -169,6 +169,9 @@ class SocketManager {
         scannedBy: lockChat ? [new mongoose.Types.ObjectId(socket.user.id)] : [],
       });
 
+      const allMemberIds = conversation.members.map((member) => member.id.toString());
+      await userService.decrementMessageCount(allMemberIds);
+
       if (!lastMashupMessage || exists) {
         const token = await userService.getFCMToken(receiverMember.id.toString());
 
@@ -275,6 +278,9 @@ class SocketManager {
           isQrCode: lockChat,
           scannedBy: lockChat ? [new mongoose.Types.ObjectId(socket.user.id)] : [],
         });
+
+        const allMemberIds = conversation.members.map((member) => member.id.toString());
+        await userService.decrementMessageCount(allMemberIds);
 
         allUnlockedMembers.forEach(async (member) => {
           if (member.id.toString() === socket.user.id) {
