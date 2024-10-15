@@ -78,6 +78,18 @@ export const conversationController = {
         });
       }
 
+      const allMembers = [...new Set([...members.map((member) => member.toString()), user.id.toString()])] as string[];
+
+      const exceedingLimitMembers = await userService.checkIfAnyConversationLimitExceeded(allMembers);
+      if (exceedingLimitMembers.length) {
+        return res.status(StatusCodes.PAYMENT_REQUIRED).json({
+          status: StatusCodes.PAYMENT_REQUIRED,
+          message: ReasonPhrases.PAYMENT_REQUIRED,
+          error: `User(s) ${exceedingLimitMembers.join(", ")} has exceeded the conversation limit`,
+          members: exceedingLimitMembers,
+        });
+      }
+
       const conversation = await conversationService.create({
         isGroup,
         members,
@@ -87,8 +99,7 @@ export const conversationController = {
         userId: user.id,
       });
 
-      const allMembers = [...new Set([...members.map((member) => member.toString()), user.id.toString()])] as string[];
-
+      console.log("All Members", allMembers);
       await userService.decrementChatCount(allMembers);
 
       const io = socketManager.getIo();
@@ -173,6 +184,17 @@ export const conversationController = {
       if (body.members) {
         const addedMembers = newMembersIds.filter((member) => !existingMembersIds.includes(member));
         const removedMembers = existingMembersIds.filter((member) => !newMembersIds.includes(member));
+
+        const exceedingLimitMembers = await userService.checkIfAnyConversationLimitExceeded(addedMembers);
+        if (exceedingLimitMembers.length) {
+          return res.status(StatusCodes.PAYMENT_REQUIRED).json({
+            status: StatusCodes.PAYMENT_REQUIRED,
+            message: ReasonPhrases.PAYMENT_REQUIRED,
+            error: `User(s) ${exceedingLimitMembers.join(", ")} has exceeded the conversation limit`,
+            members: exceedingLimitMembers,
+          });
+        }
+
         await Promise.all([
           userService.incrementChatCount(removedMembers),
           userService.decrementChatCount(addedMembers),
@@ -258,7 +280,7 @@ export const conversationController = {
       }
 
       const deletedConversation = await conversationService.deleteConversation(user.id, conversationId);
-      await userService.decrementChatCount(conversation.members.map((member) => member.id.toString()));
+      await userService.incrementChatCount(conversation.members.map((member) => member.id.toString()));
 
       return res.status(StatusCodes.NO_CONTENT).json({
         status: StatusCodes.NO_CONTENT,
@@ -533,7 +555,7 @@ export const conversationController = {
 
       const updatedConversation = await conversationService.leaveConversation(user.id, conversationId);
 
-      await userService.decrementChatCount([user.id]);
+      await userService.incrementChatCount([user.id]);
 
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
