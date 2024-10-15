@@ -1,7 +1,7 @@
 import { IUser } from "@/contracts/user.contract";
 import { CreateConversationPayload, UpdateConversationPayload } from "@/contracts/conversation.contract";
 import { ICombinedRequest, IContextRequest, IParamsRequest, IUserRequest } from "@/contracts/request.contract";
-import { conversationService, messageService } from "@/services";
+import { conversationService, messageService, userService } from "@/services";
 import { Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { ObjectId, Types } from "mongoose";
@@ -87,12 +87,16 @@ export const conversationController = {
         userId: user.id,
       });
 
+      const allMembers = [
+        ...new Set([...members.map((memmber) => members.toString()), user.id.toString()]),
+      ] as string[];
+
+      await userService.decrementChatCount(allMembers);
+
       const io = socketManager.getIo();
 
       if (io) {
         const createdConversation = await conversationService.getConversation(user.id, conversation.id);
-
-        const allMembers = [...new Set([...members, user.id])];
 
         allMembers.forEach((member) => {
           const socketId = socketManager.getSocketId(member);
@@ -164,6 +168,17 @@ export const conversationController = {
 
       if (body.members) {
         body.isGroup = body.members.length > 2 ? true : body.isGroup;
+      }
+
+      const existingMembersIds = conversation.members.map((member) => member.id.toString());
+      const newMembersIds = body.members ? body.members.map((member) => member.toString()) : [];
+      if (body.members) {
+        const addedMembers = newMembersIds.filter((member) => !existingMembersIds.includes(member));
+        const removedMembers = existingMembersIds.filter((member) => !newMembersIds.includes(member));
+        await Promise.all([
+          userService.incrementChatCount(removedMembers),
+          userService.decrementChatCount(addedMembers),
+        ]);
       }
 
       const updatedConversation = await conversationService.updateConversation(user.id, conversationId, body);
@@ -245,6 +260,7 @@ export const conversationController = {
       }
 
       const deletedConversation = await conversationService.deleteConversation(user.id, conversationId);
+      await userService.decrementChatCount(conversation.members.map((member) => member.id.toString()));
 
       return res.status(StatusCodes.NO_CONTENT).json({
         status: StatusCodes.NO_CONTENT,
@@ -518,6 +534,8 @@ export const conversationController = {
       }
 
       const updatedConversation = await conversationService.leaveConversation(user.id, conversationId);
+
+      await userService.decrementChatCount([user.id]);
 
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
