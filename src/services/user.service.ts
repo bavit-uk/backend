@@ -184,7 +184,7 @@ export const userService = {
   getUserByStripeCustomerId: (stripeCustomerId: string) => User.findOne({ stripeCustomerId }),
 
   decrementMessageCount: (userIds: string[], session?: ClientSession) =>
-    User.updateOne(
+    User.updateMany(
       { _id: { $in: userIds } },
       {
         $inc: {
@@ -195,7 +195,7 @@ export const userService = {
     ),
 
   incrementMessageCount: (userIds: string[], session?: ClientSession) =>
-    User.updateOne(
+    User.updateMany(
       { _id: { $in: userIds } },
       {
         $inc: {
@@ -217,7 +217,7 @@ export const userService = {
   //   ),
 
   decrementChatCount: (userIds: string[], session?: ClientSession) =>
-    User.updateOne(
+    User.updateMany(
       { _id: { $in: userIds } },
       {
         $inc: {
@@ -228,7 +228,7 @@ export const userService = {
     ),
 
   incrementChatCount: (userIds: string[], session?: ClientSession) =>
-    User.updateOne(
+    User.updateMany(
       { _id: { $in: userIds } },
       {
         $inc: {
@@ -237,4 +237,10 @@ export const userService = {
       },
       { session }
     ),
+
+  checkIfAnyConversationLimitExceeded: (userIds: string[]) =>
+    User.find({
+      _id: { $in: userIds },
+      $or: [{ "limits.remainingMessages": { $lte: 0 } }, { "limits.remainingChats": { $lte: 0 } }],
+    }),
 };
