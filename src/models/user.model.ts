@@ -15,8 +15,8 @@ const TOTAL_ALLOWED_CHATS_IN_FREE_PLAN = parseInt((process.env.TOTAL_ALLOWED_CHA
 const SubscriptionLimitSchema = new Schema<ISubscriptionLimit>({
   totalMessages: { type: Number, default: TOTAL_ALLOWED_MESSAGES_IN_FREE_PLAN },
   totalChats: { type: Number, default: TOTAL_ALLOWED_CHATS_IN_FREE_PLAN },
-  remainingChats: { type: Number, default: 0 },
-  remainingMessages: { type: Number, default: 0 },
+  remainingChats: { type: Number, default: TOTAL_ALLOWED_CHATS_IN_FREE_PLAN },
+  remainingMessages: { type: Number, default: TOTAL_ALLOWED_MESSAGES_IN_FREE_PLAN },
 });
 const schema = new Schema<IUser, UserModel, IUserMethods>(
   {

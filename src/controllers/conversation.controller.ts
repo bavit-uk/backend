@@ -87,9 +87,7 @@ export const conversationController = {
         userId: user.id,
       });
 
-      const allMembers = [
-        ...new Set([...members.map((memmber) => members.toString()), user.id.toString()]),
-      ] as string[];
+      const allMembers = [...new Set([...members.map((member) => member.toString()), user.id.toString()])] as string[];
 
       await userService.decrementChatCount(allMembers);
 
