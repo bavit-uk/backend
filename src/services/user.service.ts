@@ -182,4 +182,59 @@ export const userService = {
     User.updateOne({ stripeCustomerId }, { isSubscriptionActive: false }, { session }),
 
   getUserByStripeCustomerId: (stripeCustomerId: string) => User.findOne({ stripeCustomerId }),
+
+  decrementMessageCount: (userIds: string[], session?: ClientSession) =>
+    User.updateOne(
+      { _id: { $in: userIds } },
+      {
+        $inc: {
+          "limits.remainingMessages": -1,
+        },
+      },
+      { session }
+    ),
+
+  incrementMessageCount: (userIds: string[], session?: ClientSession) =>
+    User.updateOne(
+      { _id: { $in: userIds } },
+      {
+        $inc: {
+          "limits.remainingMessages": 1,
+        },
+      },
+      { session }
+    ),
+
+  // incrementMessageCount: (userIds: string[], session?: ClientSession) =>
+  //   User.updateOne(
+  //     { _id: { $in: userIds } },
+  //     {
+  //       $inc: {
+  //         "limits.remainingMessages": 1,
+  //       },
+  //     },
+  //     { session }
+  //   ),
+
+  decrementChatCount: (userIds: string[], session?: ClientSession) =>
+    User.updateOne(
+      { _id: { $in: userIds } },
+      {
+        $inc: {
+          "limits.remainingChats": -1,
+        },
+      },
+      { session }
+    ),
+
+  incrementChatCount: (userIds: string[], session?: ClientSession) =>
+    User.updateOne(
+      { _id: { $in: userIds } },
+      {
+        $inc: {
+          "limits.remainingChats": 1,
+        },
+      },
+      { session }
+    ),
 };

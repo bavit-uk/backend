@@ -5,7 +5,19 @@ import { IUser, IUserMethods, UserModel } from "@/contracts/user.contract";
 import { REGEX } from "@/constants/regex";
 import { ENUMS } from "@/constants/enum";
 import { encryptLoginQR, generateLoginQR } from "@/utils/generate-login-qr.util";
+import { ISubscriptionLimit } from "@/contracts/subscription-limits.contract";
 
+const TOTAL_ALLOWED_MESSAGES_IN_FREE_PLAN = parseInt(
+  (process.env.TOTAL_ALLOWED_MESSAGES_IN_FREE_PLAN || 250).toString()
+);
+const TOTAL_ALLOWED_CHATS_IN_FREE_PLAN = parseInt((process.env.TOTAL_ALLOWED_CHATS_IN_FREE_PLAN || 10).toString());
+
+const SubscriptionLimitSchema = new Schema<ISubscriptionLimit>({
+  totalMessages: { type: Number, default: TOTAL_ALLOWED_MESSAGES_IN_FREE_PLAN },
+  totalChats: { type: Number, default: TOTAL_ALLOWED_CHATS_IN_FREE_PLAN },
+  remainingChats: { type: Number, default: 0 },
+  remainingMessages: { type: Number, default: 0 },
+});
 const schema = new Schema<IUser, UserModel, IUserMethods>(
   {
     name: { type: String, required: true },
@@ -66,6 +78,7 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     subscriptionActivatedAt: { type: Date },
     lastPaymentAt: { type: Date },
     subscriptionExpiresAt: { type: Date },
+    limits: SubscriptionLimitSchema,
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

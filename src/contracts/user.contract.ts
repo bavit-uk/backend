@@ -1,5 +1,6 @@
 import { ENUMS } from "@/constants/enum";
 import { Model, ObjectId } from "mongoose";
+import { ISubscriptionLimit } from "./subscription-limits.contract";
 
 export interface IUser {
   id: ObjectId;
@@ -41,6 +42,7 @@ export interface IUser {
   loginQRCodeData?: string;
   stripeCustomerId?: string;
   lastPaymentAt?: Date;
+  limits: ISubscriptionLimit | null;
 }
 
 export interface IUserMethods {

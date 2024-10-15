@@ -235,13 +235,18 @@ class SocketManager {
           }
           const userSocketId = this.getSocketId(member.id.toString());
           if (userSocketId) {
+            let sender;
+            if (senderObject) {
+              sender = {
+                _id: senderObject.id,
+                name: senderObject.name,
+                id: senderObject.id,
+              };
+            } else {
+              sender = socket.user.id;
+            }
             this.io!.to(userSocketId).emit("groupMessage", {
-              senderId: socket.user.id,
-              sender: {
-                _id: senderObject?.id,
-                name: senderObject?.name,
-                id: senderObject?.id,
-              },
+              sender,
               message: message,
               conversationId,
               files,

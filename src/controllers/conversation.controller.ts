@@ -53,23 +53,23 @@ export const conversationController = {
       );
 
       if (alreadyExists && isGroup === false) {
-        const io = socketManager.getIo();
+        // const io = socketManager.getIo();
 
-        if (io) {
-          console.log("IO Exists");
-          const createdConversation = await conversationService.getConversation(user.id, alreadyExists.id);
+        // if (io) {
+        //   console.log("IO Exists");
+        //   const createdConversation = await conversationService.getConversation(user.id, alreadyExists.id);
 
-          const allMembers = createdConversation!.members;
+        //   const allMembers = createdConversation!.members;
 
-          allMembers.forEach((member) => {
-            const socketId = socketManager.getSocketId(member.id.toString());
-            if (socketId) {
-              io.to(socketId).emit("create-conversation", createdConversation);
-            }
-          });
-        } else {
-          console.log("IO does not exist");
-        }
+        //   allMembers.forEach((member) => {
+        //     const socketId = socketManager.getSocketId(member.id.toString());
+        //     if (socketId) {
+        //       io.to(socketId).emit("create-conversation", createdConversation);
+        //     }
+        //   });
+        // } else {
+        //   console.log("IO does not exist");
+        // }
 
         return res.status(StatusCodes.CONFLICT).json({
           status: StatusCodes.CONFLICT,
