@@ -242,18 +242,24 @@ export const userService = {
     if (type === "BOTH") {
       return User.find({
         _id: { $in: userIds },
+        isSubscriptionActive: false,
+        subscriptionExpiresAt: { $lte: new Date() },
         $or: [{ "limits.remainingMessages": { $lte: 0 } }, { "limits.remainingChats": { $lte: 0 } }],
       });
     }
     if (type === "MESSAGES") {
       return User.find({
         _id: { $in: userIds },
+        isSubscriptionActive: false,
+        subscriptionExpiresAt: { $lte: new Date() },
         "limits.remainingMessages": { $lte: 0 },
       });
     }
     if (type === "CHATS") {
       return User.find({
         _id: { $in: userIds },
+        isSubscriptionActive: false,
+        subscriptionExpiresAt: { $lte: new Date() },
         "limits.remainingChats": { $lte: 0 },
       });
     }
