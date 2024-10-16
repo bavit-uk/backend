@@ -78,7 +78,15 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     subscriptionActivatedAt: { type: Date },
     lastPaymentAt: { type: Date },
     subscriptionExpiresAt: { type: Date },
-    limits: SubscriptionLimitSchema,
+    limits: {
+      type: SubscriptionLimitSchema,
+      default: {
+        totalMessages: TOTAL_ALLOWED_MESSAGES_IN_FREE_PLAN,
+        totalChats: TOTAL_ALLOWED_CHATS_IN_FREE_PLAN,
+        remainingChats: TOTAL_ALLOWED_CHATS_IN_FREE_PLAN,
+        remainingMessages: TOTAL_ALLOWED_MESSAGES_IN_FREE_PLAN,
+      },
+    },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
