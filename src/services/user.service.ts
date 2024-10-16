@@ -240,6 +240,7 @@ export const userService = {
 
   checkIfAnyConversationLimitExceeded: (userIds: string[], type: "BOTH" | "MESSAGES" | "CHATS") => {
     if (type === "BOTH") {
+      console.log("UserIds", userIds);
       return User.find({
         _id: { $in: userIds },
         isSubscriptionActive: false,
@@ -248,6 +249,7 @@ export const userService = {
       });
     }
     if (type === "MESSAGES") {
+      console.log("UserIds", userIds);
       return User.find({
         _id: { $in: userIds },
         isSubscriptionActive: false,
@@ -256,6 +258,7 @@ export const userService = {
       });
     }
     if (type === "CHATS") {
+      console.log("UserIds", userIds);
       return User.find({
         _id: { $in: userIds },
         isSubscriptionActive: false,
@@ -266,4 +269,6 @@ export const userService = {
 
     return [];
   },
+
+  deleteProfile: (userId: string, session?: ClientSession) => User.deleteOne({ _id: userId }, { session }),
 };
