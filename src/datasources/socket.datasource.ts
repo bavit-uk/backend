@@ -118,7 +118,7 @@ class SocketManager {
 
       const allMemberIds = conversation.members.map((member) => member.id.toString());
 
-      const exceedingMembers = await userService.checkIfAnyConversationLimitExceeded(allMemberIds);
+      const exceedingMembers = await userService.checkIfAnyConversationLimitExceeded(allMemberIds, "MESSAGES");
 
       if (exceedingMembers.length) {
         console.log("Exceeded Free Plan Limit");
@@ -225,7 +225,7 @@ class SocketManager {
 
         const allMemberIds = conversation.members.map((member) => member.id.toString());
 
-        const exceedingMembers = await userService.checkIfAnyConversationLimitExceeded(allMemberIds);
+        const exceedingMembers = await userService.checkIfAnyConversationLimitExceeded(allMemberIds, "MESSAGES");
 
         if (exceedingMembers.length) {
           console.log("Exceeded Free Plan Limit");

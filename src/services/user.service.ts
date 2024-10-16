@@ -238,9 +238,26 @@ export const userService = {
       { session }
     ),
 
-  checkIfAnyConversationLimitExceeded: (userIds: string[]) =>
-    User.find({
-      _id: { $in: userIds },
-      $or: [{ "limits.remainingMessages": { $lte: 0 } }, { "limits.remainingChats": { $lte: 0 } }],
-    }),
+  checkIfAnyConversationLimitExceeded: (userIds: string[], type: "BOTH" | "MESSAGES" | "CHATS") => {
+    if (type === "BOTH") {
+      return User.find({
+        _id: { $in: userIds },
+        $or: [{ "limits.remainingMessages": { $lte: 0 } }, { "limits.remainingChats": { $lte: 0 } }],
+      });
+    }
+    if (type === "MESSAGES") {
+      return User.find({
+        _id: { $in: userIds },
+        "limits.remainingMessages": { $lte: 0 },
+      });
+    }
+    if (type === "CHATS") {
+      return User.find({
+        _id: { $in: userIds },
+        "limits.remainingChats": { $lte: 0 },
+      });
+    }
+
+    return [];
+  },
 };

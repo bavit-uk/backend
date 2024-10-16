@@ -80,13 +80,23 @@ export const conversationController = {
 
       const allMembers = [...new Set([...members.map((member) => member.toString()), user.id.toString()])] as string[];
 
-      const exceedingLimitMembers = await userService.checkIfAnyConversationLimitExceeded(allMembers);
+      const exceedingLimitMembers = await userService.checkIfAnyConversationLimitExceeded(allMembers, "CHATS");
       if (exceedingLimitMembers.length) {
+        console.log("Exceeding Limit Members", exceedingLimitMembers);
+        const exceedingMembersObjects = exceedingLimitMembers.map((member) => {
+          console.log("Member", member.id.toString());
+          console.log("You", user.id.toString());
+          return {
+            name: member.id.toString() === user.id.toString() ? "You" : member.name,
+            mobileNumber: member.mobileNumber,
+          };
+        });
+
         return res.status(StatusCodes.PAYMENT_REQUIRED).json({
           status: StatusCodes.PAYMENT_REQUIRED,
           message: ReasonPhrases.PAYMENT_REQUIRED,
           error: `User(s) ${exceedingLimitMembers.join(", ")} has exceeded the conversation limit`,
-          members: exceedingLimitMembers,
+          members: exceedingMembersObjects,
         });
       }
 
@@ -185,13 +195,22 @@ export const conversationController = {
         const addedMembers = newMembersIds.filter((member) => !existingMembersIds.includes(member));
         const removedMembers = existingMembersIds.filter((member) => !newMembersIds.includes(member));
 
-        const exceedingLimitMembers = await userService.checkIfAnyConversationLimitExceeded(addedMembers);
+        const exceedingLimitMembers = await userService.checkIfAnyConversationLimitExceeded(addedMembers, "CHATS");
         if (exceedingLimitMembers.length) {
+          console.log("Exceeding Limit Members", exceedingLimitMembers);
+          const exceedingMembersObjects = exceedingLimitMembers.map((member) => {
+            console.log("Member", member.id.toString());
+            console.log("You", user.id.toString());
+            return {
+              name: member.id.toString() === user.id.toString() ? "You" : member.name,
+              mobileNumber: member.mobileNumber,
+            };
+          });
           return res.status(StatusCodes.PAYMENT_REQUIRED).json({
             status: StatusCodes.PAYMENT_REQUIRED,
             message: ReasonPhrases.PAYMENT_REQUIRED,
             error: `User(s) ${exceedingLimitMembers.join(", ")} has exceeded the conversation limit`,
-            members: exceedingLimitMembers,
+            members: exceedingMembersObjects,
           });
         }
 
