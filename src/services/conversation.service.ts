@@ -5,6 +5,7 @@ import { ClientSession, get, Types } from "mongoose";
 import { messageService } from "./message.service";
 import { userService } from "./user.service";
 import { IUser } from "@/contracts/user.contract";
+import { socketManager } from "@/datasources/socket.datasource";
 
 export const conversationService = {
   create: async (
@@ -217,5 +218,56 @@ export const conversationService = {
       { members: userId, _id: conversationId },
       { $pull: { members: userId } }
     ).exec();
+  },
+
+  deleteAllUserConversations: (userId: string, session?: ClientSession) => {
+    return Conversation.deleteMany({ members: userId }, { session }).exec();
+  },
+
+  sendDeleteConversationNotificationsToAllMembers: async (userId: string, session?: ClientSession) => {
+    const conversation = await Conversation.find({ members: userId }, null, { session }).exec();
+
+    if (!conversation.length) return;
+
+    const io = socketManager.getIo();
+    if (io) {
+      conversation.forEach((conversation) => {
+        const members = conversation.members.map((member) => member.toString());
+        const filteredMembers = members.filter((member) => member !== userId);
+        console.log("filteredMembers for conversation", filteredMembers);
+        if (conversation.isGroup) {
+          console.log("conversation is group");
+          if (conversation.members.length === 2) {
+            console.log("conversation has 2 members");
+            filteredMembers.forEach((member) => {
+              const socketId = socketManager.getSocketId(member);
+              if (socketId) {
+                io.to(socketId).emit("conversation-deleted", conversation.id);
+              }
+            });
+            // io.to(conversation.id).emit("conversation-deleted", conversation.id);
+          } else {
+            console.log("conversation has more than 2 members");
+            filteredMembers.forEach((member) => {
+              const socketId = socketManager.getSocketId(member);
+              if (socketId) {
+                io.to(socketId).emit("messages-deleted", conversation.id);
+              }
+            });
+          }
+        } else {
+          console.log("conversation is not group");
+          filteredMembers.forEach((member) => {
+            const socketId = socketManager.getSocketId(member);
+            if (socketId) {
+              io.to(socketId).emit("conversation-deleted", conversation.id);
+            }
+          });
+          // io.to(filteredMembers).emit("conversation-deleted", conversation.id);
+        }
+      });
+    } else {
+      console.log("io not found");
+    }
   },
 };

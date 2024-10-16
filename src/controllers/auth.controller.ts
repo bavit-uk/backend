@@ -1,7 +1,7 @@
 import { SignInPayload, SignInWithQRPayload } from "@/contracts/auth.contract";
 import { PasswordResetPayload, PasswordUpdatePayload } from "@/contracts/password-reset.contract";
 import { IBodyRequest, ICombinedRequest, IContextRequest, IUserRequest } from "@/contracts/request.contract";
-import { passwordResetService, userService } from "@/services";
+import { conversationService, messageService, passwordResetService, userService } from "@/services";
 import { comparePassword } from "@/utils/compare-password.util";
 import { createHash } from "@/utils/hash.util";
 import { jwtSign } from "@/utils/jwt.util";
@@ -13,6 +13,7 @@ import { IUser, UserUpdatePayload } from "@/contracts/user.contract";
 import { generateOTP } from "@/utils/generate-otp.util";
 import { sendEmail } from "@/utils/send-email.util";
 import { decryptLoginQR, generateLoginQR } from "@/utils/generate-login-qr.util";
+import mongoose from "mongoose";
 
 export const authController = {
   signIn: async (req: ICombinedRequest<unknown, SignInPayload, unknown, { dashboard?: boolean }>, res: Response) => {
@@ -534,6 +535,44 @@ export const authController = {
         status: StatusCodes.OK,
       });
     } catch (err) {
+      console.log(err);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
+
+  deleteProfile: async (req: ICombinedRequest<IUserRequest, Pick<IUser, "password">>, res: Response) => {
+    const session = await mongoose.startSession();
+    try {
+      const { user } = req.context;
+      const { password } = req.body;
+
+      if (!comparePassword(password, user.password)) {
+        return res.status(StatusCodes.UNAUTHORIZED).json({
+          message: ReasonPhrases.UNAUTHORIZED,
+          status: StatusCodes.UNAUTHORIZED,
+        });
+      }
+
+      session.startTransaction();
+
+      await conversationService.sendDeleteConversationNotificationsToAllMembers(user.id, session);
+      await passwordResetService.deleteAllPasswordResetsByEmail(user.email, session);
+      await messageService.deleteAllMessagesByUser(user.id, session);
+      await conversationService.deleteAllUserConversations(user.id, session);
+      await userService.deleteProfile(user.id, session);
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return res.status(StatusCodes.OK).json({
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+      });
+    } catch (err) {
+      await session.abortTransaction();
       console.log(err);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         message: ReasonPhrases.INTERNAL_SERVER_ERROR,

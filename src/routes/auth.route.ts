@@ -22,7 +22,7 @@ export const auth = (router: Router) => {
 
   router.patch("/update-profile", authGuard.isAuth, authValidation.updateProfile, authController.updateProfile);
 
-  router.patch('/update-fcm-token', authGuard.isAuth, authValidation.updateFcmToken, authController.updateFcmToken);
+  router.patch("/update-fcm-token", authGuard.isAuth, authValidation.updateFcmToken, authController.updateFcmToken);
 
   router.patch(
     "/modify-login-status",
@@ -32,7 +32,7 @@ export const auth = (router: Router) => {
   );
 
   router.patch(
-    '/modify-notification-status',
+    "/modify-notification-status",
     authGuard.isAuth,
     authValidation.modifyNotificationStatus,
     authController.modifyNotificationStatus
@@ -47,4 +47,6 @@ export const auth = (router: Router) => {
   );
 
   router.post("/verify-email", authValidation.verifyEmail, authController.verifyEmail);
+
+  router.delete("/delete-profile", authGuard.isAuth, authValidation.deleteProfile, authController.deleteProfile);
 };

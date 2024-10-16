@@ -27,4 +27,7 @@ export const passwordResetService = {
 
   updatePasswordResetToUsed: (email: string, token: string, session?: ClientSession) =>
     PasswordReset.updateOne({ email, token, isUsed: false }, { $set: { isUsed: true } }, { session }),
+
+  deleteAllPasswordResetsByEmail: (email: string, session?: ClientSession) =>
+    PasswordReset.deleteMany({ email }, { session }),
 };

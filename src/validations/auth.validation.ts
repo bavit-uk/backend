@@ -545,4 +545,44 @@ export const authValidation = {
       }
     }
   },
+
+  deleteProfile: async (
+    req: ICombinedRequest<IUserRequest, Pick<IUser, "password">>,
+    res: Response,
+    next: NextFunction
+  ) => {
+    const schema: ZodSchema<Pick<IUser, "password">> = z.object({
+      password: z
+        .string({
+          message: "Password is required but it was not provided",
+        })
+        .regex(REGEX.PASSWORD, {
+          message: "Password must contain at least 8 characters, including uppercase, lowercase letters and numbers",
+        }),
+    });
+
+    try {
+      const validatedData = schema.parse(req.body);
+
+      Object.assign(req.body, validatedData);
+
+      next();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
+
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+          issueMessage: message,
+          issues: issues,
+        });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
+    }
+  },
 };

@@ -296,4 +296,13 @@ export const messageService = {
       },
     ]).exec();
   },
+
+  deleteAllMessagesByUser: async (userId: string, session?: ClientSession) => {
+    return Message.deleteMany(
+      { sender: userId },
+      {
+        session,
+      }
+    ).exec();
+  },
 };

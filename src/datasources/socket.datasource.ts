@@ -360,10 +360,13 @@ class SocketManager {
     this.io!.on("connection", this.handleConnection.bind(this));
     console.log("Socket.io server is up and running");
 
-    setInterval(() => {
-      console.log("Group rooms", this.groupRooms);
-      console.log("Connections", this.connections);
-    }, 5000);
+    if (process.env.NODE_ENV === "dev") {
+      const TIME_INTERVAL = 60 * 1000;
+      setInterval(() => {
+        console.log("Group rooms", this.groupRooms);
+        console.log("Connections", this.connections);
+      }, TIME_INTERVAL);
+    }
   };
 }
 

@@ -183,7 +183,7 @@ export const userService = {
 
   getUserByStripeCustomerId: (stripeCustomerId: string) => User.findOne({ stripeCustomerId }),
 
-  decrementMessageCount: (userIds: string[], session?: ClientSession) =>
+  decrementMessageCount: async (userIds: string[], session?: ClientSession) =>
     User.updateMany(
       { _id: { $in: userIds } },
       {
@@ -240,7 +240,6 @@ export const userService = {
 
   checkIfAnyConversationLimitExceeded: (userIds: string[], type: "BOTH" | "MESSAGES" | "CHATS") => {
     if (type === "BOTH") {
-      console.log("UserIds", userIds);
       return User.find({
         _id: { $in: userIds },
         isSubscriptionActive: false,
@@ -249,7 +248,6 @@ export const userService = {
       });
     }
     if (type === "MESSAGES") {
-      console.log("UserIds", userIds);
       return User.find({
         _id: { $in: userIds },
         isSubscriptionActive: false,
@@ -258,7 +256,6 @@ export const userService = {
       });
     }
     if (type === "CHATS") {
-      console.log("UserIds", userIds);
       return User.find({
         _id: { $in: userIds },
         isSubscriptionActive: false,
