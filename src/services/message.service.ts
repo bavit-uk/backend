@@ -202,6 +202,11 @@ export const messageService = {
           id: "$_id",
         },
       },
+      {
+        $sort: {
+          createdAt: -1,
+        },
+      },
     ]).exec();
   },
 
@@ -292,6 +297,11 @@ export const messageService = {
             },
           },
           id: "$_id",
+        },
+      },
+      {
+        $sort: {
+          createdAt: -1,
         },
       },
     ]).exec();
