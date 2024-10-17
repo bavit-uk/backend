@@ -231,6 +231,13 @@ export const conversationController = {
           });
         }
 
+        // Check if any of the removed member is an admin
+        const removedAdmins = conversation.admin.filter((admin) => removedMembers.includes(admin.toString()));
+        if (removedAdmins.length) {
+          const newAdmin = existingMembersIds.filter((member) => !removedMembers.includes(member))[0];
+          Object.assign(body, { admin: [new Types.ObjectId(newAdmin)] });
+        }
+
         await Promise.all([
           userService.incrementChatCount(removedMembers),
           userService.decrementChatCount(addedMembers),
