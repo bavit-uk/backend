@@ -600,8 +600,17 @@ export const conversationController = {
 
       if (conversation.admin.includes(user.id)) {
         const membersExceptUser = conversation.members.filter((member) => member.id.toString() !== user.id.toString());
-        if (membersExceptUser.length === 0) {
+        if (membersExceptUser.length === 1) {
           await conversationService.deleteConversation(user.id, conversationId);
+
+          const io = socketManager.getIo();
+          if (io) {
+            const receiverId = socketManager.getSocketId(membersExceptUser[0].id.toString());
+            if (receiverId) {
+              io.to(receiverId).emit("conversation-deleted", conversationId);
+            }
+          }
+
           return res.status(StatusCodes.OK).json({
             status: StatusCodes.OK,
             message: ReasonPhrases.OK,
