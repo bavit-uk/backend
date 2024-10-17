@@ -195,23 +195,6 @@ export const conversationController = {
         const addedMembers = newMembersIds.filter((member) => !existingMembersIds.includes(member));
         const removedMembers = existingMembersIds.filter((member) => !newMembersIds.includes(member));
 
-        const io = socketManager.getIo();
-        if (io) {
-          removedMembers.forEach((member) => {
-            const socketId = socketManager.getSocketId(member);
-            if (socketId) {
-              io.to(socketId).emit("conversation-deleted", conversationId);
-            }
-          });
-
-          addedMembers.forEach((member) => {
-            const socketId = socketManager.getSocketId(member);
-            if (socketId) {
-              io.to(socketId).emit("create-conversation", conversation);
-            }
-          });
-        }
-
         const exceedingLimitMembers = await userService.checkIfAnyConversationLimitExceeded(addedMembers, "CHATS");
         if (exceedingLimitMembers.length) {
           console.log("Exceeding Limit Members", exceedingLimitMembers);
@@ -228,6 +211,23 @@ export const conversationController = {
             message: ReasonPhrases.PAYMENT_REQUIRED,
             error: `User(s) ${exceedingLimitMembers.join(", ")} has exceeded the conversation limit`,
             members: exceedingMembersObjects,
+          });
+        }
+
+        const io = socketManager.getIo();
+        if (io) {
+          removedMembers.forEach((member) => {
+            const socketId = socketManager.getSocketId(member);
+            if (socketId) {
+              io.to(socketId).emit("conversation-deleted", conversationId);
+            }
+          });
+
+          addedMembers.forEach((member) => {
+            const socketId = socketManager.getSocketId(member);
+            if (socketId) {
+              io.to(socketId).emit("create-conversation", conversation);
+            }
           });
         }
 
