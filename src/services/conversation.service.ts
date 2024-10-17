@@ -117,7 +117,11 @@ export const conversationService = {
     return conversationWithLastMessage;
   },
 
-  updateConversation: (userId: string, conversationId: string, payload: Partial<CreateConversationPayload>) => {
+  updateConversation: (
+    userId: string,
+    conversationId: string,
+    payload: Partial<CreateConversationPayload> & { admin?: Types.ObjectId[] }
+  ) => {
     return Conversation.findOneAndUpdate(
       { members: userId, _id: conversationId },
       { $set: payload },

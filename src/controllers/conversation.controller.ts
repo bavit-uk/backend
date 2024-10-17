@@ -591,6 +591,21 @@ export const conversationController = {
 
       const updatedConversation = await conversationService.leaveConversation(user.id, conversationId);
 
+      if (conversation.admin.includes(user.id)) {
+        const membersExceptUser = conversation.members.filter((member) => member.id.toString() !== user.id.toString());
+        if (membersExceptUser.length === 0) {
+          await conversationService.deleteConversation(user.id, conversationId);
+          return res.status(StatusCodes.OK).json({
+            status: StatusCodes.OK,
+            message: ReasonPhrases.OK,
+          });
+        }
+        const newAdmin = membersExceptUser[0].id.toString();
+        await conversationService.updateConversation(user.id, conversationId, {
+          admin: [new Types.ObjectId(newAdmin)],
+        });
+      }
+
       await userService.incrementChatCount([user.id]);
 
       return res.status(StatusCodes.OK).json({
