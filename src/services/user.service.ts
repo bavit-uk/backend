@@ -243,15 +243,39 @@ export const userService = {
       return User.find({
         _id: { $in: userIds },
         isSubscriptionActive: false,
-        subscriptionExpiresAt: { $lte: new Date() },
-        $or: [{ "limits.remainingMessages": { $lte: 0 } }, { "limits.remainingChats": { $lte: 0 } }],
+        $and: [
+          {
+            $or: [
+              {
+                subscriptionExpiresAt: { $exists: false },
+              },
+              {
+                subscriptionExpiresAt: { $eq: null },
+              },
+              {
+                subscriptionExpiresAt: { $lte: new Date() },
+              },
+            ],
+          },
+          { $or: [{ "limits.remainingMessages": { $lte: 0 } }, { "limits.remainingChats": { $lte: 0 } }] },
+        ],
       });
     }
     if (type === "MESSAGES") {
       return User.find({
         _id: { $in: userIds },
         isSubscriptionActive: false,
-        subscriptionExpiresAt: { $lte: new Date() },
+        $or: [
+          {
+            subscriptionExpiresAt: { $exists: false },
+          },
+          {
+            subscriptionExpiresAt: { $eq: null },
+          },
+          {
+            subscriptionExpiresAt: { $lte: new Date() },
+          },
+        ],
         "limits.remainingMessages": { $lte: 0 },
       });
     }
@@ -259,7 +283,17 @@ export const userService = {
       return User.find({
         _id: { $in: userIds },
         isSubscriptionActive: false,
-        subscriptionExpiresAt: { $lte: new Date() },
+        $or: [
+          {
+            subscriptionExpiresAt: { $exists: false },
+          },
+          {
+            subscriptionExpiresAt: { $eq: null },
+          },
+          {
+            subscriptionExpiresAt: { $lte: new Date() },
+          },
+        ],
         "limits.remainingChats": { $lte: 0 },
       });
     }
