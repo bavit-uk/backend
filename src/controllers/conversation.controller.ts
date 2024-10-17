@@ -232,7 +232,8 @@ export const conversationController = {
         }
 
         // Check if any of the removed member is an admin
-        const removedAdmins = conversation.admin.filter((admin) => removedMembers.includes(admin.toString()));
+        const conversationAdmins = conversation.admin.map((admin) => admin.toString());
+        const removedAdmins = conversationAdmins.filter((admin) => removedMembers.includes(admin.toString()));
         if (removedAdmins.length) {
           const newAdmin = existingMembersIds.filter((member) => !removedMembers.includes(member))[0];
           Object.assign(body, { admin: [new Types.ObjectId(newAdmin)] });
@@ -596,31 +597,38 @@ export const conversationController = {
         });
       }
 
-      const updatedConversation = await conversationService.leaveConversation(user.id, conversationId);
+      const conversationAdmins = conversation.admin.map((admin) => admin.toString());
 
-      if (conversation.admin.includes(user.id)) {
-        const membersExceptUser = conversation.members.filter((member) => member.id.toString() !== user.id.toString());
+      const membersExceptUser = conversation.members.filter((member) => member.id.toString() !== user.id.toString());
+
+      if (membersExceptUser.length === 1 || membersExceptUser.length === 0) {
+        const io = socketManager.getIo();
         if (membersExceptUser.length === 1) {
-          await conversationService.deleteConversation(user.id, conversationId);
-
-          const io = socketManager.getIo();
           if (io) {
             const receiverId = socketManager.getSocketId(membersExceptUser[0].id.toString());
             if (receiverId) {
               io.to(receiverId).emit("conversation-deleted", conversationId);
             }
+            await userService.incrementChatCount([membersExceptUser[0].id.toString()]);
           }
-
-          return res.status(StatusCodes.OK).json({
-            status: StatusCodes.OK,
-            message: ReasonPhrases.OK,
-          });
         }
+
+        await conversationService.deleteConversation(user.id, conversationId);
+
+        return res.status(StatusCodes.OK).json({
+          status: StatusCodes.OK,
+          message: ReasonPhrases.OK,
+        });
+      }
+
+      if (conversationAdmins.includes(user.id)) {
         const newAdmin = membersExceptUser[0].id.toString();
         await conversationService.updateConversation(user.id, conversationId, {
           admin: [new Types.ObjectId(newAdmin)],
         });
       }
+
+      const updatedConversation = await conversationService.leaveConversation(user.id, conversationId);
 
       await userService.incrementChatCount([user.id]);
 
