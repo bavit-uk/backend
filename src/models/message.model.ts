@@ -33,6 +33,7 @@ const schema = new Schema<IMessage>(
     conversation: { type: Schema.Types.ObjectId, ref: "Conversation", required: [true, "Conversation is required"] },
     isQrCode: { type: Boolean, default: false },
     scannedBy: { type: [Schema.Types.ObjectId], ref: "User", default: [] },
+    isNotification: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
