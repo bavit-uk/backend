@@ -13,6 +13,7 @@ export interface IMessage {
   conversation: Types.ObjectId;
   isQrCode: boolean;
   scannedBy: Types.ObjectId | Types.ObjectId[];
+  isNotification: boolean;
 }
 
 export type GetMessagePayload = Pick<IMessage, "conversation" | "id">;
@@ -20,7 +21,8 @@ export type GetMessagePayload = Pick<IMessage, "conversation" | "id">;
 export type CreateMessagePayload = Pick<
   IMessage,
   "content" | "files" | "conversation" | "sender" | "isQrCode" | "scannedBy"
->;
+> &
+  Partial<Pick<IMessage, "isNotification">>;
 
 export type UpdateMessagePayload = Partial<Pick<IMessage, "content" | "files" | "scannedBy">> &
   Pick<IMessage, "conversation" | "id">;
