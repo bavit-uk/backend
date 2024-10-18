@@ -302,4 +302,6 @@ export const userService = {
   },
 
   deleteProfile: (userId: string, session?: ClientSession) => User.deleteOne({ _id: userId }, { session }),
+
+  getUsersByIds: (userIds: string[]) => User.find({ _id: { $in: userIds } }),
 };
