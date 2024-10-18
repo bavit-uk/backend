@@ -121,6 +121,18 @@ export const conversationController = {
           const socketId = socketManager.getSocketId(member);
           if (socketId) {
             io.to(socketId).emit("create-conversation", createdConversation);
+            io.to(socketId).emit("message", {
+              senderId: user.id,
+              sender: {
+                _id: user.id,
+                name: user.name,
+                id: user.id,
+              },
+              message: `${user.name} created a new conversation`,
+              conversationId: conversation.id,
+              isQrCode: false,
+              isNotification: true,
+            });
           }
         });
       }
@@ -229,6 +241,53 @@ export const conversationController = {
               io.to(socketId).emit("create-conversation", conversation);
             }
           });
+
+          // get added members and the users that are in the conversation
+          const remainingMembers = conversation.members.filter(
+            (member) => !removedMembers.includes(member.id.toString())
+          );
+
+          const remainingMembersIds = remainingMembers.map((member) => member.id.toString());
+
+          const allActiveMembers = [...new Set([...addedMembers, ...remainingMembersIds])];
+
+          // TODO: Look into this for notification of people added and people removed
+          const addedMembersObjects = await userService.getUsersByIds(addedMembers);
+          const removedMembersObjects = await userService.getUsersByIds(removedMembers);
+          allActiveMembers.forEach((member) => {
+            const socketId = socketManager.getSocketId(member);
+            if (socketId) {
+              addedMembersObjects.forEach((addedMember) => {
+                io.to(socketId).emit("message", {
+                  senderId: user.id,
+                  sender: {
+                    _id: user.id,
+                    name: user.name,
+                    id: user.id,
+                  },
+                  message: `${user.name} added ${addedMember.name}`,
+                  conversationId,
+                  isQrCode: false,
+                  isNotification: true,
+                });
+              });
+
+              removedMembersObjects.forEach((removedMember) => {
+                io.to(socketId).emit("message", {
+                  senderId: user.id,
+                  sender: {
+                    _id: user.id,
+                    name: user.name,
+                    id: user.id,
+                  },
+                  message: `${user.name} removed ${removedMember.name}`,
+                  conversationId,
+                  isQrCode: false,
+                  isNotification: true,
+                });
+              });
+            }
+          });
         }
 
         // Check if any of the removed member is an admin
@@ -239,9 +298,48 @@ export const conversationController = {
           Object.assign(body, { admin: [new Types.ObjectId(newAdmin)] });
         }
 
+        const messagePromises: Promise<any>[] = [];
+        removedMembers.forEach((member) => {
+          const memberObject = conversation.members.find((m) => m.id.toString() === member);
+          messagePromises.push(
+            messageService.create({
+              content: `${user.name} removed ${memberObject!.name}`,
+              conversation: new Types.ObjectId(conversationId),
+              sender: user.id,
+              isNotification: true,
+              isQrCode: false,
+              scannedBy: [],
+            })
+          );
+        });
+
+        addedMembers.forEach((member) => {
+          const memberObject = conversation.members.find((m) => m.id.toString() === member);
+          messagePromises.push(
+            messageService.create({
+              content: `${user.name} added ${memberObject}`,
+              conversation: new Types.ObjectId(conversationId),
+              sender: user.id,
+              isNotification: true,
+              isQrCode: false,
+              scannedBy: [],
+            })
+          );
+        });
+
         await Promise.all([
           userService.incrementChatCount(removedMembers),
           userService.decrementChatCount(addedMembers),
+          messagePromises,
+
+          // messageService.create({
+          //   content: `${user.name} added ${addedMembers.length} new member(s)`,
+          //   conversation: new Types.ObjectId(conversationId),
+          //   sender: user.id,
+          //   isNotification: true,
+          //   isQrCode: false,
+          //   scannedBy: [],
+          // }),
         ]);
       }
 
@@ -409,6 +507,18 @@ export const conversationController = {
               conversationId: conversation._id,
               blockedBy: user.id,
             });
+            io.to(socketId).emit("message", {
+              senderId: user.id,
+              sender: {
+                _id: user.id,
+                name: user.name,
+                id: user.id,
+              },
+              message: `${user.name} blocked the conversation`,
+              conversationId: conversation.id,
+              isQrCode: false,
+              isNotification: true,
+            });
           }
         });
       } else {
@@ -465,6 +575,18 @@ export const conversationController = {
             io.to(socketId).emit("unblock-conversation", {
               conversationId: conversation._id,
               unblockedBy: user.id,
+            });
+            io.to(socketId).emit("message", {
+              senderId: user.id,
+              sender: {
+                _id: user.id,
+                name: user.name,
+                id: user.id,
+              },
+              message: `${user.name} unblocked the conversation`,
+              conversationId: conversation.id,
+              isQrCode: false,
+              isNotification: true,
             });
           }
         });
@@ -629,6 +751,16 @@ export const conversationController = {
       }
 
       const updatedConversation = await conversationService.leaveConversation(user.id, conversationId);
+
+      // Add a notification message
+      await messageService.create({
+        content: `${user.name} left the group`,
+        conversation: new Types.ObjectId(conversationId),
+        sender: user.id,
+        isNotification: true,
+        isQrCode: false,
+        scannedBy: [],
+      });
 
       await userService.incrementChatCount([user.id]);
 
