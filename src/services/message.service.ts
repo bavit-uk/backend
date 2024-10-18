@@ -6,7 +6,7 @@ import { IUser } from "@/contracts/user.contract";
 
 export const messageService = {
   create: (
-    { content, conversation, files, sender, isQrCode, scannedBy }: CreateMessagePayload,
+    { content, conversation, files, sender, isQrCode, scannedBy, isNotification = false }: CreateMessagePayload,
     session?: ClientSession
   ) =>
     new Message({
@@ -16,6 +16,7 @@ export const messageService = {
       sender,
       isQrCode,
       scannedBy,
+      isNotification,
     }).save({ session }),
 
   getMessageById: (messageId: string) => Message.findById(messageId),
