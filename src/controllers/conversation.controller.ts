@@ -760,14 +760,52 @@ export const conversationController = {
         });
       }
 
+      let newAdmin = null;
+      let newAdminObject = null;
       if (conversationAdmins.includes(user.id)) {
-        const newAdmin = membersExceptUser[0].id.toString();
+        newAdmin = membersExceptUser[0].id.toString();
+        newAdminObject = membersExceptUser[0];
         await conversationService.updateConversation(user.id, conversationId, {
           admin: [new Types.ObjectId(newAdmin)],
         });
       }
 
       const updatedConversation = await conversationService.leaveConversation(user.id, conversationId);
+
+      const io = socketManager.getIo();
+      if (io) {
+        membersExceptUser.forEach((member) => {
+          const socketId = socketManager.getSocketId(member.id.toString());
+          if (socketId) {
+            io.to(socketId).emit("message", {
+              senderId: user.id,
+              sender: {
+                _id: user.id,
+                name: user.name,
+                id: user.id,
+              },
+              message: `${user.name} left the group`,
+              conversationId: conversationId.toString(),
+              isQrCode: false,
+              isNotification: true,
+            });
+            if (newAdmin && newAdminObject) {
+              io.to(socketId).emit("message", {
+                senderId: user.id,
+                sender: {
+                  _id: user.id,
+                  name: user.name,
+                  id: user.id,
+                },
+                message: `${newAdminObject.name} is now the admin`,
+                conversationId: conversationId.toString(),
+                isQrCode: false,
+                isNotification: true,
+              });
+            }
+          }
+        });
+      }
 
       // Add a notification message
       await messageService.create({
@@ -779,6 +817,17 @@ export const conversationController = {
         scannedBy: [],
       });
 
+      if (newAdmin && newAdminObject) {
+        await messageService.create({
+          content: `${newAdminObject.name} is now the admin`,
+          conversation: new Types.ObjectId(conversationId),
+          sender: user.id,
+          isNotification: true,
+          isQrCode: false,
+          scannedBy: [],
+        });
+      }
+
       await userService.incrementChatCount([user.id]);
 
       return res.status(StatusCodes.OK).json({
@@ -787,6 +836,7 @@ export const conversationController = {
         data: updatedConversation,
       });
     } catch (error) {
+      console.log(error);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         status: StatusCodes.INTERNAL_SERVER_ERROR,
         message: ReasonPhrases.INTERNAL_SERVER_ERROR,
