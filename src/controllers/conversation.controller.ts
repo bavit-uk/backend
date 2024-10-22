@@ -32,6 +32,7 @@ export const conversationController = {
     res: Response
   ) => {
     try {
+      // If there are no members in the group, return a bad request
       if (!members.length) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           status: StatusCodes.BAD_REQUEST,
@@ -39,6 +40,9 @@ export const conversationController = {
         });
       }
 
+      // If members length is greater than 10, return a bad request
+      // This is only for non-subscribed users
+      // TODO: Check if the user is subscribed and then check the limit
       if (members.length > 10) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           status: StatusCodes.BAD_REQUEST,
@@ -47,11 +51,13 @@ export const conversationController = {
         });
       }
 
+      // Check if the conversation already exists
       const alreadyExists = await conversationService.checkConversationExists(
         user.id,
         members.map((member) => member.toString())
       );
 
+      // If the conversation already exists and it is not a group, return a conflict
       if (alreadyExists && isGroup === false) {
         // const io = socketManager.getIo();
 
@@ -80,6 +86,7 @@ export const conversationController = {
 
       const allMembers = [...new Set([...members.map((member) => member.toString()), user.id.toString()])] as string[];
 
+      // Check if any of the members have exceeded the conversation limit
       const exceedingLimitMembers = await userService.checkIfAnyConversationLimitExceeded(allMembers, "CHATS");
       if (exceedingLimitMembers.length) {
         console.log("Exceeding Limit Members", exceedingLimitMembers);
@@ -136,6 +143,16 @@ export const conversationController = {
           }
         });
       }
+
+      // Save message to the database
+      await messageService.create({
+        content: `${user.name} created a new conversation`,
+        conversation: new Types.ObjectId(conversation.id),
+        sender: user.id,
+        isNotification: true,
+        isQrCode: false,
+        scannedBy: [],
+      });
 
       return res.status(StatusCodes.CREATED).json({
         status: StatusCodes.CREATED,
@@ -226,6 +243,9 @@ export const conversationController = {
           });
         }
 
+        const addedMembersObjects = await userService.getUsersByIds(addedMembers);
+        const removedMembersObjects = await userService.getUsersByIds(removedMembers);
+
         const io = socketManager.getIo();
         if (io) {
           removedMembers.forEach((member) => {
@@ -252,8 +272,7 @@ export const conversationController = {
           const allActiveMembers = [...new Set([...addedMembers, ...remainingMembersIds])];
 
           // TODO: Look into this for notification of people added and people removed
-          const addedMembersObjects = await userService.getUsersByIds(addedMembers);
-          const removedMembersObjects = await userService.getUsersByIds(removedMembers);
+
           allActiveMembers.forEach((member) => {
             const socketId = socketManager.getSocketId(member);
             if (socketId) {
@@ -299,11 +318,10 @@ export const conversationController = {
         }
 
         const messagePromises: Promise<any>[] = [];
-        removedMembers.forEach((member) => {
-          const memberObject = conversation.members.find((m) => m.id.toString() === member);
+        removedMembersObjects.forEach((member) => {
           messagePromises.push(
             messageService.create({
-              content: `${user.name} removed ${memberObject!.name}`,
+              content: `${user.name} removed ${member!.name}`,
               conversation: new Types.ObjectId(conversationId),
               sender: user.id,
               isNotification: true,
@@ -313,11 +331,10 @@ export const conversationController = {
           );
         });
 
-        addedMembers.forEach((member) => {
-          const memberObject = conversation.members.find((m) => m.id.toString() === member);
+        addedMembersObjects.forEach((member) => {
           messagePromises.push(
             messageService.create({
-              content: `${user.name} added ${memberObject}`,
+              content: `${user.name} added ${member!.name}`,
               conversation: new Types.ObjectId(conversationId),
               sender: user.id,
               isNotification: true,
