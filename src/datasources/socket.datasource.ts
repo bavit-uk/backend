@@ -1,3 +1,4 @@
+import { user } from "./../routes/user.route";
 import { conversationService, messageService, userService } from "@/services";
 import { getAccessTokenFromHeaders } from "@/utils/headers.util";
 import { jwtVerify } from "@/utils/jwt.util";
@@ -153,6 +154,21 @@ class SocketManager {
           // return this.io!.to(socket.id).emit("error", "Receiver is not connected to the server");
         } else {
           const senderObject = conversation.members.find((member) => member.id.toString() === socket.user.id);
+          if (lockChat) {
+            this.io!.to(receiverSocketId).emit("message", {
+              senderId: socket.user.id,
+              sender: {
+                _id: senderObject?.id,
+                name: senderObject?.name,
+                id: senderObject?.id,
+              },
+              message: `${senderObject?.name} has locked the chat`,
+              conversationId,
+              files,
+              isQrCode: false,
+              isNotification: true,
+            });
+          }
           this.io!.to(receiverSocketId).emit("message", {
             senderId: socket.user.id,
             sender: {
@@ -170,6 +186,18 @@ class SocketManager {
             this.io!.to(receiverSocketId).emit("lock-conversation", conversationId);
           }
         }
+      }
+
+      if (lockChat) {
+        const senderObject = conversation.members.find((member) => member.id.toString() === socket.user.id);
+        await messageService.create({
+          content: `${senderObject?.name} has locked the chat`,
+          sender: new mongoose.Types.ObjectId(socket.user.id),
+          conversation: new mongoose.Types.ObjectId(conversationId),
+          files,
+          isQrCode: false,
+          scannedBy: [],
+        });
       }
 
       await messageService.create({
