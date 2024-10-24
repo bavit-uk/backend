@@ -137,6 +137,9 @@ export const userService = {
   updateEmailVerificationOtp: (id: string, otp: string, session?: ClientSession) =>
     User.updateOne({ _id: id }, { otp, otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000) }, { session }),
 
+  updateLoginVerificationOtp: (id: string, otp: string | null, session?: ClientSession) =>
+    User.updateOne({ _id: id }, { otp, otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000) }, { session }),
+
   getRegisteredContacts: (contacts: string[]) =>
     User.find({
       mobileNumber: {
@@ -152,8 +155,8 @@ export const userService = {
   updateNotificationStatus: (userId: string, notificationStatus: boolean, session?: ClientSession) =>
     User.updateOne({ _id: userId }, { notificationStatus }, { session }),
 
-  updateFCMToken: (userId: string, fcmToken: string, session?: ClientSession) =>
-    User.updateOne({ _id: userId }, { fcmToken }, { session }),
+  updateFCMToken: (userId: string, fcmToken: string, deviceUniqueId: string, session?: ClientSession) =>
+    User.updateOne({ _id: userId }, { fcmToken, deviceUniqueId }, { session }),
 
   getFCMToken: async (userId: string) => {
     const user = await User.findById(userId).select("fcmToken");
@@ -304,4 +307,7 @@ export const userService = {
   deleteProfile: (userId: string, session?: ClientSession) => User.deleteOne({ _id: userId }, { session }),
 
   getUsersByIds: (userIds: string[]) => User.find({ _id: { $in: userIds } }),
+
+  updateUniqueDeviceId: (userId: string, deviceUniqueId: string, session?: ClientSession) =>
+    User.updateOne({ _id: userId }, { deviceUniqueId }, { session }),
 };

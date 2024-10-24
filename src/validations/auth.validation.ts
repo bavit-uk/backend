@@ -77,6 +77,86 @@ export const authValidation = {
     }
   },
 
+  signInWithOtp: async (
+    req: IBodyRequest<Pick<SignInPayload, "email" | "otp" | "deviceUniqueId">>,
+    res: Response,
+    next: NextFunction
+  ) => {
+    const schema: ZodSchema<Pick<SignInPayload, "email" | "otp" | "deviceUniqueId">> = z.object({
+      email: z
+        .string({
+          message: "Email is required but it was not provided",
+        })
+        .regex(REGEX.EMAIL, { message: "Invalid email format" })
+        .toLowerCase(),
+      otp: z.string({
+        message: "OTP is required but it was not provided",
+      }),
+      deviceUniqueId: z.string({
+        message: "Device unique id is required but it was not provided",
+      }),
+    });
+
+    try {
+      const validatedData = schema.parse(req.body);
+
+      Object.assign(req.body, validatedData);
+
+      next();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
+
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+          issueMessage: message,
+          issues: issues,
+        });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
+    }
+  },
+
+  resendLoginOtp: async (req: IBodyRequest<{ email: string }>, res: Response, next: NextFunction) => {
+    const schema: ZodSchema<{ email: string }> = z.object({
+      email: z
+        .string({
+          message: "Email is required but it was not provided",
+        })
+        .regex(REGEX.EMAIL, { message: "Invalid email format" })
+        .toLowerCase(),
+    });
+
+    try {
+      const validatedData = schema.parse(req.body);
+
+      Object.assign(req.body, validatedData);
+
+      next();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
+
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+          issueMessage: message,
+          issues: issues,
+        });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
+    }
+  },
+
   signUp: async (req: IBodyRequest<SignUpPayload>, res: Response, next: NextFunction) => {
     const schema: ZodSchema<SignUpPayload> = z.object({
       email: z
@@ -509,16 +589,19 @@ export const authValidation = {
   },
 
   updateFcmToken: async (
-    req: ICombinedRequest<IUserRequest, Pick<IUser, "fcmToken">>,
+    req: ICombinedRequest<IUserRequest, Pick<IUser, "fcmToken" | "deviceUniqueId">>,
     res: Response,
     next: NextFunction
   ) => {
-    const schema: ZodSchema<Pick<IUser, "fcmToken">> = z.object({
+    const schema: ZodSchema<Pick<IUser, "fcmToken" | "deviceUniqueId">> = z.object({
       fcmToken: z
         .string({
           message: "FCM token is required but it was not provided",
         })
         .min(1, { message: "FCM token is required but it was not provided" }),
+      deviceUniqueId: z.string({
+        message: "Device unique id is required but it was not provided",
+      }),
     });
 
     try {

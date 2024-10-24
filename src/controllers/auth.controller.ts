@@ -42,6 +42,27 @@ export const authController = {
         });
       }
 
+      if (user.deviceUniqueId && user.deviceUniqueId !== req.headers["device-unique-id"]) {
+        const token = generateOTP(5);
+
+        const html = `
+        <h1>Login OTP</h1>
+        <p>Hello ${user.name},</p>
+        <p>Below is your Login OTP. Please use it to complete your login process.</p>
+        <p><strong>${token}</strong></p>
+        <p>This token will expire in 1 hour.</p>
+        <p>Thanks</p>
+      `;
+
+        await sendEmail(user.email, "QR Exchange Support: Login OTP", "Login OTP", html);
+        await userService.updateLoginVerificationOtp(user.id, token);
+        return res.status(StatusCodes.OK).json({
+          message: ReasonPhrases.OK,
+          status: StatusCodes.OK,
+          reason: "DEVICE_ID_MISMATCH",
+        });
+      }
+
       const { accessToken, refreshToken } = jwtSign(user.id);
       return res.status(StatusCodes.OK).json({
         data: { accessToken, refreshToken, user: user.toJSON() },
@@ -100,6 +121,98 @@ export const authController = {
       const { accessToken, refreshToken } = jwtSign(user.id);
       return res.status(StatusCodes.OK).json({
         data: { accessToken, refreshToken, user: user.toJSON() },
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+      });
+    } catch (err) {
+      console.log(err);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
+
+  signInWithOtp: async (req: IBodyRequest<Pick<SignInPayload, "email" | "otp" | "deviceUniqueId">>, res: Response) => {
+    try {
+      const { email, otp, deviceUniqueId } = req.body;
+
+      const user = await userService.getByEmail(email, "+otp +otpExpiresAt");
+      if (!user) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          message: ReasonPhrases.NOT_FOUND,
+          status: StatusCodes.NOT_FOUND,
+        });
+      }
+
+      if (!user.otp || !user.otpExpiresAt) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
+
+      const matchedToken = user.otp.toString() === otp!.toString() && user.otpExpiresAt > new Date();
+      if (!matchedToken) {
+        console.log("OTP Mismatch");
+        return res.status(StatusCodes.UNAUTHORIZED).json({
+          message: ReasonPhrases.UNAUTHORIZED,
+          status: StatusCodes.UNAUTHORIZED,
+        });
+      }
+
+      await userService.updateLoginVerificationOtp(user.id, null);
+      await userService.updateUniqueDeviceId(user.id, deviceUniqueId!);
+
+      const { accessToken, refreshToken } = jwtSign(user.id);
+      return res.status(StatusCodes.OK).json({
+        data: { accessToken, refreshToken, user: user.toJSON() },
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+      });
+    } catch (err) {
+      console.log(err);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
+
+  resendLoginOtp: async (req: IBodyRequest<{ email: string }>, res: Response) => {
+    try {
+      const { email } = req.body;
+
+      const user = await userService.getByEmail(email, "+otp +otpExpiresAt");
+      if (!user) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          message: ReasonPhrases.NOT_FOUND,
+          status: StatusCodes.NOT_FOUND,
+        });
+      }
+
+      if (!user.otp || !user.otpExpiresAt) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
+
+      const token = generateOTP(5);
+
+      const html = `
+        <h1>Login OTP</h1>
+        <p>Hello ${user.name},</p>
+        <p>Below is your Login OTP. Please use it to complete your login process.</p>
+        <p><strong>${token}</strong></p>
+        <p>This token will expire in 1 hour.</p>
+        <p>Thanks</p>
+      `;
+
+      await sendEmail(user.email, "QR Exchange Support: Login OTP", "Login OTP", html);
+      await userService.updateLoginVerificationOtp(user.id, token);
+
+      return res.status(StatusCodes.OK).json({
         message: ReasonPhrases.OK,
         status: StatusCodes.OK,
       });
@@ -523,12 +636,15 @@ export const authController = {
     }
   },
 
-  updateFcmToken: async (req: ICombinedRequest<IUserRequest, Pick<IUser, "fcmToken">>, res: Response) => {
+  updateFcmToken: async (
+    req: ICombinedRequest<IUserRequest, Pick<IUser, "fcmToken" | "deviceUniqueId">>,
+    res: Response
+  ) => {
     try {
-      const { fcmToken } = req.body;
+      const { fcmToken, deviceUniqueId } = req.body;
       const { user } = req.context;
 
-      await userService.updateFCMToken(user.id, fcmToken!);
+      await userService.updateFCMToken(user.id, fcmToken!, deviceUniqueId!);
 
       return res.status(StatusCodes.OK).json({
         message: ReasonPhrases.OK,

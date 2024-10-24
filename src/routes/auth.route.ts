@@ -8,6 +8,10 @@ export const auth = (router: Router) => {
 
   router.post("/login-with-qr", authValidation.signInWithQrCode, authController.signInWithQrCode);
 
+  router.post("/login-with-otp", authValidation.signInWithOtp, authController.signInWithOtp);
+
+  router.post("/resend-login-otp", authValidation.resendLoginOtp, authController.resendLoginOtp);
+
   router.post("/register", authValidation.signUp, authController.signUp);
 
   router.get("/refresh-token", authGuard.isAuth, authController.refreshToken);
