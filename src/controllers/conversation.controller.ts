@@ -122,7 +122,7 @@ export const conversationController = {
       const io = socketManager.getIo();
 
       if (io) {
-        const createdConversation = await conversationService.getConversation(user.id, conversation.id);
+        const createdConversation = await conversationService.getConversation(user.id, conversation._id.toString());
 
         allMembers.forEach((member) => {
           const socketId = socketManager.getSocketId(member);
@@ -136,7 +136,7 @@ export const conversationController = {
                 id: user.id,
               },
               message: `${user.name} created a new conversation`,
-              conversationId: conversation.id,
+              conversationId: conversation._id,
               isQrCode: false,
               isNotification: true,
             });
@@ -147,7 +147,7 @@ export const conversationController = {
       // Save message to the database
       await messageService.create({
         content: `${user.name} created a new conversation`,
-        conversation: new Types.ObjectId(conversation.id),
+        conversation: new Types.ObjectId(conversation._id),
         sender: user.id,
         isNotification: true,
         isQrCode: false,
@@ -532,7 +532,7 @@ export const conversationController = {
                 id: user.id,
               },
               message: `${user.name} blocked the conversation`,
-              conversationId: conversation.id,
+              conversationId: conversation._id,
               isQrCode: false,
               isNotification: true,
             });
@@ -601,7 +601,7 @@ export const conversationController = {
                 id: user.id,
               },
               message: `${user.name} unblocked the conversation`,
-              conversationId: conversation.id,
+              conversationId: conversation._id,
               isQrCode: false,
               isNotification: true,
             });
@@ -679,6 +679,24 @@ export const conversationController = {
           if (receiverId) {
             io.to(receiverId).emit("unlock-conversation", conversation._id);
           }
+
+          scannedByUsers.forEach((scannedByUser) => {
+            const socketId = socketManager.getSocketId(scannedByUser.toString());
+            if (socketId) {
+              io.to(socketId).emit("message", {
+                senderId: user.id,
+                sender: {
+                  _id: user.id,
+                  name: user.name,
+                  id: user.id,
+                },
+                message: `${user.name} unlocked the conversation`,
+                conversationId: conversation._id,
+                isQrCode: false,
+                isNotification: true,
+              });
+            }
+          });
         }
       }
 
