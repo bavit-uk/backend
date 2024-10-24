@@ -348,6 +348,10 @@ export const conversationController = {
           userService.incrementChatCount(removedMembers),
           userService.decrementChatCount(addedMembers),
           messagePromises,
+          messageService.addMultipleScannedBy({
+            conversation: new Types.ObjectId(conversationId),
+            scannedBy: addedMembers.map((member) => new Types.ObjectId(member)),
+          }),
 
           // messageService.create({
           //   content: `${user.name} added ${addedMembers.length} new member(s)`,
