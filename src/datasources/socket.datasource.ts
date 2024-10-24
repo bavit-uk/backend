@@ -197,6 +197,7 @@ class SocketManager {
           files,
           isQrCode: false,
           scannedBy: [],
+          isNotification: true,
         });
       }
 
