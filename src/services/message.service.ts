@@ -118,6 +118,12 @@ export const messageService = {
     return Message.findOneAndUpdate({ conversation, _id: id, isQrCode: true }, { $addToSet: { scannedBy } });
   },
 
+  addMultipleScannedBy: async ({
+    conversation,
+    scannedBy,
+  }: Pick<UpdateMessagePayload, "conversation" | "scannedBy">) => {
+    return Message.updateMany({ conversation, isQrCode: true }, { $addToSet: { scannedBy } });
+  },
   getAllMashupsSentByUser: async (sender: string) => {
     return Message.aggregate([
       {
