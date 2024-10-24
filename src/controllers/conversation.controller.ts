@@ -698,6 +698,16 @@ export const conversationController = {
             }
           });
         }
+
+        // Add a notification message
+        await messageService.create({
+          content: `${user.name} unlocked the conversation`,
+          conversation: new Types.ObjectId(conversationId),
+          sender: user.id,
+          isNotification: true,
+          isQrCode: false,
+          scannedBy: [],
+        });
       }
 
       return res.status(StatusCodes.OK).json({
