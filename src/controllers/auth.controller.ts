@@ -674,6 +674,7 @@ export const authController = {
 
       session.startTransaction();
 
+      await conversationService.assignAnotherAdmin(user.id, session);
       await conversationService.sendDeleteConversationNotificationsToAllMembers(user.id, session);
       await passwordResetService.deleteAllPasswordResetsByEmail(user.email, session);
       await messageService.deleteAllMessagesByUser(user.id, session);

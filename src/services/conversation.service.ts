@@ -228,6 +228,22 @@ export const conversationService = {
     return Conversation.deleteMany({ members: userId }, { session }).exec();
   },
 
+  assignAnotherAdmin: async (userId: string, session?: ClientSession) => {
+    const conversation = await Conversation.find({ admin: userId, isGroup: true }, null, {
+      session,
+    }).exec();
+
+    return Promise.all(
+      conversation.map((conversation) => {
+        const newAdmin = conversation.members.find((member) => member.toString() !== userId);
+        return Conversation.findOneAndUpdate(
+          { _id: conversation.id },
+          { $set: { admin: [newAdmin] } },
+          { session }
+        ).exec();
+      })
+    );
+  },
   sendDeleteConversationNotificationsToAllMembers: async (userId: string, session?: ClientSession) => {
     const conversation = await Conversation.find({ members: userId }, null, { session }).exec();
 
