@@ -224,8 +224,23 @@ export const conversationService = {
     ).exec();
   },
 
-  deleteAllUserConversations: (userId: string, session?: ClientSession) => {
-    return Conversation.deleteMany({ members: userId }, { session }).exec();
+  deleteAllUserConversations: async (userId: string, session?: ClientSession) => {
+    // Get all conversations where the user is a member
+    const userConversations = await Conversation.find({ members: userId }).exec();
+
+    const promises: Promise<any>[] = [];
+
+    for (const conversation of userConversations) {
+      if (conversation.members.length > 2) {
+        promises.push(
+          Conversation.updateOne({ _id: conversation._id }, { $pull: { members: userId } }, { session }).exec()
+        );
+      } else {
+        promises.push(Conversation.deleteOne({ _id: conversation._id }, { session }).exec());
+      }
+    }
+
+    return Promise.all(promises);
   },
 
   assignAnotherAdmin: async (userId: string, session?: ClientSession) => {
