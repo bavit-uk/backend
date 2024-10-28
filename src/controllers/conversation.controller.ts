@@ -43,7 +43,7 @@ export const conversationController = {
       // If members length is greater than 10, return a bad request
       // This is only for non-subscribed users
       // TODO: Check if the user is subscribed and then check the limit
-      if (members.length > 10) {
+      if (members.length > 10 && !user.isSubscriptionActive) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           status: StatusCodes.BAD_REQUEST,
           message: ReasonPhrases.BAD_REQUEST,
@@ -91,8 +91,6 @@ export const conversationController = {
       if (exceedingLimitMembers.length) {
         console.log("Exceeding Limit Members", exceedingLimitMembers);
         const exceedingMembersObjects = exceedingLimitMembers.map((member) => {
-          console.log("Member", member.id.toString());
-          console.log("You", user.id.toString());
           return {
             name: member.id.toString() === user.id.toString() ? "You" : member.name,
             mobileNumber: member.mobileNumber,
@@ -124,35 +122,41 @@ export const conversationController = {
       if (io) {
         const createdConversation = await conversationService.getConversation(user.id, conversation._id.toString());
 
+        const allMembers = createdConversation!.members.map((member) => member.id.toString());
+
         allMembers.forEach((member) => {
           const socketId = socketManager.getSocketId(member);
           if (socketId) {
             io.to(socketId).emit("create-conversation", createdConversation);
-            io.to(socketId).emit("message", {
-              senderId: user.id,
-              sender: {
-                _id: user.id,
-                name: user.name,
-                id: user.id,
-              },
-              message: `${user.name} created a new conversation`,
-              conversationId: conversation._id,
-              isQrCode: false,
-              isNotification: true,
-            });
+            if (conversation.isGroup) {
+              io.to(socketId).emit("message", {
+                senderId: user.id,
+                sender: {
+                  _id: user.id,
+                  name: user.name,
+                  id: user.id,
+                },
+                message: `${user.name} created a new conversation`,
+                conversationId: conversation._id,
+                isQrCode: false,
+                isNotification: true,
+              });
+            }
           }
         });
       }
 
-      // Save message to the database
-      await messageService.create({
-        content: `${user.name} created a new conversation`,
-        conversation: new Types.ObjectId(conversation._id),
-        sender: user.id,
-        isNotification: true,
-        isQrCode: false,
-        scannedBy: [],
-      });
+      if (conversation.isGroup) {
+        // Save message to the database
+        await messageService.create({
+          content: `${user.name} created a new conversation`,
+          conversation: new Types.ObjectId(conversation._id),
+          sender: user.id,
+          isNotification: true,
+          isQrCode: false,
+          scannedBy: [],
+        });
+      }
 
       return res.status(StatusCodes.CREATED).json({
         status: StatusCodes.CREATED,
