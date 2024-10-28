@@ -122,9 +122,9 @@ export const conversationController = {
       if (io) {
         const createdConversation = await conversationService.getConversation(user.id, conversation._id.toString());
 
-        const allMembers = createdConversation!.members.map((member) => member.id.toString());
+        const conversationMembers = createdConversation!.members.map((member) => member.id.toString());
 
-        allMembers.forEach((member) => {
+        conversationMembers.forEach((member) => {
           const socketId = socketManager.getSocketId(member);
           if (socketId) {
             io.to(socketId).emit("create-conversation", createdConversation);
