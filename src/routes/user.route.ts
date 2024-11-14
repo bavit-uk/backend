@@ -1,17 +1,23 @@
-import { userController } from "@/controllers";
-import { authGuard } from "@/guards";
 import { Router } from "express";
+import { userController } from "@/controllers";
+import { userValidation } from "@/validations";
 
 export const user = (router: Router) => {
-  router.get("/", authGuard.isAuth, authGuard.isAdmin, userController.getAll);
 
-  router.post("/registered-contacts", authGuard.isAuth, userController.getRegisteredContacts);
+    // route for create new user 
+    router.post("/create", userValidation.createUser , userController.createUser);
 
-  router.get("/:id", authGuard.isAuth, authGuard.isAdmin, userController.getOne);
+    // route for create new user category 
+    router.post("/create-category", userValidation.createUserCategory , userController.createUserCategory); 
 
-  router.post("/", authGuard.isAuth, authGuard.isAdmin, userController.create);
+    // route for get all users 
+    router.get("/all-users" , userController.allUsers)
 
-  router.patch("/:id", authGuard.isAuth, authGuard.isAdmin, userController.update);
+    // route for get all users category 
+    router.get('/categories' , userController.allUsersCategories)
 
-  router.patch("/:id/password", authGuard.isAuth, authGuard.isAdmin, userController.updatePassword);
-};
+    // route for get details of specific user through id
+    router.get("/:id" , userController.getUserDetails)    
+
+}
+

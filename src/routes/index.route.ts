@@ -1,14 +1,9 @@
 import { Router } from "express";
 
 // Routes
-import { auth } from "./auth.route";
-import { healthcheck } from "./healthcheck.route";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
-import { user as users } from "./user.route";
 import { multer as files } from "./multer.route";
-import { conversation as conversations } from "./conversation.route";
-import { message as messages } from "./message.route";
-import { stripe } from "./stripe.route";
+import {user} from "./user.route"
 
 // Create a new router to handle all routes
 const router: Router = Router();
@@ -16,7 +11,7 @@ const router: Router = Router();
 // Define all routes
 const routes: {
   [key: string]: (router: Router) => void;
-} = { auth, healthcheck, users, files, conversations, messages, stripe };
+} = { files , user};
 
 // Loop through all routes and pass the router to each route
 for (const route in routes) {

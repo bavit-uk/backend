@@ -1,146 +1,104 @@
-import { IBodyRequest, ICombinedRequest, IParamsRequest } from "@/contracts/request.contract";
-import { IUser, UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract";
-import { PasswordReset } from "@/models";
-import { passwordResetService, userService } from "@/services";
-import { createHash } from "@/utils/hash.util";
 import { Request, Response } from "express";
-import { ReasonPhrases, StatusCodes } from "http-status-codes";
-
-import formData from "form-data";
-import Mailgun from "mailgun.js";
+import { StatusCodes, ReasonPhrases } from "http-status-codes";
+import { User , UserCategory} from "@/models";
+import { IUser , IUserCategory } from "@/contracts/user.contract"
+// import bcrypt from 'bcrypt'; 
+import { createHash } from "@/utils/hash.util";
+import { userService } from "@/services";
 
 export const userController = {
-  getAll: async (req: Request, res: Response) => {
-    const users = await userService.getAllWithPasswordRequests();
 
-    return res.status(StatusCodes.OK).json({
-      status: StatusCodes.OK,
-      message: ReasonPhrases.OK,
-      data: users,
-    });
-  },
+    allUsers: async (req: Request , res: Response) => {
+        try {
+            const users = await userService.getAllUsers()
+            res.status(StatusCodes.OK).json(users);
+        } catch (error) {
+            res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error });
+        }
+    },
 
-  getOne: async (
-    req: IParamsRequest<{
-      id: string;
-    }>,
-    res: Response
-  ) => {
-    const user = await userService.getById(req.params.id);
+    allUsersCategories: async (req: Request , res: Response) => {
+        try {
+            const usersCategories = await userService.getAllUsersCategories();
+            res.status(StatusCodes.OK).json(usersCategories);
+        } catch (error) {
+            console.log(error)
+            res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error fetching user categories", error: error  });
+        }
+    },
 
-    return res.status(StatusCodes.OK).json({
-      status: StatusCodes.OK,
-      message: ReasonPhrases.OK,
-      data: user,
-    });
-  },
+    createUserCategory: async (req: Request, res: Response) => {
+        try {
+            const { userType, description, permissions } = req.body;
 
-  create: async (req: IBodyRequest<UserCreatePayload>, res: Response) => {
-    const exists = await userService.getByEmail(req.body.email);
-    if (exists) {
-      return res.status(StatusCodes.CONFLICT).json({
-        status: StatusCodes.CONFLICT,
-        message: ReasonPhrases.CONFLICT,
-      });
-    }
+            // Create a new user category
+            // const newUserCategory = new UserCategory({
+            //     userType,
+            //     description,
+            //     permissions
+            // });
+            const newUserCategory = userService.createCategory(userType , description , permissions)
+            res.status(StatusCodes.CREATED).json({ message: 'User category created successfully', userCategory: newUserCategory });
+        } catch (error) {
+            console.error(error);
+            res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Error creating user category' });
+        }
+    },
 
-    const user = await userService.create(req.body);
+    getUserDetails: async (req: Request, res: Response) => {
+        try {
+            const userId = req.params.id // req.userId // Assume you have a way to get the logged-in user's ID
+            const user = await User.findById(userId).populate('userType');
+            if (!user) return res.status(404).json({ message: 'User not found' });
+    
+            // const userType = user.userType as IUserCategory;
+    
+            // const userDetails = {
+            //     userType: userType.userType, // Get the role of the user
+            //     permissions: userType.permissions,
+            //     additionalAccessRights: user.additionalAccessRights,
+            //     restrictedAccessRights: user.restrictedAccessRights,
+            // };
+            res.json(user);
+        } catch (error) {
+            console.error(error);
+            res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Error fetching user details' });
+        }
+    },
 
-    return res.status(StatusCodes.CREATED).json({
-      status: StatusCodes.CREATED,
-      message: ReasonPhrases.CREATED,
-      data: user,
-    });
-  },
+    createUser: async (req: Request, res: Response) => {
+        try {
+            const { firstName, lastName, email, password, signUpThrough, userType, additionalAccessRights, restrictedAccessRights, phoneNumber } = req.body;
+            // console.log("Hello world" , firstName, lastName, email, password, signUpThrough, userType, additionalAccessRights, restrictedAccessRights, phoneNumber)
+            const hashedPassword = await createHash(password)
 
-  update: async (
-    req: ICombinedRequest<unknown, UserUpdatePayload & Pick<UserCreatePayload, "password">, { id: string }>,
-    res: Response
-  ) => {
-    if (req.body.password) {
-      req.body.password = await createHash(req.body.password);
-    }
+            const userCategory = await UserCategory.findById(userType);
+            if (!userCategory) {
+                return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Invalid user type' });
+            }
+            // console.log("User Category : " , userCategory);
+            // console.log("hello")
+            const newUser = new User({
+                firstName,
+                lastName,
+                email,
+                password: hashedPassword,
+                signUpThrough,
+                // profileImage,
+                userType: userCategory._id,
+                additionalAccessRights,
+                restrictedAccessRights,
+                phoneNumber
+            });
 
-    const user = await userService.updateProfileByUserId(req.params.id, req.body);
+            await newUser.save();
+            res.status(StatusCodes.CREATED).json({ message: 'User created successfully', user: newUser });
+        } catch (error) {
+            console.error(error);
+            res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Error creating user' });
+        }
+    },
 
-    return res.status(StatusCodes.OK).json({
-      status: StatusCodes.OK,
-      message: ReasonPhrases.OK,
-      data: user,
-    });
-  },
+}
 
-  updatePassword: async (req: ICombinedRequest<unknown, { password: string }, { id: string }>, res: Response) => {
-    const password = await createHash(req.body.password);
 
-    const user = await userService.updatePasswordByUserId(req.params.id, password);
-
-    if (!user) {
-      return res.status(StatusCodes.NOT_FOUND).json({
-        status: StatusCodes.NOT_FOUND,
-        message: ReasonPhrases.NOT_FOUND,
-      });
-    }
-
-    const passwordReset = await passwordResetService.findAllUnusedPasswordResetsByEmail(user.email);
-
-    if (passwordReset.length) {
-      await passwordResetService.updateAllUnusedPasswordResetsToUsed(user.email);
-    }
-
-    try {
-      const mailgun = new Mailgun(formData);
-      const mg = mailgun.client({ username: "api", key: process.env.MAILGUN_API_KEY! });
-
-      const messageObject = {
-        from: `HideAndSeek Support <bdc@support.rons-automotive.com>`,
-        to: [user.email],
-        subject: "Password Reset",
-        text: "Your password has been reset",
-        html: `
-          <p>Your password has been reset by an admin. If you did not request this, please contact support.</p>
-          <p> Your new password is: ${req.body.password}</p>
-
-          <p>Thank you</p>
-          <p>HideAndSeek Support</p>
-        `,
-      };
-
-      const message = await mg.messages.create("support.rons-automotive.com", messageObject);
-    } catch (err) {
-      console.log(err);
-    }
-
-    return res.status(StatusCodes.OK).json({
-      status: StatusCodes.OK,
-      message: ReasonPhrases.OK,
-      data: user,
-    });
-  },
-
-  getRegisteredContacts: async (
-    req: ICombinedRequest<
-      IUser,
-      {
-        contacts: string[];
-      }
-    >,
-    res: Response
-  ) => {
-    req.body.contacts = (req.body.contacts || []).map((contact) => contact.replace(/\D/g, ""));
-
-    let registeredContacts = await userService.getRegisteredContacts(req.body.contacts);
-
-    const registeredMobileNumbers = registeredContacts.map((contact) => contact.mobileNumber);
-    const unregisteredMobileNumbers = req.body.contacts.filter((contact) => !registeredMobileNumbers.includes(contact));
-
-    return res.status(StatusCodes.OK).json({
-      status: StatusCodes.OK,
-      message: ReasonPhrases.OK,
-      data: {
-        registeredMobileNumbers: registeredContacts,
-        unregisteredMobileNumbers,
-      },
-    });
-  },
-};

@@ -5,6 +5,7 @@ let componentName = process.argv[3];
 let createSpecificFiles = process.argv[2];
 
 if (!["model", "controller", "service", "route", "contract"].includes(createSpecificFiles)) {
+  console.log("componentName",componentName);
   if (!componentName) {
     componentName = createSpecificFiles;
     createSpecificFiles = null;
