@@ -1,5 +1,7 @@
 import { User , UserCategory } from "@/models";
-import { IUser , IUserCategory } from "@/contracts/user.contract";
+import { IUser } from "@/contracts/user.contract";
+import { createHash } from "@/utils/hash.util";
+
 
 export const userService = {
 
@@ -7,38 +9,51 @@ export const userService = {
         return await User.find();
     },
 
-    getAllUsersCategories: async () => {
-        return await UserCategory.find();
-    },
-
-    createCategory: async (userType: string , description: string , permissions: [string]) => {
-        const newCategory = await new UserCategory({
-            userType,
-            description,
-            permissions,
-        });
-        return await newCategory.save();
-    },
-
-    findById: async (id: string) => {
+    findUserById: async (id: string) => {
         const user = await User.findById(id).populate('userType')
         return user;
     },
 
-    // createUser: async (firstName:string , lastName:string , email:string , password:string , signUpThrough:string , userType:string , additionalAccessRights:[string] , restrictedAccessRights:[string] , phoneNumber:string) => {
-        
-    //     const newUser = new TestUser ({
-    //         firstName, 
-    //         lastName,
-    //         email,
-    //         password,
-    //         signUpThrough,
-    //         userType,
-    //         additionalAccessRights,
-    //         restrictedAccessRights,
-    //         phoneNumber,
-    //     })
-    // }
+    findCategoryById: async (id: string) => {
+        // console.log("id : " , id);
+        const userCategory = await UserCategory.findById(id);
+        return userCategory;
+    },
+
+    createUser: async (data: IUser) => {
+        const { firstName, lastName, email, password, signUpThrough, userType, additionalAccessRights, restrictedAccessRights, phoneNumber } = data;
+        const hasedPassword = await createHash(password || "");
+        // const hashedPassword = await User.hashPassword()
+
+        const newUser = await new User ({
+            firstName, 
+            lastName,
+            email,
+            password: hasedPassword,
+            signUpThrough,
+            userType,
+            additionalAccessRights,
+            restrictedAccessRights,
+            phoneNumber,
+        });
+        return await newUser.save();
+    },
+
+    findExistingEmail: async (email: string) => {
+        const userExists = await User.findOne({email});
+        return userExists;
+    },
+
+    updateById: async (userId: string , updateData: IUser) => {
+        const updatedUser = await User.findByIdAndUpdate(userId , updateData , {new: true})
+        return updatedUser;
+    },
+
+    deleteById: async (id: string) => {
+        return await User.findByIdAndDelete(id);
+    },
+
+    
 
 }
 

@@ -1,2 +1,4 @@
-export {User , UserCategory} from "./user.model"
+export {User} from "./user.model"
+export {UserCategory} from "./user-category.model"
+
 

@@ -1,9 +1,10 @@
 import jwt from "jsonwebtoken";
 import { Types } from "mongoose";
 
-import { IAccessToken, IJwtUser } from "@/contracts/jwt.contract";
+import { IAccessToken , IJwtUser} from "@/contracts/jwt.contract";
 
 export const jwtSign = (id: Types.ObjectId): IAccessToken => {
+  
   const accessToken = jwt.sign({ id }, process.env.JWT_SECRET || "", {
     expiresIn: process.env.JWT_EXPIRATION,
   });

@@ -1,21 +1,14 @@
 import mongoose, { Schema, model , Document } from "mongoose";
 import { REGEX } from "@/constants/regex";
-import { IUser , IUserCategory , IUserMethods , UserModel } from "@/contracts/user.contract";
+import { IUser , IUserMethods , UserModel ,  } from "@/contracts/user.contract";
+import { compareSync, hashSync } from "bcrypt";
+import { ENUMS } from "@/constants/enum";
 
 
 const validateEmail = (email: string) => REGEX.EMAIL.test(email);
 
-const userCategorySchema = new Schema<IUserCategory>({
-    userType: { type: String, required: true, unique: true },
-    description: { type: String },
-    permissions: { type: [String], required: true }, 
-}, { timestamps: true });
 
-export const UserCategory = model<IUserCategory>('UserCategory', userCategorySchema);
-
-
-
-const UserSchema = new Schema<IUser , UserModel , IUserMethods>({
+const schema = new Schema<IUser , UserModel , IUserMethods>({
     firstName: { type: String, required: true },
     lastName: { type: String },
     email: {
@@ -26,20 +19,29 @@ const UserSchema = new Schema<IUser , UserModel , IUserMethods>({
         message: "Invalid email format",
       },
     },
-    password: { type: String },
-    signUpThrough: { type: String, enum: ["Google", "Apple", "Web"], required: true, default: "Web" },
+    password: { type: String , select: false},
+    signUpThrough: { type: String, enum: ENUMS.SIGNUP_THROUGH, required: true, default: "Web" },
     profileImage: { type: String },
     EmailVerifiedOTP: { type: String },
     EmailVerifiedOTPExpiredAt: { type: Date },
     isEmailVerified: { type: Boolean, },
     EmailVerifiedAt: { type: Date,  },
-    userType: { type: Schema.Types.ObjectId, ref: 'UserCategory', required: true }, // Reference to UserCategory
+    userType: { type: Schema.Types.ObjectId, ref: 'UserCategory'}, // Reference to UserCategory
     additionalAccessRights: { type: [String], default: [] }, // Add specific rights
     restrictedAccessRights: { type: [String], default: [] }, // Remove specific rights
-    phoneNumber: { type: String, required: true },
+    phoneNumber: { type: String},
+    resetPasswordToken: { type: String, select: false },
+    resetPasswordExpires: { type: Date, select: false },
 }, { timestamps: true });
 
+schema.methods.hashPassword = function (password: string) {
+  return hashSync (password, 10);
+}
 
-export const User = model<IUser , UserModel>('User', UserSchema);
+schema.methods.comparePassword = function (password: string) {
+  return compareSync(password, this.password);
+};
+
+export const User = model<IUser , UserModel>('User', schema);
 
 

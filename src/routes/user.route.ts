@@ -5,19 +5,20 @@ import { userValidation } from "@/validations";
 export const user = (router: Router) => {
 
     // route for create new user 
-    router.post("/create", userValidation.createUser , userController.createUser);
-
-    // route for create new user category 
-    router.post("/create-category", userValidation.createUserCategory , userController.createUserCategory); 
+    router.post("/", userValidation.createUser , userController.createUser);
 
     // route for get all users 
-    router.get("/all-users" , userController.allUsers)
+    router.get("/" , userController.allUsers)
 
-    // route for get all users category 
-    router.get('/categories' , userController.allUsersCategories)
+    // route for get details (include permissions) of specific user through id
+    router.get("/:id" ,  userValidation.validateId ,userController.getUserDetails)
 
-    // route for get details of specific user through id
-    router.get("/:id" , userController.getUserDetails)    
+    // route for update user 
+    router.patch("/:id" , userValidation.updateUser ,userController.updateUser)
+
+    // route for delete user using id
+    router.delete("/:id" , userValidation.validateId , userController.deleteUser )
 
 }
+
 

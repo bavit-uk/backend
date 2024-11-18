@@ -4,4 +4,6 @@ export const ENUMS = {
   USER_STATUS: ["active", "inactive", "blocked", "deleted", "reported"] as const,
   NOTIFICATION_STATUS: ["on", "off", "mute"] as const,
   LOCATION_STATUS: ["on", "off"] as const,
+  SIGNUP_THROUGH: ["Google" , "Apple" , "Web"] as const
+
 };

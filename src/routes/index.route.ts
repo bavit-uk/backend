@@ -4,6 +4,8 @@ import { Router } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { multer as files } from "./multer.route";
 import {user} from "./user.route"
+import { auth } from "./user-auth.route";
+import { userCategory } from "./user-category.route";
 
 // Create a new router to handle all routes
 const router: Router = Router();
@@ -11,7 +13,7 @@ const router: Router = Router();
 // Define all routes
 const routes: {
   [key: string]: (router: Router) => void;
-} = { files , user};
+} = { files , user , auth , userCategory};
 
 // Loop through all routes and pass the router to each route
 for (const route in routes) {

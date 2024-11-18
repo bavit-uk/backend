@@ -1,3 +1,3 @@
 import { hash } from "bcrypt";
 
-export const createHash = (string: string) => hash(string, 10);
+export const createHash = (password: string) => hash(password, 10);

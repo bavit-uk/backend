@@ -1,31 +1,30 @@
 import { Document, Model, Types } from "mongoose";
 
 
-export interface IUserCategory extends Document {
-  _id: Types.ObjectId;
-  userType: string;
-  description?: string;
-  permissions: string[];
-}
-
 
 export interface IUser extends Document {
   firstName: string;
-  lastName?: string;
+  lastName: string;
   email: string;
-  password?: string;
+  password: string;
   signUpThrough: string;
-  profileImage: string;
+  profileImage?: string;
   EmailVerifiedOTP?: string;
   EmailVerifiedOTPExpiredAt?: Date;
   isEmailVerified: boolean;
   EmailVerifiedAt: Date;
-  userType: IUserCategory | Types.ObjectId;
+  userType: Types.ObjectId;
   additionalAccessRights: string[];
   restrictedAccessRights: string[];
   phoneNumber: string;
+  resetPasswordToken: string;
+  resetPasswordExpires: Date
 }
 
+
+
+export type UserCreatePayload = Pick<IUser , "firstName" | "lastName" | "email" | "password" | "signUpThrough" | "phoneNumber" | "userType" | "additionalAccessRights" | "restrictedAccessRights">
+export type UserSignupPayload = Pick<IUser , "firstName" | "lastName" | "email" | "password" | "signUpThrough">
 
 export interface IUserMethods {
   comparePassword: (password: string) => boolean;

@@ -1,0 +1,5 @@
+import { IUser } from "./user.contract";
+
+
+export type UserRegisterPayload = Pick<IUser ,  "firstName" | "lastName" | "email" | "password" | "signUpThrough">
+export type UserLoginPayload = Pick<IUser ,  "email" | "password" >
