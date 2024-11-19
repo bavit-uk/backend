@@ -16,6 +16,6 @@ export const jwtSign = (id: Types.ObjectId): IAccessToken => {
   return { accessToken, refreshToken };
 };
 
-export const jwtVerify = ({ accessToken }: { accessToken: string }) => {
-  return jwt.verify(accessToken, process.env.JWT_SECRET || "") as IJwtUser;
+export const jwtVerify = (token: string) => {
+  return jwt.verify(token, process.env.JWT_SECRET || "") as IJwtUser;
 };

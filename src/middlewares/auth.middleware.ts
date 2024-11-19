@@ -14,7 +14,7 @@ export const authMiddleware = async (req: Request, _: Response, next: NextFuncti
 
     // console.log("accessToken : " , accessToken)
 
-    const { id } = jwtVerify({ accessToken });
+    const { id } = jwtVerify(accessToken);
     if (!id) return next();
 
     // console.log("id : " , id)

@@ -24,7 +24,7 @@ const schema = new Schema<IUser , UserModel , IUserMethods>({
     profileImage: { type: String },
     EmailVerifiedOTP: { type: String },
     EmailVerifiedOTPExpiredAt: { type: Date },
-    isEmailVerified: { type: Boolean, },
+    isEmailVerified: { type: Boolean, default:false},
     EmailVerifiedAt: { type: Date,  },
     userType: { type: Schema.Types.ObjectId, ref: 'UserCategory'}, // Reference to UserCategory
     additionalAccessRights: { type: [String], default: [] }, // Add specific rights

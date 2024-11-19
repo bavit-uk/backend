@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { authService } from "@/services";
 import { User } from "@/models";
-import { jwtSign } from "@/utils/jwt.util";
+import { jwtSign, jwtVerify } from "@/utils/jwt.util";
 import crypto from "crypto";
 import sendEmail from "@/utils/nodeMailer";
 
@@ -17,7 +17,25 @@ export const authController = {
       }
       // Create new user
       const newUser = await authService.createUser(req.body);
-      res.status(StatusCodes.CREATED).json({ message: "User registered successfully", user: newUser });
+
+      // send verification email
+      const verificationToken = jwtSign(newUser.id);
+      // const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+      const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+
+      const html = `<p>Please verify your email by clicking the link below:</p>
+                    <a href="${verificationUrl}">Verify Email</a>`;
+      // Use sendEmail to send the verification email
+      await sendEmail({
+        to: newUser.email,
+        subject: "Verify your email address",
+        html,
+      });
+      res.status(StatusCodes.CREATED).json({
+        message: "User registered successfully, Please check your email to verify your account.",
+        user: newUser,
+        verificationToken: verificationToken.accessToken // Include token for testing purposes
+      });
     } catch (error) {
       console.error("Error registering user:", error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error registering user" });
@@ -68,6 +86,34 @@ export const authController = {
     }
   },
 
+  verifyEmail: async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      if (!token || typeof token !== "string") {
+        return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: "Invalid verification token." });
+      }
+      const decoded = jwtVerify(token);
+      const userId = decoded.id.toString();
+      const user = await authService.findUserById(userId);
+      if (!user) {
+        return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: "User not found." });
+      }
+      // Check if already verified
+      if (user.isEmailVerified) {
+        return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: "Email is already verified." });
+      }
+
+      // Update user's verification status
+      user.isEmailVerified = true;
+      user.EmailVerifiedAt = new Date();
+      await user.save();
+      res.status(StatusCodes.OK).json({ success: true, message: "Email verified successfully." });
+    } catch (error) {
+      console.error("Error verifying email:", error);
+      res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: "Invalid or expired token." });
+    }
+  },
+
   getProfile: async (req: Request, res: Response) => {
     try {
       // const userId = req.body.user?._id;
@@ -89,8 +135,8 @@ export const authController = {
       const { firstName, lastName, phoneNumber, profileImage, oldPassword, newPassword } = req.body;
 
       // const user = await authService.findUserById(req.body.user.id, "+password");
-      const user = req.context.user
-      console.log("User in controller : " , user)
+      const user = req.context.user;
+      console.log("User in controller : ", user);
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
       }
