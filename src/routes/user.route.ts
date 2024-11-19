@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { userController } from "@/controllers";
 import { userValidation } from "@/validations";
+import { authGuard } from "@/guards";
 
 export const user = (router: Router) => {
 
@@ -8,7 +9,7 @@ export const user = (router: Router) => {
     router.post("/", userValidation.createUser , userController.createUser);
 
     // route for get all users 
-    router.get("/" , userController.allUsers)
+    router.get("/" , authGuard.isAuth , userController.allUsers)
 
     // route for get details (include permissions) of specific user through id
     router.get("/:id" ,  userValidation.validateId ,userController.getUserDetails)

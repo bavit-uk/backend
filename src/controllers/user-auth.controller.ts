@@ -3,7 +3,8 @@ import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { authService } from "@/services";
 import { User } from "@/models";
 import { jwtSign } from "@/utils/jwt.util";
-import crypto from "crypto"
+import crypto from "crypto";
+import sendEmail from "@/utils/nodeMailer";
 
 export const authController = {
   registerUser: async (req: Request, res: Response) => {
@@ -23,7 +24,7 @@ export const authController = {
     }
   },
 
-  loginUser: async (req: Request, res: Response, next: NextFunction) => {
+  loginUser: async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
       // Find user by email first
@@ -67,7 +68,87 @@ export const authController = {
     }
   },
 
-  forgotPassword: async (req: Request, res: Response, next: NextFunction) => {
+  getProfile: async (req: Request, res: Response) => {
+    try {
+      // const userId = req.body.user?._id;
+      // const user = await authService.findUserById(userId);
+      const user = req.context.user;
+      // console.log("User in controller : " , user)
+      if (!user) {
+        return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
+      }
+      return res.status(StatusCodes.OK).json({ user });
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error fetching user profile" });
+    }
+  },
+
+  updateProfile: async (req: Request, res: Response) => {
+    try {
+      const { firstName, lastName, phoneNumber, profileImage, oldPassword, newPassword } = req.body;
+
+      // const user = await authService.findUserById(req.body.user.id, "+password");
+      const user = req.context.user
+      console.log("User in controller : " , user)
+      if (!user) {
+        return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
+      }
+      if (firstName) {
+        user.firstName = firstName;
+      }
+      if (lastName) {
+        user.lastName = lastName;
+      }
+      if (phoneNumber) {
+        user.phoneNumber = phoneNumber;
+      }
+      if (profileImage) {
+        user.profileImage = profileImage;
+      }
+      // Check if password update is requested
+      if (newPassword) {
+        if (!oldPassword) {
+          // Old password must be provided if new password is being updated
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            message: "Old password is required to update the password",
+          });
+        }
+        // Verify the old password
+        const isPasswordCorrect = user.comparePassword(oldPassword);
+        if (!isPasswordCorrect) {
+          return res.status(StatusCodes.UNAUTHORIZED).json({
+            success: false,
+            message: "Old password is incorrect",
+          });
+        }
+        // Hash the new password and update it
+        user.password = user.hashPassword(newPassword);
+      }
+      await user.save();
+      // Respond with the updated user information
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Profile updated successfully",
+        user: {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phoneNumber: user.phoneNumber,
+          profileImage: user.profileImage,
+          email: user.email,
+        },
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Error updating profile",
+      });
+    }
+  },
+
+  forgotPassword: async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
       const user = await authService.findExistingEmail(email);
@@ -81,8 +162,70 @@ export const authController = {
       // Generate a reset token
       const resetToken = crypto.randomBytes(32).toString("hex");
       const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
-      const resetTokenExpiry = Date.now() + 3600 * 1000; // 1 hour expiration
-    } catch (error) {}
+      const resetTokenExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes expiration
+
+      // Save the token and expiry to the user record
+      user.resetPasswordToken = resetTokenHash;
+      user.resetPasswordExpires = resetTokenExpiry;
+      await user.save();
+
+      // Construct reset URL
+      const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+      console.log("resetURL : ", resetUrl);
+
+      const message = `
+        <p>You requested a password reset.</p>
+        <p>Please click the link below to reset your password:</p>
+        <a href="${resetUrl}" clicktracking=off>${resetUrl}</a>
+        <p>This link is valid for 10 minutes.</p>
+       `;
+
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: "Password Reset Request",
+          html: message,
+        });
+        res.status(StatusCodes.OK).json({
+          success: true,
+          message: "Reset password email sent",
+        });
+      } catch (error) {
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+        throw new Error("Email could not be sent");
+      }
+    } catch (error) {
+      console.error("Error in forgotPassword:", error);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing request" });
+    }
+  },
+
+  resetPassword: async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const { password } = req.body;
+
+      // Hash the token and compare it to the stored token
+      const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+      // Find user by the reset token and check expiration
+      const user = await authService.findUserByResetToken(hashedToken);
+      if (!user || !user.resetPasswordExpires || user.resetPasswordExpires < Date.now()) {
+        return res.status(StatusCodes.BAD_REQUEST).json({ message: "Invalid or expired token" });
+      }
+
+      // Update the password and clear the reset token
+      user.password = user.hashPassword(password);
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+      return res.status(StatusCodes.OK).json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Error in resetPassword:", error);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing request" });
+    }
   },
 };
 

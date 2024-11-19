@@ -31,7 +31,7 @@ const schema = new Schema<IUser , UserModel , IUserMethods>({
     restrictedAccessRights: { type: [String], default: [] }, // Remove specific rights
     phoneNumber: { type: String},
     resetPasswordToken: { type: String, select: false },
-    resetPasswordExpires: { type: Date, select: false },
+    resetPasswordExpires: { type: Number, select: false },
 }, { timestamps: true });
 
 schema.methods.hashPassword = function (password: string) {

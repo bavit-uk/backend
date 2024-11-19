@@ -9,22 +9,18 @@ export const userService = {
         return await User.find();
     },
 
-    findUserById: async (id: string) => {
-        const user = await User.findById(id).populate('userType')
-        return user;
+    findUserById: async (id: string ) => {
+        return await User.findById(id).populate('userType')
     },
 
     findCategoryById: async (id: string) => {
-        // console.log("id : " , id);
-        const userCategory = await UserCategory.findById(id);
-        return userCategory;
+        return await UserCategory.findById(id);
+
     },
 
     createUser: async (data: IUser) => {
         const { firstName, lastName, email, password, signUpThrough, userType, additionalAccessRights, restrictedAccessRights, phoneNumber } = data;
-        const hasedPassword = await createHash(password || "");
-        // const hashedPassword = await User.hashPassword()
-
+        const hasedPassword = await createHash(password);
         const newUser = await new User ({
             firstName, 
             lastName,

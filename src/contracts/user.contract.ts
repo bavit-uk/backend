@@ -17,8 +17,8 @@ export interface IUser extends Document {
   additionalAccessRights: string[];
   restrictedAccessRights: string[];
   phoneNumber: string;
-  resetPasswordToken: string;
-  resetPasswordExpires: Date
+  resetPasswordToken?: string;
+  resetPasswordExpires?: number
 }
 
 

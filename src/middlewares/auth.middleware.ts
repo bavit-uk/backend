@@ -2,7 +2,8 @@ import { NextFunction, Request, Response } from "express";
 
 import { getAccessTokenFromHeaders } from "@/utils/headers.util";
 import { jwtVerify } from "@/utils/jwt.util";
-import { userService } from "@/services";
+// import { userService } from "@/services";
+import { authService } from "@/services";
 
 export const authMiddleware = async (req: Request, _: Response, next: NextFunction): Promise<void> => {
   try {
@@ -11,11 +12,17 @@ export const authMiddleware = async (req: Request, _: Response, next: NextFuncti
     const { accessToken } = getAccessTokenFromHeaders(req.headers);
     if (!accessToken) return next();
 
+    // console.log("accessToken : " , accessToken)
+
     const { id } = jwtVerify({ accessToken });
     if (!id) return next();
 
-    const user = await userService.getById(id.toString(), "+password");
+    // console.log("id : " , id)
+
+    const user = await authService.findUserById(id.toString(), "+password");
     if (!user) return next();
+
+    // console.log("User : " , user)
 
     Object.assign(req, {
       context: {
