@@ -1,5 +1,5 @@
 import { User , UserCategory } from "@/models";
-import { IUser } from "@/contracts/user.contract";
+import { IUser , UserCreatePayload} from "@/contracts/user.contract";
 import { createHash } from "@/utils/hash.util";
 
 
@@ -18,7 +18,7 @@ export const userService = {
 
     },
 
-    createUser: async (data: IUser) => {
+    createUser: async (data: UserCreatePayload) => {
         const { firstName, lastName, email, password, signUpThrough, userType, additionalAccessRights, restrictedAccessRights, phoneNumber } = data;
         const hasedPassword = await createHash(password);
         const newUser = await new User ({
