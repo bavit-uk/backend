@@ -53,30 +53,30 @@ export const supplierController = {
     }
   },
 
-  editSupplier: async (req: Request, res: Response) => {
-    try {
-      const supplierId = req.params.id; // Get supplier ID from route parameters
-      const { address: newAddresses, ...supplierData } = req.body;
+//   editSupplier: async (req: Request, res: Response) => {
+//     try {
+//       const supplierId = req.params.id; // Get supplier ID from route parameters
+//       const { address: newAddresses, ...supplierData } = req.body;
 
-      // Update the non-address fields for the supplier
-      const updatedSupplier = await supplierService.updateSupplierData(supplierId, supplierData);
+//       // Update the non-address fields for the supplier
+//       const updatedSupplier = await supplierService.updateSupplierData(supplierId, supplierData);
 
-      if (!updatedSupplier) {
-        return res.status(StatusCodes.NOT_FOUND).json({ message: "Supplier not found" });
-      }
+//       if (!updatedSupplier) {
+//         return res.status(StatusCodes.NOT_FOUND).json({ message: "Supplier not found" });
+//       }
 
-      // Process addresses
-      const updatedAddressIds = await supplierService.updateAddresses(updatedSupplier.address, newAddresses);
+//       // Process addresses
+//       const updatedAddressIds = await supplierService.updateAddresses(updatedSupplier.address, newAddresses);
 
-      // Update the supplier document with the new address IDs
-      updatedSupplier.address = updatedAddressIds;
-      await updatedSupplier.save();
+//       // Update the supplier document with the new address IDs
+//       updatedSupplier.address = updatedAddressIds;
+//       await updatedSupplier.save();
 
-      res.status(StatusCodes.OK).json({ message: "Supplier updated successfully", supplier: updatedSupplier });
-    } catch (error) {
-      console.error(error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error updating supplier" });
-    }
-  },
+//       res.status(StatusCodes.OK).json({ message: "Supplier updated successfully", supplier: updatedSupplier });
+//     } catch (error) {
+//       console.error(error);
+//       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error updating supplier" });
+//     }
+//   },
 
 };

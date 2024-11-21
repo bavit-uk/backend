@@ -44,34 +44,34 @@ export const supplierService = {
     return User.findById(id).populate("supplierCategory").populate("address");
   },
 
-  updateById: (id: string, data: Partial<supplierAddPayload>) => {
-    const updatedSupplier = User.findByIdAndUpdate(id, data, { new: true });
-    return updatedSupplier;
-  },
+//   updateById: (id: string, data: Partial<supplierAddPayload>) => {
+//     const updatedSupplier = User.findByIdAndUpdate(id, data, { new: true });
+//     return updatedSupplier;
+//   },
 
-  // Update supplier's non-address data
-  updateSupplierData: async (supplierId: string, data: Partial<supplierAddPayload>) => {
-    const updatedSupplier = await User.findByIdAndUpdate(supplierId, data, { new: true });
-    return updatedSupplier;
-  },
+//   // Update supplier's non-address data
+//   updateSupplierData: async (supplierId: string, data: Partial<supplierAddPayload>) => {
+//     const updatedSupplier = await User.findByIdAndUpdate(supplierId, data, { new: true });
+//     return updatedSupplier;
+//   },
 
-  // Update, Add, or Remove addresses based on new input
-  updateAddresses: async (existingAddressIds: mongoose.Types.ObjectId[], newAddresses: IUserAddress[]) => {
-    const updatedAddressIds: mongoose.Types.ObjectId[] = [];
+//   // Update, Add, or Remove addresses based on new input
+//   updateAddresses: async (existingAddressIds: mongoose.Types.ObjectId[], newAddresses: IUserAddress[]) => {
+//     const updatedAddressIds: mongoose.Types.ObjectId[] = [];
 
-    for (const address of newAddresses) {
-      if (address._id && existingAddressIds.includes(address._id)) {
-        // Update existing address
-        await Address.findByIdAndUpdate(address._id, address);
-        updatedAddressIds.push(address._id);
-      } else {
-        // Add new address
-        const newAddress = new Address(address);
-        const savedAddress = await newAddress.save();
-        updatedAddressIds.push(savedAddress._id);
-      }
-    }
-  },
+//     for (const address of newAddresses) {
+//       if (address._id && existingAddressIds.includes(address._id)) {
+//         // Update existing address
+//         await Address.findByIdAndUpdate(address._id, address);
+//         updatedAddressIds.push(address._id);
+//       } else {
+//         // Add new address
+//         const newAddress = new Address(address);
+//         const savedAddress = await newAddress.save();
+//         updatedAddressIds.push(savedAddress._id);
+//       }
+//     }
+//   },
 
 };
 
