@@ -64,16 +64,20 @@ export const authController = {
       // const accessToken = jwtSign
       const { accessToken, refreshToken } = jwtSign(user.id);
 
-      res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        maxAge: 15 * 60 * 1000, // Access Token lifespan (15 minutes in ms)
-      });
-      res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // Refresh Token lifespan (7 days in ms)
-      });
+      // res.cookie("accessToken", accessToken, {
+      //   httpOnly: true,
+      //   maxAge: 15 * 60 * 1000, // Access Token lifespan (15 minutes in ms)
+      // });
+      // res.cookie("refreshToken", refreshToken, {
+      //   httpOnly: true,
+      //   maxAge: 7 * 24 * 60 * 60 * 1000, // Refresh Token lifespan (7 days in ms)
+      // });
       return res.status(StatusCodes.OK).json({
-        data: { user: user.toJSON() },
+        data: { 
+          user: user.toJSON(),
+          accessToken,  // Include 'Bearer' prefix if necessary
+          refreshToken,
+        },
         message: ReasonPhrases.OK,
         status: StatusCodes.OK,
       });

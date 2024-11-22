@@ -11,6 +11,7 @@ export const auth = (router: Router) => {
 
   router.post("/login", authValidation.loginUser, authController.loginUser);
 
+  
   router.get("/profile", authGuard.isAuth, authController.getProfile);
 
   // TODO add validation  "authValidation.updateProfile,"
