@@ -19,7 +19,7 @@ export interface IUser extends Document {
   dob: Date;
   address: Types.ObjectId
   signUpThrough: string;
-  profileImage?: IFile;
+  profileImage?: string;
   EmailVerifiedOTP?: string;
   EmailVerifiedOTPExpiredAt?: Date;
   isEmailVerified: boolean;

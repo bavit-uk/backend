@@ -32,7 +32,7 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     dob: { type: Date },
     // address: [{ type: Schema.Types.ObjectId, ref: "Address" }],
     signUpThrough: { type: String, enum: ENUMS.SIGNUP_THROUGH, required: true, default: "Web" },
-    profileImage: { type: fileSchema },
+    profileImage: { type: String },
     EmailVerifiedOTP: { type: String },
     EmailVerifiedOTPExpiredAt: { type: Date },
     isEmailVerified: { type: Boolean, default: false },

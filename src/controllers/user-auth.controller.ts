@@ -130,18 +130,32 @@ export const authController = {
     }
   },
 
+
+
+
   updateProfile: async (req: Request, res: Response) => {
     try {
-      const { firstName, lastName, phoneNumber , dob , profileImage, oldPassword, newPassword } = req.body;
+      const { firstName, lastName, phoneNumber , dob , address , profileImage, oldPassword, newPassword } = req.body;
 
-      console.log("This is User in request Body : " , req.body)
+      // console.log("Address in request Body : " , address)
 
       // const user = await authService.findUserById(req.body.user.id, "+password");
       const user = req.context.user;
 
-      console.log("User in context: " , user)
+      // console.log("User Id in context: " , user._id)
+      // user.address = address
+      // console.log("Address : " , user.address)
 
       // console.log("User in controller : ", user);
+
+      // for(const addr of address){
+      //   const createdAddress = await authService.createAddress({...addr , userId:user._id });
+      //   if(!createdAddress){
+      //       return res.json({ message: "Error creating address" });
+      //   }
+      //   console.log("Address created : " , createdAddress)
+      // }
+
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
       }
