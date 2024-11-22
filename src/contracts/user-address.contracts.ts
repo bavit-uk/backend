@@ -2,7 +2,7 @@ import { Document, Model, Types } from "mongoose";
 
 
 export interface IUserAddress extends Document {
-    // userId: Types.ObjectId;
+    userId: Types.ObjectId;
     label: string;
     street: string,
     city: string,

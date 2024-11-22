@@ -24,7 +24,7 @@ export const authController = {
       const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
 
       const html = `<p>Please verify your email by clicking the link below:</p>
-                    <a href="${verificationUrl}">Verify Email</a>`;
+                    <a href="${verificationUrl}">Verify Email${verificationUrl}</a>`;
       // Use sendEmail to send the verification email
       await sendEmail({
         to: newUser.email,
@@ -132,7 +132,7 @@ export const authController = {
 
   updateProfile: async (req: Request, res: Response) => {
     try {
-      const { firstName, lastName, phoneNumber, profileImage, oldPassword, newPassword } = req.body;
+      const { firstName, lastName, phoneNumber , dob , address , profileImage, oldPassword, newPassword } = req.body;
 
       // const user = await authService.findUserById(req.body.user.id, "+password");
       const user = req.context.user;
@@ -151,6 +151,9 @@ export const authController = {
       }
       if (profileImage) {
         user.profileImage = profileImage;
+      }
+      if(dob){
+        user.dob = dob
       }
       // Check if password update is requested
       if (newPassword) {

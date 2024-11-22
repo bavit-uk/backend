@@ -3,7 +3,7 @@ import { IUserAddress , UserAddressModel} from "@/contracts/user-address.contrac
 
 const AddressSchema = new Schema<IUserAddress , UserAddressModel>(
     {
-      // userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+      userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
       label: { type: String, required: true },
       street: { type: String, required: true },
       city: { type: String, required: true },

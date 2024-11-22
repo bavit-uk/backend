@@ -33,6 +33,7 @@ const documentSchema = z.object({
 
 
 export const supplierValidation = {
+
   addSupplier: async (req: IBodyRequest<supplierAddPayload>, res: Response, next: NextFunction) => {
     const schema: ZodSchema = z.object({
       firstName: z.string().trim().min(3, "First name is required"),
@@ -67,5 +68,32 @@ export const supplierValidation = {
       }
     }
   },
-  
+
+   // ID validation 
+   validateId: (req: IBodyRequest<string>, res: Response, next: NextFunction) => {
+    const schema = z.object({
+      id: objectId,
+    });
+    try {
+      const validatedData = schema.parse(req.params);
+      Object.assign(req.params, validatedData);
+      next();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+          issueMessage: message,
+          issues: issues,
+        });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
+    }
+  },
+
 };

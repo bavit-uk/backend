@@ -3,6 +3,7 @@ import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { supplierService } from "@/services";
 import { IUserAddress } from "@/contracts/user-address.contracts";
 import { createHash } from "@/utils/hash.util";
+import { UserCategory } from "@/models";
 
 export const supplierController = {
 
@@ -15,16 +16,19 @@ export const supplierController = {
       if (userExists) {
         return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
       }
-      const addressIds = [];
-      for (const addr of address) {
-        const createdAddress = await supplierService.createAddress(addr);
-        if (!createdAddress) {
-          return res.json({ message: "Error creating address" });
-        }
-        addressIds.push(createdAddress._id);
+
+      // Create the user (supplier)
+      const supplier = await supplierService.createSupplier(req.body);
+      if (!supplier) {
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating supplier" });
       }
-      //   console.log("address ids array : " , addressIds)
-      const supplier = await supplierService.createSupplier({ ...req.body, address: addressIds });
+
+      for(const addr of address){
+        const createdAddress = await supplierService.createAddress({...addr , userId:supplier._id });
+        if(!createdAddress){
+            return res.json({ message: "Error creating address" });
+        }
+      }
       res.status(StatusCodes.CREATED).json({ message: "Supplier created successfully", supplier: supplier });
     } catch (error) {
       console.error(error);
@@ -34,6 +38,7 @@ export const supplierController = {
 
   getSuppliers: async (req: Request, res: Response) => {
     try {
+        // const categories = await UserCategory.findOne({})
       const allSuppliers = await supplierService.getAllSuppliers();
       res.status(StatusCodes.OK).json({ data: allSuppliers });
     } catch (error) {
@@ -53,30 +58,38 @@ export const supplierController = {
     }
   },
 
-//   editSupplier: async (req: Request, res: Response) => {
-//     try {
-//       const supplierId = req.params.id; // Get supplier ID from route parameters
-//       const { address: newAddresses, ...supplierData } = req.body;
+  editSupplier: async (req: Request, res: Response) => {
+    try {
+      const supplierId = req.params.id; 
 
-//       // Update the non-address fields for the supplier
-//       const updatedSupplier = await supplierService.updateSupplierData(supplierId, supplierData);
+      const {address: newAddress , ...supplierData} = req.body
 
-//       if (!updatedSupplier) {
-//         return res.status(StatusCodes.NOT_FOUND).json({ message: "Supplier not found" });
-//       }
+    //   console.log("address : " , newAddress);
+    //   console.log("supplierData : " , supplierData)
+    //   console.log("id : " , supplierId);
 
-//       // Process addresses
-//       const updatedAddressIds = await supplierService.updateAddresses(updatedSupplier.address, newAddresses);
+    for(const addr of newAddress){
+        const updatedAddress = await supplierService.updateAddresses(supplierId , addr)
+        console.log("updatedAddress : " , updatedAddress)
+    }
 
-//       // Update the supplier document with the new address IDs
-//       updatedSupplier.address = updatedAddressIds;
-//       await updatedSupplier.save();
-
-//       res.status(StatusCodes.OK).json({ message: "Supplier updated successfully", supplier: updatedSupplier });
-//     } catch (error) {
-//       console.error(error);
-//       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error updating supplier" });
-//     }
-//   },
+    // //   const { address: newAddresses, ...supplierData } = req.body;
+    //   console.log("address  : " , newAddresses)
+    //   // Update the non-address fields for the supplier
+    //   const updatedSupplier = await supplierService.updateSupplierData(supplierId, supplierData);
+    //   if (!updatedSupplier) {
+    //     return res.status(StatusCodes.NOT_FOUND).json({ message: "Supplier not found" });
+    //   }
+    //   // Process addresses
+    //   const updatedAddressIds = await supplierService.updateAddresses(updatedSupplier.address, newAddresses);
+    //   // Update the supplier document with the new address IDs
+    //   updatedSupplier.address = updatedAddressIds;
+    //   await updatedSupplier.save();
+    //   res.status(StatusCodes.OK).json({ message: "Supplier updated successfully", supplier: updatedSupplier });
+    } catch (error) {
+      console.error(error);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error updating supplier" });
+    }
+  },
 
 };

@@ -32,6 +32,7 @@ export interface IUser extends Document {
   resetPasswordExpires?: number;
   isBlocked: boolean;
   documents: IFile;
+  // isSupplier: boolean;
 }
 
 

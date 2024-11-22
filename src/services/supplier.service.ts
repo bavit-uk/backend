@@ -12,36 +12,82 @@ export const supplierService = {
     return userExists;
   },
 
-  createAddress: (address: IUserAddress) => {
-    const newAddress = new Address(address);
-    return newAddress.save();
-  },
-
   createSupplier: async (data: supplierAddPayload) => {
     // console.log("data in service : " , data)
-    const { firstName, lastName, email, password, phoneNumber, supplierCategory, address, documents } = data;
-    // const {label , street , state , postalCode , country , isDefault } = address;
-    // console.log("address in service : " , address)
+    const { firstName, lastName, email, password, phoneNumber, supplierCategory, documents } = data;
+
+    // Here this id refers to the supplier in user category
+    const supplierId = "67403baee189e381d5f1cdc6";
     const hashedPassword = await createHash(password);
+
     const user = new User({
       firstName,
       lastName,
       email,
       password: hashedPassword,
       phoneNumber,
-      address,
       supplierCategory,
+      userType: supplierId,
       documents,
     });
+
     return user.save();
   },
 
-  getAllSuppliers: () => {
-    return User.find();
+  createAddress: (address: IUserAddress) => {
+    const newAddress = new Address(address);
+    return newAddress.save();
   },
 
-  findSupplierById: (id: string) => {
-    return User.findById(id).populate("supplierCategory").populate("address");
+  getAllSuppliers: () => {
+    // return User.find().populate("userType");
+    return User.aggregate([
+      {
+        // Join with the 'usercategories' collection to get the user type details
+        $lookup: {
+          from: "usercategories",
+          localField: "userType",
+          foreignField: "_id",
+          as: "userType",
+        },
+      },
+      {
+        // Match only users where the userType role is "Supplier"
+        $match: {
+          "userType.role": "Supplier",
+        },
+      },
+      {
+        // Join with the 'addresses' collection to get the addresses associated with the supplier
+        $lookup: {
+          from: "addresses",
+          localField: "_id",
+          foreignField: "userId",
+          as: "addresses",
+        },
+      },
+    ]);
+  },
+
+  findSupplierById: async (id: string) => {
+    console.log("idd : " , id)
+    const supplier = await User.findById(id).populate("supplierCategory").populate("userType");
+    console.log("supplier : " , supplier)
+    if (!supplier) {
+      return null;
+    }
+    const addresses = await Address.find({ userId: id });
+    console.log("adresses in service" , addresses)
+    return {
+      ...supplier.toObject(),
+      addresses,
+    };
+  },
+
+  updateAddresses: async (supplierId: string , address: Partial<IUserAddress>) => {
+    const updatedAddress = await Address.findOneAndUpdate({userId: supplierId} , address , {new: true})
+    // console.log("updatedAddress : " , updatedAddress)
+    return updatedAddress;
   },
 
 //   updateById: (id: string, data: Partial<supplierAddPayload>) => {

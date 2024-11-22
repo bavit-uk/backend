@@ -6,7 +6,7 @@ import { IContextRequest, IUserRequest } from "@/contracts/request.contract";
 export const authGuard = {
 
   isAuth: ({ context: { user } }: IContextRequest<IUserRequest>, res: Response, next: NextFunction) => {
-    // console.log("User in Guard : " , user)
+    console.log("User in Guard : " , user)
     if (user) {
       return next();
     }
