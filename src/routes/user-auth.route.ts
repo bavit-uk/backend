@@ -13,7 +13,8 @@ export const auth = (router: Router) => {
 
   router.get("/profile", authGuard.isAuth, authController.getProfile);
 
-  router.patch("/update-profile", authValidation.updateProfile, authGuard.isAuth, authController.updateProfile);
+  // TODO add validation  "authValidation.updateProfile,"
+  router.patch("/update-profile",  authGuard.isAuth, authController.updateProfile);
 
   router.get("/verify-email/:token" , authController.verifyEmail)
 

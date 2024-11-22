@@ -58,38 +58,38 @@ export const supplierController = {
     }
   },
 
-  editSupplier: async (req: Request, res: Response) => {
-    try {
-      const supplierId = req.params.id; 
+//   editSupplier: async (req: Request, res: Response) => {
+//     try {
+//       const supplierId = req.params.id; 
 
-      const {address: newAddress , ...supplierData} = req.body
+//       const {address: newAddress , ...supplierData} = req.body
 
-    //   console.log("address : " , newAddress);
-    //   console.log("supplierData : " , supplierData)
-    //   console.log("id : " , supplierId);
+//     //   console.log("address : " , newAddress);
+//     //   console.log("supplierData : " , supplierData)
+//     //   console.log("id : " , supplierId);
 
-    for(const addr of newAddress){
-        const updatedAddress = await supplierService.updateAddresses(supplierId , addr)
-        console.log("updatedAddress : " , updatedAddress)
-    }
+//     for(const addr of newAddress){
+//         const updatedAddress = await supplierService.updateAddresses(supplierId , addr)
+//         console.log("updatedAddress : " , updatedAddress)
+//     }
 
-    // //   const { address: newAddresses, ...supplierData } = req.body;
-    //   console.log("address  : " , newAddresses)
-    //   // Update the non-address fields for the supplier
-    //   const updatedSupplier = await supplierService.updateSupplierData(supplierId, supplierData);
-    //   if (!updatedSupplier) {
-    //     return res.status(StatusCodes.NOT_FOUND).json({ message: "Supplier not found" });
-    //   }
-    //   // Process addresses
-    //   const updatedAddressIds = await supplierService.updateAddresses(updatedSupplier.address, newAddresses);
-    //   // Update the supplier document with the new address IDs
-    //   updatedSupplier.address = updatedAddressIds;
-    //   await updatedSupplier.save();
-    //   res.status(StatusCodes.OK).json({ message: "Supplier updated successfully", supplier: updatedSupplier });
-    } catch (error) {
-      console.error(error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error updating supplier" });
-    }
-  },
+//     // //   const { address: newAddresses, ...supplierData } = req.body;
+//     //   console.log("address  : " , newAddresses)
+//     //   // Update the non-address fields for the supplier
+//     //   const updatedSupplier = await supplierService.updateSupplierData(supplierId, supplierData);
+//     //   if (!updatedSupplier) {
+//     //     return res.status(StatusCodes.NOT_FOUND).json({ message: "Supplier not found" });
+//     //   }
+//     //   // Process addresses
+//     //   const updatedAddressIds = await supplierService.updateAddresses(updatedSupplier.address, newAddresses);
+//     //   // Update the supplier document with the new address IDs
+//     //   updatedSupplier.address = updatedAddressIds;
+//     //   await updatedSupplier.save();
+//     //   res.status(StatusCodes.OK).json({ message: "Supplier updated successfully", supplier: updatedSupplier });
+//     } catch (error) {
+//       console.error(error);
+//       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error updating supplier" });
+//     }
+//   },
 
 };

@@ -6,7 +6,7 @@ export const supplier = (router:Router) => {
 
     router.post("/" , supplierValidation.addSupplier , supplierController.addSupplier)
 
-    router.patch("/:id" , supplierValidation.validateId , supplierController.editSupplier)
+    // router.patch("/:id" , supplierValidation.validateId , supplierController.editSupplier)
 
     router.get("/" , supplierController.getSuppliers)
 

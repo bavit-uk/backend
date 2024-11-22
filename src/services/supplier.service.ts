@@ -84,11 +84,11 @@ export const supplierService = {
     };
   },
 
-  updateAddresses: async (supplierId: string , address: Partial<IUserAddress>) => {
-    const updatedAddress = await Address.findOneAndUpdate({userId: supplierId} , address , {new: true})
-    // console.log("updatedAddress : " , updatedAddress)
-    return updatedAddress;
-  },
+  // updateAddresses: async (supplierId: string , address: Partial<IUserAddress>) => {
+  //   const updatedAddress = await Address.findOneAndUpdate({userId: supplierId} , address , {new: true})
+  //   // console.log("updatedAddress : " , updatedAddress)
+  //   return updatedAddress;
+  // },
 
 //   updateById: (id: string, data: Partial<supplierAddPayload>) => {
 //     const updatedSupplier = User.findByIdAndUpdate(id, data, { new: true });

@@ -132,11 +132,16 @@ export const authController = {
 
   updateProfile: async (req: Request, res: Response) => {
     try {
-      const { firstName, lastName, phoneNumber , dob , address , profileImage, oldPassword, newPassword } = req.body;
+      const { firstName, lastName, phoneNumber , dob , profileImage, oldPassword, newPassword } = req.body;
+
+      console.log("This is User in request Body : " , req.body)
 
       // const user = await authService.findUserById(req.body.user.id, "+password");
       const user = req.context.user;
-      console.log("User in controller : ", user);
+
+      console.log("User in context: " , user)
+
+      // console.log("User in controller : ", user);
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
       }
@@ -155,9 +160,9 @@ export const authController = {
       if(dob){
         user.dob = dob
       }
-      if(address){
-        user.address = address
-      }
+      // if(address){
+      //   user.address = address
+      // }
       // Check if password update is requested
       if (newPassword) {
         if (!oldPassword) {
