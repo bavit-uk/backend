@@ -155,6 +155,9 @@ export const authController = {
       if(dob){
         user.dob = dob
       }
+      if(address){
+        user.address = address
+      }
       // Check if password update is requested
       if (newPassword) {
         if (!oldPassword) {
