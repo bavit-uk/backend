@@ -32,7 +32,7 @@ export const userController = {
             //     additionalAccessRights: user.additionalAccessRights,
             //     restrictedAccessRights: user.restrictedAccessRights,
             // };
-            res.json(user);
+            res.status(StatusCodes.OK).json(user);
         } catch (error) {
             console.error(error);
             res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Error fetching user details' });

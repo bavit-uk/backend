@@ -24,7 +24,7 @@ export const authController = {
       const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
 
       const html = `<p>Please verify your email by clicking the link below:</p>
-                    <a href="${verificationUrl}">Verify Email</a>`;
+                    <a href="${verificationUrl}">Verify Email${verificationUrl}</a>`;
       // Use sendEmail to send the verification email
       await sendEmail({
         to: newUser.email,
@@ -64,16 +64,20 @@ export const authController = {
       // const accessToken = jwtSign
       const { accessToken, refreshToken } = jwtSign(user.id);
 
-      res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        maxAge: 15 * 60 * 1000, // Access Token lifespan (15 minutes in ms)
-      });
-      res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // Refresh Token lifespan (7 days in ms)
-      });
+      // res.cookie("accessToken", accessToken, {
+      //   httpOnly: true,
+      //   maxAge: 15 * 60 * 1000, // Access Token lifespan (15 minutes in ms)
+      // });
+      // res.cookie("refreshToken", refreshToken, {
+      //   httpOnly: true,
+      //   maxAge: 7 * 24 * 60 * 60 * 1000, // Refresh Token lifespan (7 days in ms)
+      // });
       return res.status(StatusCodes.OK).json({
-        data: { user: user.toJSON() },
+        data: { 
+          user: user.toJSON(),
+          accessToken,  // Include 'Bearer' prefix if necessary
+          refreshToken,
+        },
         message: ReasonPhrases.OK,
         status: StatusCodes.OK,
       });
@@ -130,13 +134,32 @@ export const authController = {
     }
   },
 
+
+
+
   updateProfile: async (req: Request, res: Response) => {
     try {
-      const { firstName, lastName, phoneNumber, profileImage, oldPassword, newPassword } = req.body;
+      const { firstName, lastName, phoneNumber , dob , address , profileImage, oldPassword, newPassword } = req.body;
+
+      // console.log("Address in request Body : " , address)
 
       // const user = await authService.findUserById(req.body.user.id, "+password");
       const user = req.context.user;
-      console.log("User in controller : ", user);
+
+      // console.log("User Id in context: " , user._id)
+      // user.address = address
+      // console.log("Address : " , user.address)
+
+      // console.log("User in controller : ", user);
+
+      // for(const addr of address){
+      //   const createdAddress = await authService.createAddress({...addr , userId:user._id });
+      //   if(!createdAddress){
+      //       return res.json({ message: "Error creating address" });
+      //   }
+      //   console.log("Address created : " , createdAddress)
+      // }
+
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
       }
@@ -152,6 +175,12 @@ export const authController = {
       if (profileImage) {
         user.profileImage = profileImage;
       }
+      if(dob){
+        user.dob = dob
+      }
+      // if(address){
+      //   user.address = address
+      // }
       // Check if password update is requested
       if (newPassword) {
         if (!oldPassword) {

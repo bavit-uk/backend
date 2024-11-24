@@ -19,8 +19,10 @@ export const userCategoryController = {
     // controller for post new user category
     createUserCategory: async (req: Request, res: Response) => {
         try {
-            const { userType, description, permissions } = req.body;
-            const newUserCategory = userCategoryService.createCategory(userType , description , permissions)
+            const { role, description, permissions } = req.body;
+            // console.log("sdad : " , role , description)
+            const newUserCategory = await userCategoryService.createCategory(role , description , permissions)
+            // console.log(newUserCategory)
             res.status(StatusCodes.CREATED).json({ message: 'User category created successfully', userCategory: newUserCategory });
         } catch (error) {
             console.error(error);

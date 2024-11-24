@@ -1,7 +1,8 @@
-import { User, UserCategory } from "@/models";
+import { Address, User, UserCategory } from "@/models";
 import { IUser } from "@/contracts/user.contract";
 import { UserRegisterPayload } from "@/contracts/user-auth.contract";
 import { createHash } from "@/utils/hash.util";
+import { IUserAddress } from "@/contracts/user-address.contracts";
 
 export const authService = {
   findExistingEmail: (email: string, select?: string) => {
@@ -23,6 +24,11 @@ export const authService = {
       signUpThrough,
     });
     return await newUser.save();
+  },
+
+  createAddress: (address: IUserAddress) => {
+    const newAddress = new Address(address);
+    return newAddress.save();
   },
 
   // New: Find user by reset token

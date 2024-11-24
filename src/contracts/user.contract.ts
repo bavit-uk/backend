@@ -1,12 +1,23 @@
 import { Document, Model, Types } from "mongoose";
 
 
+export interface IFile {
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  url: string;
+  filename: string;
+}
 
 export interface IUser extends Document {
   firstName: string;
   lastName: string;
   email: string;
   password: string;
+  phoneNumber: string;
+  dob: Date;
+  address: Types.ObjectId
   signUpThrough: string;
   profileImage?: string;
   EmailVerifiedOTP?: string;
@@ -14,11 +25,14 @@ export interface IUser extends Document {
   isEmailVerified: boolean;
   EmailVerifiedAt: Date;
   userType: Types.ObjectId;
+  supplierCategory: Types.ObjectId;
   additionalAccessRights: string[];
   restrictedAccessRights: string[];
-  phoneNumber: string;
   resetPasswordToken?: string;
-  resetPasswordExpires?: number
+  resetPasswordExpires?: number;
+  isBlocked: boolean;
+  documents: IFile;
+  // isSupplier: boolean;
 }
 
 

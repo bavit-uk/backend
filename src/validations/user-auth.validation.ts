@@ -79,6 +79,7 @@ export const authValidation = {
       lastName: z.string().trim().min(3, "Last name is required").optional(),
       phoneNumber: z.string().trim().optional(),
       profileImage: z.string().url("Invalid URL format for profile image").optional(),
+      dob: z.date(),
       oldPassword: z.string().optional(),
       newPassword: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one charcter) (between 8-20)").optional(),
     })
