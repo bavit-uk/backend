@@ -3,9 +3,10 @@ import { IUserCategory , UserCategoryModel } from "@/contracts/user-category.con
 
 
 const userCategorySchema = new Schema<IUserCategory>({
-    userType: { type: String, required: true, unique: true },
+    role: { type: String, required: true , unique: true},
     description: { type: String },
     permissions: { type: [String], required: true }, 
+    // isSupplier: {type: Boolean , default:false}
 }, { timestamps: true });
 
 export const UserCategory = model<IUserCategory , UserCategoryModel>('UserCategory', userCategorySchema);

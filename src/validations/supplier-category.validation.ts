@@ -4,18 +4,20 @@ import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { z, ZodSchema } from "zod";
 import { Types } from "mongoose";
 import { IBodyRequest } from "@/contracts/request.contract";
-import { REGEX } from "@/constants/regex";
-import { IUserCategory, UserCategoryUpdatePayload } from "@/contracts/user-category.contract";
 
 // Custom Zod validation for MongoDB ObjectId
 const objectId = z.instanceof(Types.ObjectId).or(z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ObjectId"));
 
-export const userCategoryValidation = {
-  createUserCategory: async (req: IBodyRequest<IUserCategory>, res: Response, next: NextFunction) => {
+export const supplierCategoryValidation = {
+  addCategory: async (
+    req: IBodyRequest<{ name: string; description: string; image?: string }>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const schema: ZodSchema = z.object({
-      role: z.string().min(3, "User type is required"), // userType is required
-      description: z.string().optional(), // description is optional
-      permissions: z.array(z.string()).min(1, "At least one permission is required"), // permissions array must have at least one string
+      name: z.string().trim().min(3, "Category name is required and should be at least 3 characters long"),
+      description: z.string().trim().min(5, "Description is required and should be at least 5 characters long"),
+      image: z.string().optional(),
     });
     try {
       const validatedData = schema.parse(req.body);
@@ -24,7 +26,6 @@ export const userCategoryValidation = {
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         const { message, issues } = getZodErrors(error);
-
         return res.status(StatusCodes.BAD_REQUEST).json({
           message: ReasonPhrases.BAD_REQUEST,
           status: StatusCodes.BAD_REQUEST,
@@ -40,11 +41,19 @@ export const userCategoryValidation = {
     }
   },
 
-  updateUserCategory: async (req: IBodyRequest<UserCategoryUpdatePayload>, res: Response, next: NextFunction) => {
+  editCategory: async (
+    req: IBodyRequest<Partial<{ name: string; description: string; image?: string }>>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const schema: ZodSchema = z.object({
-      role: z.string().min(3, "User type is required").optional(),
-      description: z.string().optional().optional(),
-      permissions: z.array(z.string()).min(1, "At least one permission is required").optional(),
+      name: z.string().trim().min(3, "Category name is required and should be at least 3 characters long").optional(),
+      description: z
+        .string()
+        .trim()
+        .min(5, "Description is required and should be at least 5 characters long")
+        .optional(),
+      image: z.string().optional(),
     });
     try {
       const validatedData = schema.parse(req.body);
@@ -53,7 +62,6 @@ export const userCategoryValidation = {
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         const { message, issues } = getZodErrors(error);
-
         return res.status(StatusCodes.BAD_REQUEST).json({
           message: ReasonPhrases.BAD_REQUEST,
           status: StatusCodes.BAD_REQUEST,
@@ -95,4 +103,5 @@ export const userCategoryValidation = {
       }
     }
   },
+  
 };
