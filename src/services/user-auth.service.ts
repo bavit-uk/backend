@@ -1,7 +1,8 @@
-import { User, UserCategory } from "@/models";
+import { Address, User, UserCategory } from "@/models";
 import { IUser } from "@/contracts/user.contract";
 import { UserRegisterPayload } from "@/contracts/user-auth.contract";
 import { createHash } from "@/utils/hash.util";
+import { IUserAddress } from "@/contracts/user-address.contracts";
 
 export const authService = {
   findExistingEmail: (email: string, select?: string) => {
@@ -25,6 +26,19 @@ export const authService = {
     return await newUser.save();
   },
 
+  findAddressByUserId: (userId: string) => {
+    return Address.find({ userId: userId });
+  },
+
+  findAddressandUpdate: (id: string , address: IUserAddress) => {
+    return Address.findByIdAndUpdate(id , address , {new: true})
+  },
+
+  createAddress: (address: IUserAddress) => {
+    const newAddress = new Address(address);
+    return newAddress.save();
+  },
+ 
   // New: Find user by reset token
   findUserById: (id: string , select?:string) => {
     if (select) {
