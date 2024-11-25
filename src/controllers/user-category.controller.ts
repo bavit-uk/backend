@@ -30,4 +30,33 @@ export const userCategoryController = {
         }
     },
 
+    editCategory: async (req: Request, res: Response) => {
+        try {
+        const { id } = req.params;
+        const { role, description, permissions } = req.body;
+        const category = await userCategoryService.editCategory(id, { role, description, permissions });
+        res.status(StatusCodes.OK).json({ success: true, message: "Category updated successfully", data: category });
+        } catch (error) {
+        console.error("Edit Category Error:", error);
+        res
+            .status(StatusCodes.INTERNAL_SERVER_ERROR)
+            .json({ success: false, message: "Error updating category" });
+        }
+    },
+
+    deleteCategory: async (req: Request, res: Response) => {
+        try {
+        const { id } = req.params;
+        const result = await userCategoryService.deleteCategory(id);
+        res.status(StatusCodes.OK).json({ success: true, message: "Category deleted successfully", deletedUser: result });
+        } catch (error) {
+        console.error("Delete Category Error:", error);
+        res
+            .status(StatusCodes.INTERNAL_SERVER_ERROR)
+            .json({ success: false, message: "Error deleting category" });
+        }
+    },
+
+ 
+    
 }

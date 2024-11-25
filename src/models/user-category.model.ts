@@ -6,7 +6,7 @@ const userCategorySchema = new Schema<IUserCategory>({
     role: { type: String, required: true , unique: true},
     description: { type: String },
     permissions: { type: [String], required: true }, 
-    isSupplier: {type: Boolean , default:false}
+    // isSupplier: {type: Boolean , default:false}
 }, { timestamps: true });
 
 export const UserCategory = model<IUserCategory , UserCategoryModel>('UserCategory', userCategorySchema);

@@ -9,7 +9,7 @@ export const user = (router: Router) => {
     router.post("/", userValidation.createUser , userController.createUser);
 
     // route for get all users 
-    router.get("/" , authGuard.isAuth , userController.allUsers)
+    router.get("/" , userController.allUsers)
 
     // route for get details (include permissions) of specific user through id
     router.get("/:id" ,  userValidation.validateId ,userController.getUserDetails)
@@ -20,6 +20,7 @@ export const user = (router: Router) => {
     // route for delete user using id
     router.delete("/:id" , userValidation.validateId , userController.deleteUser )
 
+    router.patch("/block/:id" , userController.toggleBlock)
 }
 
 

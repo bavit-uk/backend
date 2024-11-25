@@ -11,7 +11,6 @@ export const supplierController = {
     try {
       const { email, address } = req.body;
 
-      // console.log("User with Address : " , address)
       const userExists = await supplierService.findExistingEmail(email);
       if (userExists) {
         return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
@@ -29,6 +28,7 @@ export const supplierController = {
             return res.json({ message: "Error creating address" });
         }
       }
+      
       res.status(StatusCodes.CREATED).json({ message: "Supplier created successfully", supplier: supplier });
     } catch (error) {
       console.error(error);

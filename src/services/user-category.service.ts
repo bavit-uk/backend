@@ -16,4 +16,17 @@ export const userCategoryService = {
         return newCategory.save();
     },
 
+    editCategory: (id: string, data: { role?: string; description?: string; permissions?: [string] }) => {
+        return UserCategory.findByIdAndUpdate(id, data, { new: true });
+    },
+
+    deleteCategory: (id: string) => {
+        const category = UserCategory.findByIdAndDelete(id);
+        if (!category) {
+          throw new Error("Category not found");
+        }
+        return category;
+    },
+
+
 }

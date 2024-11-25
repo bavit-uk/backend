@@ -85,7 +85,7 @@ export const supplierService = {
   },
 
   // updateAddresses: async (supplierId: string , address: Partial<IUserAddress>) => {
-  //   const updatedAddress = await Address.findOneAndUpdate({userId: supplierId} , address , {new: true})
+  //   const updatedAddress = await Address.pdate({userId: supplierId} , address , {new: true})
   //   // console.log("updatedAddress : " , updatedAddress)
   //   return updatedAddress;
   // },

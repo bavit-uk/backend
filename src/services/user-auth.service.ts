@@ -26,11 +26,19 @@ export const authService = {
     return await newUser.save();
   },
 
+  findAddressByUserId: (userId: string) => {
+    return Address.find({ userId: userId });
+  },
+
+  findAddressandUpdate: (id: string , address: IUserAddress) => {
+    return Address.findByIdAndUpdate(id , address , {new: true})
+  },
+
   createAddress: (address: IUserAddress) => {
     const newAddress = new Address(address);
     return newAddress.save();
   },
-
+ 
   // New: Find user by reset token
   findUserById: (id: string , select?:string) => {
     if (select) {

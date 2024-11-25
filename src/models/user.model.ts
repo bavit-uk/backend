@@ -33,8 +33,8 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     // address: [{ type: Schema.Types.ObjectId, ref: "Address" }],
     signUpThrough: { type: String, enum: ENUMS.SIGNUP_THROUGH, required: true, default: "Web" },
     profileImage: { type: String },
-    EmailVerifiedOTP: { type: String },
-    EmailVerifiedOTPExpiredAt: { type: Date },
+    // EmailVerifiedOTP: { type: String },
+    // EmailVerifiedOTPExpiredAt: { type: Date },
     isEmailVerified: { type: Boolean, default: false },
     EmailVerifiedAt: { type: Date },
     userType: { type: Schema.Types.ObjectId, ref: "UserCategory" }, // Reference to UserCategory
@@ -43,8 +43,8 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     restrictedAccessRights: { type: [String], default: [] }, // Remove specific rights
     resetPasswordToken: { type: String, select: false },
     resetPasswordExpires: { type: Number, select: false },
-    isBlocked: { type: Boolean, default: false },
     documents: [{ type: fileSchema }], // Store supplier-related files
+    isBlocked: {type: Boolean , default: false}
   },
   { timestamps: true }
 );
