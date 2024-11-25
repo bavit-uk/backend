@@ -13,7 +13,9 @@ export const authController = {
       // Check if user already exists
       const existingUser = await authService.findExistingEmail(email);
       if (existingUser) {
-        return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
+        return res
+          .status(StatusCodes.CONFLICT)
+          .json({ message: "User with this email already exists" });
       }
       // Create new user
       const newUser = await authService.createUser(req.body);
@@ -32,13 +34,16 @@ export const authController = {
         html,
       });
       res.status(StatusCodes.CREATED).json({
-        message: "User registered successfully, Please check your email to verify your account.",
+        message:
+          "User registered successfully, Please check your email to verify your account.",
         user: newUser,
-        verificationToken: verificationToken.accessToken // Include token for testing purposes
+        verificationToken: verificationToken.accessToken, // Include token for testing purposes
       });
     } catch (error) {
       console.error("Error registering user:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error registering user" });
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "Error registering user" });
     }
   },
 
@@ -90,27 +95,37 @@ export const authController = {
     try {
       const { token } = req.params;
       if (!token || typeof token !== "string") {
-        return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: "Invalid verification token." });
+        return res
+          .status(StatusCodes.BAD_REQUEST)
+          .json({ success: false, message: "Invalid verification token." });
       }
       const decoded = jwtVerify(token);
       const userId = decoded.id.toString();
       const user = await authService.findUserById(userId);
       if (!user) {
-        return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: "User not found." });
+        return res
+          .status(StatusCodes.NOT_FOUND)
+          .json({ success: false, message: "User not found." });
       }
       // Check if already verified
       if (user.isEmailVerified) {
-        return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: "Email is already verified." });
+        return res
+          .status(StatusCodes.BAD_REQUEST)
+          .json({ success: false, message: "Email is already verified." });
       }
 
       // Update user's verification status
       user.isEmailVerified = true;
       user.EmailVerifiedAt = new Date();
       await user.save();
-      res.status(StatusCodes.OK).json({ success: true, message: "Email verified successfully." });
+      res
+        .status(StatusCodes.OK)
+        .json({ success: true, message: "Email verified successfully." });
     } catch (error) {
       console.error("Error verifying email:", error);
-      res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: "Invalid or expired token." });
+      res
+        .status(StatusCodes.UNAUTHORIZED)
+        .json({ success: false, message: "Invalid or expired token." });
     }
   },
 
@@ -121,24 +136,37 @@ export const authController = {
       const user = req.context.user;
       // console.log("User in controller : " , user)
       if (!user) {
-        return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
+        return res
+          .status(StatusCodes.NOT_FOUND)
+          .json({ message: "User not found" });
       }
       return res.status(StatusCodes.OK).json({ user });
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error fetching user profile" });
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "Error fetching user profile" });
     }
   },
 
   updateProfile: async (req: Request, res: Response) => {
     try {
-      const { firstName, lastName, phoneNumber, profileImage, oldPassword, newPassword } = req.body;
+      const {
+        firstName,
+        lastName,
+        phoneNumber,
+        profileImage,
+        oldPassword,
+        newPassword,
+      } = req.body;
 
       // const user = await authService.findUserById(req.body.user.id, "+password");
       const user = req.context.user;
       console.log("User in controller : ", user);
       if (!user) {
-        return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
+        return res
+          .status(StatusCodes.NOT_FOUND)
+          .json({ message: "User not found" });
       }
       if (firstName) {
         user.firstName = firstName;
@@ -207,7 +235,10 @@ export const authController = {
 
       // Generate a reset token
       const resetToken = crypto.randomBytes(32).toString("hex");
-      const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+      const resetTokenHash = crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
       const resetTokenExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes expiration
 
       // Save the token and expiry to the user record
@@ -244,7 +275,9 @@ export const authController = {
       }
     } catch (error) {
       console.error("Error in forgotPassword:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing request" });
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "Error processing request" });
     }
   },
 
@@ -254,12 +287,21 @@ export const authController = {
       const { password } = req.body;
 
       // Hash the token and compare it to the stored token
-      const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
 
       // Find user by the reset token and check expiration
       const user = await authService.findUserByResetToken(hashedToken);
-      if (!user || !user.resetPasswordExpires || user.resetPasswordExpires < Date.now()) {
-        return res.status(StatusCodes.BAD_REQUEST).json({ message: "Invalid or expired token" });
+      if (
+        !user ||
+        !user.resetPasswordExpires ||
+        user.resetPasswordExpires < Date.now()
+      ) {
+        return res
+          .status(StatusCodes.BAD_REQUEST)
+          .json({ message: "Invalid or expired token" });
       }
 
       // Update the password and clear the reset token
@@ -267,10 +309,14 @@ export const authController = {
       user.resetPasswordToken = undefined;
       user.resetPasswordExpires = undefined;
       await user.save();
-      return res.status(StatusCodes.OK).json({ message: "Password updated successfully" });
+      return res
+        .status(StatusCodes.OK)
+        .json({ message: "Password updated successfully" });
     } catch (error) {
       console.error("Error in resetPassword:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing request" });
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "Error processing request" });
     }
   },
 };
