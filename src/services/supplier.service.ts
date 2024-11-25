@@ -17,6 +17,7 @@ export const supplierService = {
     const { firstName, lastName, email, password, phoneNumber, supplierCategory, documents } = data;
 
     // Here this id refers to the supplier in user category
+    // TODO: find other solutiuon for this
     const supplierId = "67403baee189e381d5f1cdc6";
     const hashedPassword = await createHash(password);
 
@@ -69,62 +70,39 @@ export const supplierService = {
     ]);
   },
 
-  findSupplierById: async (id: string) => {
-    console.log("idd : " , id)
-    const supplier = await User.findById(id).populate("supplierCategory").populate("userType");
-    console.log("supplier : " , supplier)
-    if (!supplier) {
-      return null;
+  findSupplierById: async (id: string , select? : string) => {
+    if(select){
+      return await User.findById(id).populate("supplierCategory").populate("userType").select(select);
     }
-    const addresses = await Address.find({ userId: id });
-    console.log("adresses in service" , addresses)
-    return {
-      ...supplier.toObject(),
-      addresses,
-    };
+    else{
+      return await User.findById(id).populate("supplierCategory").populate("userType");
+    }
   },
 
-  // updateAddresses: async (supplierId: string , address: Partial<IUserAddress>) => {
-  //   const updatedAddress = await Address.pdate({userId: supplierId} , address , {new: true})
-  //   // console.log("updatedAddress : " , updatedAddress)
-  //   return updatedAddress;
-  // },
+  updateById: (id: string, data: Partial<supplierAddPayload>) => {
+    const updatedSupplier = User.findByIdAndUpdate(id, data, { new: true });
+    return updatedSupplier;
+  },
 
-//   updateById: (id: string, data: Partial<supplierAddPayload>) => {
-//     const updatedSupplier = User.findByIdAndUpdate(id, data, { new: true });
-//     return updatedSupplier;
-//   },
+  findAddressByUserId: (userId: string) => {
+    return Address.find({ userId: userId });
+  },
 
-//   // Update supplier's non-address data
-//   updateSupplierData: async (supplierId: string, data: Partial<supplierAddPayload>) => {
-//     const updatedSupplier = await User.findByIdAndUpdate(supplierId, data, { new: true });
-//     return updatedSupplier;
-//   },
+  findAddressandUpdate: (id: string , address: IUserAddress) => {
+    return Address.findByIdAndUpdate(id , address , {new: true})
+  },
 
-//   // Update, Add, or Remove addresses based on new input
-//   updateAddresses: async (existingAddressIds: mongoose.Types.ObjectId[], newAddresses: IUserAddress[]) => {
-//     const updatedAddressIds: mongoose.Types.ObjectId[] = [];
+  deleteById: async (id: string) => {
+    return await User.findByIdAndDelete(id);
+  },
 
-//     for (const address of newAddresses) {
-//       if (address._id && existingAddressIds.includes(address._id)) {
-//         // Update existing address
-//         await Address.findByIdAndUpdate(address._id, address);
-//         updatedAddressIds.push(address._id);
-//       } else {
-//         // Add new address
-//         const newAddress = new Address(address);
-//         const savedAddress = await newAddress.save();
-//         updatedAddressIds.push(savedAddress._id);
-//       }
-//     }
-//   },
+  toggleBlock: (id: string, isBlocked: boolean) => {
+    const updateSupplier = User.findByIdAndUpdate(id, { isBlocked: isBlocked }, { new: true });
+    if (!updateSupplier) {
+      throw new Error("User not found");
+    }
+    return updateSupplier;
+  },
 
 };
 
-// label: { type: String, required: true },
-//   street: { type: String, required: true },
-//   city: { type: String, required: true },
-//   state: { type: String, required: true },
-//   postalCode: { type: String, required: true },
-//   country: { type: String, required: true },
-//   isDefault: { type: Boolean, default: false },
