@@ -36,6 +36,7 @@ export const userValidation = {
       restrictedAccessRights: z.array(z.string()).optional(),
       phoneNumber: z.string().trim().min(3, "Phone number is required"),
       dob: z.date().optional(),
+      // userType: z.objectId(),
       address: z.array(addressSchema).optional()
       
     });

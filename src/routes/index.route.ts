@@ -3,11 +3,12 @@ import { Router } from "express";
 // Routes
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { multer as files } from "./multer.route";
-import {user} from "./user.route"
+import { user } from "./user.route";
 import { auth } from "./user-auth.route";
 import { userCategory } from "./user-category.route";
 import { supplier } from "./supplier.route";
 import { supplierCategory } from "./supplier-category.routes";
+import { productCategory } from "./product-category.route";
 
 // Create a new router to handle all routes
 const router: Router = Router();
@@ -15,7 +16,7 @@ const router: Router = Router();
 // Define all routes
 const routes: {
   [key: string]: (router: Router) => void;
-} = { files , user , auth , userCategory , supplier , supplierCategory};
+} = { files, user, auth, userCategory, supplier, supplierCategory, productCategory };
 
 // Loop through all routes and pass the router to each route
 for (const route in routes) {

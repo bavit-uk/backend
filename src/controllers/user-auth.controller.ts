@@ -7,6 +7,7 @@ import crypto from "crypto";
 import sendEmail from "@/utils/nodeMailer";
 
 export const authController = {
+
   registerUser: async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
@@ -226,7 +227,8 @@ export const authController = {
       const user = await authService.findExistingEmail(email);
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({
-          message: ReasonPhrases.NOT_FOUND,
+          
+          message: "user is not in auth",
           status: StatusCodes.NOT_FOUND,
         });
       }

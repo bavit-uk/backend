@@ -5,4 +5,5 @@ export {userCategoryController} from "./user-category.controller"
 export {authController} from "./user-auth.controller"
 export {supplierController} from "./supplier.controller"
 export {supplierCategoryController} from "./supplier-category.controller"
+export {productCategoryController} from "./product-category.controller"
 
