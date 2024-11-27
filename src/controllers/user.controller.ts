@@ -44,7 +44,7 @@ export const userController = {
       const userId = req.params.id;
       const updateData = req.body;
       const { address } = updateData;
-    //   console.log("address : " , address)
+      //   console.log("address : " , address)
 
       if (updateData.password) {
         updateData.password = await createHash(updateData.password);
@@ -88,7 +88,7 @@ export const userController = {
   allUsers: async (req: Request, res: Response) => {
     try {
       const users = await userService.getAllUsers();
-      res.status(StatusCodes.OK).json(users);
+      res.status(StatusCodes.OK).json({data : users});
     } catch (error) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error });
     }
@@ -96,11 +96,11 @@ export const userController = {
 
   getUserDetails: async (req: Request, res: Response) => {
     try {
-      const userId = req.params.id; 
-      const user = await userService.findUserById(userId , "+password");
+      const userId = req.params.id;
+      const user = await userService.findUserById(userId, "+password");
       if (!user) return res.status(404).json({ message: "User not found" });
       const userAddresses = await userService.findAddressByUserId(userId);
-      res.status(StatusCodes.OK).json({ user , addresses: userAddresses});
+      res.status(StatusCodes.OK).json({ user, addresses: userAddresses });
     } catch (error) {
       console.error(error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error fetching user details" });
@@ -125,14 +125,15 @@ export const userController = {
       const result = await userService.toggleBlock(userId, isBlocked);
       res.status(StatusCodes.OK).json({
         success: true,
-        message: `Category ${isBlocked ? "blocked" : "unblocked"} successfully`,
+        message: `User Category ${isBlocked ? "blocked" : "unblocked"} successfully`,
         data: result,
       });
     } catch (error) {
       console.error("Toggle Block Category Error:", error);
       res
         .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ success: false, message: "Error updating supplier category status" });
+        .json({ success: false, message: "Error updating user category status" });
     }
   },
+
 };

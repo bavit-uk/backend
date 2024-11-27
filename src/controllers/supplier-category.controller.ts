@@ -3,6 +3,7 @@
     import { StatusCodes, ReasonPhrases } from "http-status-codes";
 
     export const supplierCategoryController = {
+        
     addCategory: async (req: Request, res: Response) => {
         try {
         const { name, description, image } = req.body;
@@ -65,7 +66,7 @@
         if (!result) return res.status(404).json({ message: "Category not found" });
         res.status(StatusCodes.OK).json({ success: true, data: result });
         } catch (error) {
-        console.error("View Categories Error:", error);
+        console.error("View Category Error:", error);
         res
             .status(StatusCodes.INTERNAL_SERVER_ERROR)
             .json({ success: false, message: "Error getting supplier category" });

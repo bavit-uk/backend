@@ -29,7 +29,7 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     },
     password: { type: String, select: false },
     phoneNumber: { type: String },
-    dob: { type: Date },
+    dob: { type: String },
     // address: [{ type: Schema.Types.ObjectId, ref: "Address" }],
     signUpThrough: { type: String, enum: ENUMS.SIGNUP_THROUGH, required: true, default: "Web" },
     profileImage: { type: String },

@@ -6,20 +6,23 @@ import { authGuard } from "@/guards";
 export const user = (router: Router) => {
 
     // route for create new user 
-    router.post("/", userValidation.createUser , userController.createUser);
+    // TODO: , userValidation.createUser add validations
+    router.post("/" , userController.createUser);
 
     // route for get all users 
     router.get("/" , userController.allUsers)
 
-    // route for get details (include permissions) of specific user through id
+    // route for get details (include permissions) of specific user by id
     router.get("/:id" ,  userValidation.validateId ,userController.getUserDetails)
 
     // route for update user 
-    router.patch("/:id" , userValidation.updateUser ,userController.updateUser)
+    // TODO: , userValidation.updateUser  add validation
+    router.patch("/:id"  ,userController.updateUser)
 
     // route for delete user using id
     router.delete("/:id" , userValidation.validateId , userController.deleteUser )
 
+    // route for toggle block status
     router.patch("/block/:id" , userController.toggleBlock)
 }
 

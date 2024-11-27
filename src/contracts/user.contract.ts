@@ -16,7 +16,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   phoneNumber: string;
-  dob: Date;
+  dob: string;
   // address: Types.ObjectId
   signUpThrough: string;
   profileImage?: string;
