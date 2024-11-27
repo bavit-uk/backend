@@ -35,7 +35,8 @@ export const userValidation = {
       additionalAccessRights: z.array(z.string()).optional(),
       restrictedAccessRights: z.array(z.string()).optional(),
       phoneNumber: z.string().trim().min(3, "Phone number is required"),
-      dob: z.date().optional(),
+      dob: z.string().optional(),
+      // userType: z.objectId(),
       address: z.array(addressSchema).optional()
       
     });
@@ -80,6 +81,7 @@ export const userValidation = {
       additionalAccessRights: z.array(z.string()).optional(),
       restrictedAccessRights: z.array(z.string()).optional(),
       phoneNumber: z.string().optional(),
+      dob: z.string().optional()
     }).partial(); // Use `.partial()` to allow partial updates
     try {
       const validatedData = schema.parse(req.body);
