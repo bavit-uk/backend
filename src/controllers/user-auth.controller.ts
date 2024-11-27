@@ -131,7 +131,8 @@ export const authController = {
       // Fetch all addresses associated with the user
       const userAddresses = await authService.findAddressByUserId(user._id);
 
-      return res.status(StatusCodes.OK).json({ user, addresses: userAddresses });
+      
+      return res.status(StatusCodes.OK).json({ user, address: userAddresses });
     } catch (error) {
       console.error("Error fetching user profile:", error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error fetching user profile" });
@@ -141,7 +142,7 @@ export const authController = {
   updateProfile: async (req: Request, res: Response) => {
     try {
       const { firstName, lastName, phoneNumber, dob, address, profileImage, oldPassword, newPassword } = req.body;
-      console.log("address in auth controller : " , address)
+      // console.log("data in auth controller : " , address)
 
       const user = req.context.user;
       if (!user) {
@@ -185,6 +186,7 @@ export const authController = {
 
       // Handle address update/addition if provided
       if (address && Array.isArray(address)) {
+        // console.log( "address inside IFF :" , address)
         for (const addr of address) {
           if (addr._id) {
             // If address ID exists, update the existing address

@@ -13,3 +13,4 @@ export type ProductCategoryModel = Model<IProductCategory>;
 export type ProductCategoryCreatePayload = Pick<IProductCategory, "name" | "description" | "image" | "isBlocked">;
 
 export type ProductCategoryUpdatePayload = Partial<ProductCategoryCreatePayload>
+
