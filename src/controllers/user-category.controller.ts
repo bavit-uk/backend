@@ -15,7 +15,6 @@ export const userCategoryController = {
             res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error fetching user categories", error: error  });
         }
     },
-
     // controller for post new user category
     createUserCategory: async (req: Request, res: Response) => {
         try {
