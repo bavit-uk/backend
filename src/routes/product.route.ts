@@ -10,4 +10,7 @@ export const product = (router: Router) => {
 
     router.get("/:id" , productController.getProductById);
 
+    // TODO: Working on update product
+    router.patch(":/id" , productController.updateProductById)
+
 }

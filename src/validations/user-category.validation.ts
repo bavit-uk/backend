@@ -13,7 +13,7 @@ const objectId = z.instanceof(Types.ObjectId).or(z.string().regex(/^[0-9a-fA-F]{
 export const userCategoryValidation = {
   createUserCategory: async (req: IBodyRequest<IUserCategory>, res: Response, next: NextFunction) => {
     const schema: ZodSchema = z.object({
-      role: z.string().min(3, "User Category role is required"), // userType is required
+      role: z.string().min(1, "User Category role is required"), // userType is required
       description: z.string().optional(), // description is optional
       permissions: z.array(z.string()).min(1, "At least one permission is required"), // permissions array must have at least one string
     });

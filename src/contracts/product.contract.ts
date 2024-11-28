@@ -102,6 +102,8 @@ interface IProduct {
   status: "draft" | "published"; // Product status
 }
 
+export type IProductUpdatePayload = Partial<IProduct>
+
 export {
   IProduct,
   ICommonProductDetails,
