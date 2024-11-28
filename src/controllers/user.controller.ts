@@ -9,7 +9,7 @@ export const userController = {
   createUser: async (req: Request, res: Response) => {
     try {
       const { email, address } = req.body;
-      // const userExists = await User.findOne({email})
+
       const userExists = await userService.findExistingEmail(email);
       if (userExists) {
         return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
@@ -17,7 +17,7 @@ export const userController = {
 
       const userCategory = await userService.findCategoryById(req.body.userType);
       if (!userCategory) {
-        return res.status(StatusCodes.BAD_REQUEST).json({ message: "Invalid user type" });
+        return res.status(StatusCodes.BAD_REQUEST).json({ message: "Invalid user category" });
       }
 
       const newUser = await userService.createUser(req.body);
