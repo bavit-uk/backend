@@ -8,5 +8,5 @@ export {supplierCategoryController} from "./supplier-category.controller"
 export {productCategoryController} from "./product-category.controller"
 export {productBrandController} from "./product-brand.controller"
 export {productController} from "./product.controller"
-
+export {permissionsController} from "./permissions.controller"
 

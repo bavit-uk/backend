@@ -1,5 +1,5 @@
 import { Product } from "@/models"; 
-import { IProduct } from "@/contracts/product.contract"; 
+import { IProduct, IProductUpdatePayload } from "@/contracts/product.contract"; 
 
 export const productService = {
 
@@ -22,7 +22,9 @@ export const productService = {
         return Product.findById(id);
     },
 
-    
+    updateProduct: (id: string , data: IProductUpdatePayload) => {
+        return Product.findByIdAndUpdate(id , data , {new: true})
+    }
 
 
 }

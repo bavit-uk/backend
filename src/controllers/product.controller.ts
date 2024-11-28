@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 
 export const productController = {
+
   addProduct: async (req: Request, res: Response) => {
     try {
       const productData = req.body; // Destructure product details from the request body
@@ -38,11 +39,27 @@ export const productController = {
       console.log(prodId)
       const product = await productService.getById(prodId);
       if (!product) return res.status(404).json({ message: "Product not found" });
-      res.status(StatusCodes.OK).json({ success: true, product: product });
+      res.status(StatusCodes.OK).json({ success: true , product: product });
     } catch (error) {
       console.error("View Product Error:", error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: "Error getting product" });
     }
   },
+
+  updateProductById: async (req: Request, res: Response) => {
+    try {
+        console.log("hello")
+        const prodId = req.params.id;
+        const data = req.body
+        console.log(prodId)
+        console.log(data)
+        const product = await productService.updateProduct(prodId , data)
+        if (!product) return res.status(404).json({ message: "Product not found" });
+        res.status(StatusCodes.OK).json({ success: true, product: product });
+    } catch (error) {
+        console.error("Update Product Error:", error);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: "Error updating product" });
+    }
+  }
 
 };
