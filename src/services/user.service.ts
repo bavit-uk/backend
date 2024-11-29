@@ -4,8 +4,9 @@ import { createHash } from "@/utils/hash.util";
 import { IUserAddress } from "@/contracts/user-address.contracts";
 
 export const userService = {
+
   getAllUsers: async () => {
-    return await User.find();
+    return await User.find().populate("userType");
   },
 
   findUserById: async (id: string , select?: string) => {

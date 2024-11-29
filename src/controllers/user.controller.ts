@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
-import { User, UserCategory } from "@/models";
+import { Address, User, UserCategory } from "@/models";
 import { IUser } from "@/contracts/user.contract";
 import { createHash } from "@/utils/hash.util";
 import { userService } from "@/services";
@@ -91,6 +91,27 @@ export const userController = {
       res.status(StatusCodes.OK).json({data : users});
     } catch (error) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error });
+    }
+  },
+
+  getUserAddress: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      // Validate userId parameter
+      if (!id) {
+        return res.status(StatusCodes.BAD_REQUEST).json({ error: "User ID is required" });
+      }
+      // Find the address for the given userId
+      const address = await Address.findOne({ userId: id });
+      // Handle case where no address is found
+      if (!address) {
+        return res.status(StatusCodes.NOT_FOUND).json({ error: "Address not found for this user" });
+      }
+      // Return the address
+      return res.status(StatusCodes.OK).json({ address });
+    } catch (error) {
+      console.error(error); // Log the error for internal debugging
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "An error occurred while fetching the address" });
     }
   },
 
