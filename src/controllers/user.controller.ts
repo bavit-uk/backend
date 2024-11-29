@@ -21,6 +21,7 @@ export const userController = {
       }
 
       const newUser = await userService.createUser(req.body);
+      console.log("newUser : " , newUser)
       if (!newUser) {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating user" });
       }
