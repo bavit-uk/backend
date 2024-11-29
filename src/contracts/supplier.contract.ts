@@ -4,7 +4,7 @@ import { IUserAddress } from "./user-address.contracts";
 
 export type supplierAddPayload = Pick<
   IUser,
-  "firstName" | "lastName" | "email" | "password" | "phoneNumber" | "supplierCategory" | "documents"
+  "firstName" | "lastName" | "email" | "password" | "phoneNumber" | "supplierCategory" | "userType" | "documents"
 > & { address: IUserAddress };
 
 
