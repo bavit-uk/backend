@@ -14,6 +14,7 @@ export const permissionsController = {
               children: ["ADD_SUPPLIERS_CATEGORY", "VIEW_SUPPLIERS_CATEGORY", "ADD_SUPPLIERS", "VIEW_SUPPLIERS"],
             },
           };
+          console.log(permissions)
 
       res.status(StatusCodes.CREATED).json({
         success: true,
