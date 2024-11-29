@@ -15,6 +15,8 @@ export const user = (router: Router) => {
     // route for get details (include permissions) of specific user by id
     router.get("/:id" ,  userValidation.validateId ,userController.getUserDetails)
 
+    router.get("/address/:id" , userController.getUserAddress)
+
     // route for update user 
     // TODO: , userValidation.updateUser  add validation
     router.patch("/:id"  ,userController.updateUser)
