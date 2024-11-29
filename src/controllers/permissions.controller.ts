@@ -5,6 +5,9 @@ export const permissionsController = {
   getPermissions: (req: Request, res: Response) => {
     try {
         const permissions = {
+          dashboard: {
+            parent: "DASHBOARD",
+          },
             userManagement: {
               parent: "MANAGE_USERS",
               children: ["ADD_CATEGORY", "VIEW_CATEGORY", "ADD_USER", "VIEW_USER"],
@@ -13,8 +16,11 @@ export const permissionsController = {
               parent: "MANAGE_SUPPLIERS",
               children: ["ADD_SUPPLIERS_CATEGORY", "VIEW_SUPPLIERS_CATEGORY", "ADD_SUPPLIERS", "VIEW_SUPPLIERS"],
             },
+              setting: {
+                parent: "SETTINGS"
+              }
           };
-          console.log(permissions)
+          console.log(permissions);
 
       res.status(StatusCodes.CREATED).json({
         success: true,

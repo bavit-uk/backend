@@ -14,11 +14,10 @@ export const supplierService = {
 
   createSupplier: async (data: supplierAddPayload) => {
     // console.log("data in service : " , data)
-    const { firstName, lastName, email, password, phoneNumber, supplierCategory, documents } = data;
+    const { firstName, lastName, email, password, phoneNumber, userType , supplierCategory, documents } = data;
 
     // Here this id refers to the supplier in user category
     // TODO: find other solutiuon for this
-    const supplierId = "67403baee189e381d5f1cdc6";
     const hashedPassword = await createHash(password);
 
     const user = new User({
@@ -28,7 +27,7 @@ export const supplierService = {
       password: hashedPassword,
       phoneNumber,
       supplierCategory,
-      userType: supplierId,
+      userType,
       documents,
     });
 
@@ -41,7 +40,6 @@ export const supplierService = {
   },
 
   getAllSuppliers: () => {
-    // return User.find().populate("userType");
     return User.aggregate([
       {
         // Join with the 'usercategories' collection to get the user type details
@@ -51,6 +49,10 @@ export const supplierService = {
           foreignField: "_id",
           as: "userType",
         },
+      },
+      {
+        // Flatten the 'userType' array into an object
+        $unwind: "$userType",
       },
       {
         // Match only users where the userType role is "Supplier"
@@ -69,6 +71,7 @@ export const supplierService = {
       },
     ]);
   },
+  
 
   findSupplierById: async (id: string , select? : string) => {
     if(select){
