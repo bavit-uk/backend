@@ -4,18 +4,24 @@ import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { z, ZodSchema } from "zod";
 import { Types } from "mongoose";
 import { IBodyRequest } from "@/contracts/request.contract";
-import { REGEX } from "@/constants/regex";
-import { IUserCategory, UserCategoryUpdatePayload } from "@/contracts/user-category.contract";
+import { ProductCategoryCreatePayload, ProductCategoryUpdatePayload } from "@/contracts/product-category.contract";
 
 // Custom Zod validation for MongoDB ObjectId
 const objectId = z.instanceof(Types.ObjectId).or(z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ObjectId"));
 
-export const userCategoryValidation = {
-  createUserCategory: async (req: IBodyRequest<IUserCategory>, res: Response, next: NextFunction) => {
+export const productCategoryValidation = {
+
+  addCategory: async (
+    req: IBodyRequest<ProductCategoryCreatePayload>,
+    res: Response,
+    next: NextFunction
+  ) => {
+    console.log(req.body.name, req.body.description, req.body.image);
     const schema: ZodSchema = z.object({
-      role: z.string().min(1, "User Category role is required"), // userType is required
+      name: z.string().min(1, "Product Category Name is required"), // userType is required
       description: z.string().optional(), // description is optional
-      permissions: z.array(z.string()).min(1, "At least one permission is required"), // permissions array must have at least one string
+      image: z.array(z.string()).nonempty("At least one image/icon is required"), // permissions array must have at least one string
+      isBlocked: z.boolean().optional(),
     });
     try {
       const validatedData = schema.parse(req.body);
@@ -40,11 +46,17 @@ export const userCategoryValidation = {
     }
   },
 
-  updateUserCategory: async (req: IBodyRequest<UserCategoryUpdatePayload>, res: Response, next: NextFunction) => {
+  updateCategory: async (
+    req: IBodyRequest<ProductCategoryUpdatePayload>,
+    res: Response,
+    next: NextFunction
+  ) => {
+    console.log(req.body.name, req.body.description, req.body.image);
     const schema: ZodSchema = z.object({
-      role: z.string().min(3, "User type is required").optional(),
-      description: z.string().optional().optional(),
-      permissions: z.array(z.string()).min(1, "At least one permission is required").optional(),
+      name: z.string().min(1, "Product Category Name is required").optional(), // userType is required
+      description: z.string().optional(), // description is optional
+      image: z.array(z.string()).nonempty("At least one image/icon is required").optional(), // permissions array must have at least one string
+      isBlocked: z.boolean().optional(),
     });
     try {
       const validatedData = schema.parse(req.body);
@@ -95,4 +107,5 @@ export const userCategoryValidation = {
       }
     }
   },
+
 };

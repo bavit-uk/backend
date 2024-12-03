@@ -1,12 +1,23 @@
 import { Document, Model, Types } from "mongoose";
+import { IUserAddress } from "./user-address.contracts";
 
-
+export interface IFile {
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  url: string;
+  filename: string;
+}
 
 export interface IUser extends Document {
   firstName: string;
   lastName: string;
   email: string;
   password: string;
+  phoneNumber: string;
+  dob: string;
+  // address: Types.ObjectId
   signUpThrough: string;
   profileImage?: string;
   EmailVerifiedOTP?: string;
@@ -14,22 +25,34 @@ export interface IUser extends Document {
   isEmailVerified: boolean;
   EmailVerifiedAt: Date;
   userType: Types.ObjectId;
+  supplierCategory: Types.ObjectId;
   additionalAccessRights: string[];
   restrictedAccessRights: string[];
-  phoneNumber: string;
   resetPasswordToken?: string;
-  resetPasswordExpires?: number
+  resetPasswordExpires?: number;
+  isBlocked: boolean;
+  documents: IFile;
+  // isSupplier: boolean;
 }
 
+export type UserCreatePayload = Pick<
+  IUser,
+  | "firstName"
+  | "lastName"
+  | "email"
+  | "password"
+  | "phoneNumber"
+  | "dob"
+  | "userType"
+  | "additionalAccessRights"
+  | "restrictedAccessRights"
+> & {address: IUserAddress} ;
 
-
-export type UserCreatePayload = Pick<IUser , "firstName" | "lastName" | "email" | "password" | "signUpThrough" | "phoneNumber" | "userType" | "additionalAccessRights" | "restrictedAccessRights">
-export type UserSignupPayload = Pick<IUser , "firstName" | "lastName" | "email" | "password" | "signUpThrough">
+export type UserUpdatePayload = Partial<UserCreatePayload>;
 
 export interface IUserMethods {
   comparePassword: (password: string) => boolean;
   hashPassword: (password: string) => string;
 }
-
 
 export type UserModel = Model<IUser, unknown, IUserMethods>;
