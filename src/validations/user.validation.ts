@@ -67,9 +67,9 @@ export const userValidation = {
   updateUser: async (req: IBodyRequest<UserUpdatePayload>, res: Response, next: NextFunction) => {
     // Create a partial schema for updates
     const schema: ZodSchema = z.object({
-      firstName: z.string().min(3, "First name is required").optional(),
-      lastName: z.string().min(3, "Last name is required").optional(),
-      email: z.string().regex(REGEX.EMAIL, "Invalid email format").optional(),
+      firstName: z.string().trim().min(3, "First name is required").max(50 , "First name should not exceed then 50 char").optional(),
+      lastName: z.string().trim().min(3, "Last name is required").max(50 , "Last name should not exceed then 50 char").optional(),
+      email: z.string().regex(REGEX.EMAIL, "Invalid email format").max(50 , "Email should not exceed then 50 char").optional(),
       password: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one character) (between 8-20)").optional(),
       signUpThrough: z.enum(["Google", "Apple", "Web"]).optional(),
       profileImage: z.string().optional(),
