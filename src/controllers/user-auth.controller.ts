@@ -1,12 +1,13 @@
 import { NextFunction, Request, Response } from "express";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { authService } from "@/services";
-import { User } from "@/models";
+import { Address, User } from "@/models";
 import { jwtSign, jwtVerify } from "@/utils/jwt.util";
 import crypto from "crypto";
 import sendEmail from "@/utils/nodeMailer";
 
 export const authController = {
+
   registerUser: async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
@@ -23,7 +24,7 @@ export const authController = {
       // send verification email
       const verificationToken = jwtSign(newUser.id);
       // const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
-      const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+      const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken.accessToken}`;
 
       const html = `<p>Please verify your email by clicking the link below:</p>
                     <a href="${verificationUrl}">Verify Email</a>`;
@@ -69,16 +70,21 @@ export const authController = {
       // const accessToken = jwtSign
       const { accessToken, refreshToken } = jwtSign(user.id);
 
-      res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        maxAge: 15 * 60 * 1000, // Access Token lifespan (15 minutes in ms)
-      });
-      res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // Refresh Token lifespan (7 days in ms)
-      });
+      // TODO: Send Tokens in Cookies instead of response
+      // res.cookie("accessToken", accessToken, {
+      //   httpOnly: true,
+      //   maxAge: 15 * 60 * 1000, // Access Token lifespan (15 minutes in ms)
+      // });
+      // res.cookie("refreshToken", refreshToken, {
+      //   httpOnly: true,
+      //   maxAge: 7 * 24 * 60 * 60 * 1000, // Refresh Token lifespan (7 days in ms)
+      // });
       return res.status(StatusCodes.OK).json({
-        data: { user: user.toJSON() },
+        data: {
+          user: user.toJSON(),
+          accessToken, // Include 'Bearer' prefix
+          refreshToken,
+        },
         message: ReasonPhrases.OK,
         status: StatusCodes.OK,
       });
@@ -131,16 +137,19 @@ export const authController = {
 
   getProfile: async (req: Request, res: Response) => {
     try {
-      // const userId = req.body.user?._id;
-      // const user = await authService.findUserById(userId);
       const user = req.context.user;
-      // console.log("User in controller : " , user)
+
       if (!user) {
         return res
           .status(StatusCodes.NOT_FOUND)
           .json({ message: "User not found" });
       }
-      return res.status(StatusCodes.OK).json({ user });
+
+      // Fetch all addresses associated with the user
+      const userAddresses = await authService.findAddressByUserId(user._id);
+
+      
+      return res.status(StatusCodes.OK).json({ user, address: userAddresses });
     } catch (error) {
       console.error("Error fetching user profile:", error);
       res
@@ -151,23 +160,16 @@ export const authController = {
 
   updateProfile: async (req: Request, res: Response) => {
     try {
-      const {
-        firstName,
-        lastName,
-        phoneNumber,
-        profileImage,
-        oldPassword,
-        newPassword,
-      } = req.body;
+      const { firstName, lastName, phoneNumber, dob, address, profileImage, oldPassword, newPassword } = req.body;
+      // console.log("data in auth controller : " , address)
 
-      // const user = await authService.findUserById(req.body.user.id, "+password");
       const user = req.context.user;
-      console.log("User in controller : ", user);
       if (!user) {
         return res
           .status(StatusCodes.NOT_FOUND)
           .json({ message: "User not found" });
       }
+
       if (firstName) {
         user.firstName = firstName;
       }
@@ -180,7 +182,9 @@ export const authController = {
       if (profileImage) {
         user.profileImage = profileImage;
       }
-      // Check if password update is requested
+      if (dob) {
+        user.dob = dob;
+      }
       if (newPassword) {
         if (!oldPassword) {
           // Old password must be provided if new password is being updated
@@ -200,8 +204,24 @@ export const authController = {
         // Hash the new password and update it
         user.password = user.hashPassword(newPassword);
       }
+
+      // Handle address update/addition if provided
+      if (address && Array.isArray(address)) {
+        // console.log( "address inside IFF :" , address)
+        for (const addr of address) {
+          if (addr._id) {
+            // If address ID exists, update the existing address
+            // await Address.findByIdAndUpdate(addr._id, addr);
+            await authService.findAddressandUpdate(addr._id , addr)
+          } else {
+            // If no ID, create a new address for the user
+            await Address.create({ ...addr, userId: user._id });
+          }
+        }
+      }
+
       await user.save();
-      // Respond with the updated user information
+
       return res.status(StatusCodes.OK).json({
         success: true,
         message: "Profile updated successfully",
@@ -211,6 +231,8 @@ export const authController = {
           phoneNumber: user.phoneNumber,
           profileImage: user.profileImage,
           email: user.email,
+          dob: user.dob,
+          // address: user.address
         },
       });
     } catch (error) {
@@ -228,7 +250,8 @@ export const authController = {
       const user = await authService.findExistingEmail(email);
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({
-          message: ReasonPhrases.NOT_FOUND,
+          
+          message: "user is not in auth",
           status: StatusCodes.NOT_FOUND,
         });
       }
@@ -319,6 +342,7 @@ export const authController = {
         .json({ message: "Error processing request" });
     }
   },
+
 };
 
 //   googleAuth: async (req: Request, res: Response, next: NextFunction) => {
