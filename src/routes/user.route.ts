@@ -19,7 +19,7 @@ export const user = (router: Router) => {
 
     // route for update user 
     // TODO: , userValidation.updateUser  add validation
-    router.patch("/:id"  ,userController.updateUser)
+    router.patch("/:id" , userValidation.updateUser ,userController.updateUser)
 
     // route for delete user using id
     router.delete("/:id" , userValidation.validateId , userController.deleteUser )

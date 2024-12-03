@@ -76,7 +76,7 @@ export const userController = {
 
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
-        message: ReasonPhrases.OK,
+        message: "User Updated Successfully",
         data: updatedUser,
       });
     } catch (error) {
