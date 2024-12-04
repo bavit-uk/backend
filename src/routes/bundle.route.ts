@@ -1,22 +1,21 @@
-// import { productBrandController } from "@/controllers";
-// import { productBrandValidation } from "@/validations";
-import { bundleController } from "@/controllers";
+import { bundleController } from "@/controllers"; // Assuming you have a bundle controller
 import { Router } from "express";
 
-export const bundle= (router: Router) => {
-//   router.post("/", productBrandValidation.addBrand, productBrandController.addBrand);
+export const bundle = (router: Router) => {
+  
+  // Route to create a new bundle
+  router.post("/", bundleController.addBundle);
 
+  // Route to get all bundles
+  router.get("/", bundleController.getAllBundles);
 
-router.post("/",bundleController.createBundleInventory)
+  // Route to get a specific bundle by ID
+  router.get("/:id", bundleController.getBundleById);
 
-//   router.get("/", productBrandController.getAllBrands);
+  // Route to update a bundle by ID
+  router.patch("/:id", bundleController.updateBundleById);
 
-//   router.get("/:id", productBrandValidation.validateId, productBrandController.getSpecificBrand);
-
-//   router.patch("/:id", productBrandValidation.updateBrand, productBrandController.editBrand);
-
-//   router.delete("/:id", productBrandValidation.validateId, productBrandController.deleteBrand);
-
-//   router.patch("/block/:id", productBrandValidation.validateId, productBrandController.toggleBlock);
+  // Route to delete a bundle by ID
+  router.delete("/:id", bundleController.deleteBundleById);
 };
-
+//todo fix, auth guard , validators
