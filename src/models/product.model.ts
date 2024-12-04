@@ -20,7 +20,7 @@ const amazonSchema = new Schema<IAmazonPlatformDetails>({
   },
   quantity: { type: Number, required: true },
   pricing: {
-    pricePerUnit: { type: Number, required: true },
+    pricePerUnit: { type:Number, required: true },
     discountPrice: { type: Number },
   },
   condition: {
