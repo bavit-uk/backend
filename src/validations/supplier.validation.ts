@@ -45,7 +45,7 @@ export const supplierValidation = {
       address: z.array(addressSchema).min(1, "At least one address is required"),
       documents: z.array(documentSchema).optional(),
       //   userType: objectId, // Reference to UserCategory
-      supplierCategory: objectId,
+      // supplierCategory: objectId,
     });
     try {
       const validatedData = schema.parse(req.body);
