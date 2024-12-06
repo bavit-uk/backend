@@ -4,7 +4,7 @@ import { Router } from "express";
 import { auth } from "firebase-admin";
 
 export const bundle = (router: Router) => {
-  router.use(authGuard.isAuth);
+  // router.use(authGuard.isAuth);
   // Route to create a new bundle
   router.post("/", bundleController.addBundle);
 
