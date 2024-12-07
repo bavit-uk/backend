@@ -48,13 +48,13 @@ interface ICartItem {
 }
 
 // Update Payload for Cart (Partial type to support updates)
-export type ICartUpdatePayloadType = {
+interface ICartUpdatePayload {
   details?: ICartDetails; // Update details (user reference, items, etc.)
   pricing?: ICartPricing; // Update pricing details
   status?: CartStatus; // Update status (active or abandoned)
   createdAt?: Date; // Update timestamp for creation
   updatedAt?: Date; // Update timestamp for modification
-};
+}
 
 // Exporting all interfaces
 export {
@@ -64,5 +64,5 @@ export {
   ICartPricing,
   CartStatus,
   ICartDetails,
-  ICartUpdatePayloadType,
+  ICartUpdatePayload,
 };
