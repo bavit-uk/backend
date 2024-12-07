@@ -6,8 +6,7 @@ import { authGuard } from "@/guards";
 export const user = (router: Router) => {
 
     // route for create new user 
-    // TODO: , userValidation.createUser add validations
-    router.post("/" , userController.createUser);
+    router.post("/" , userValidation.createUser , userController.createUser);
 
     // route for get all users 
     router.get("/" , userController.allUsers)

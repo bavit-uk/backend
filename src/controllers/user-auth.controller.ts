@@ -7,7 +7,6 @@ import crypto from "crypto";
 import sendEmail from "@/utils/nodeMailer";
 
 export const authController = {
-
   registerUser: async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
@@ -50,7 +49,7 @@ export const authController = {
       const user = await authService.findExistingEmail(email, "+password");
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({
-          message: ReasonPhrases.NOT_FOUND,
+          message: "Email not found!",
           status: StatusCodes.NOT_FOUND,
         });
       }
@@ -58,7 +57,7 @@ export const authController = {
       const isPasswordValid = user.comparePassword(password);
       if (!isPasswordValid) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
-          message: ReasonPhrases.UNAUTHORIZED,
+          message: "Incorrect Password!",
           status: StatusCodes.UNAUTHORIZED,
         });
       }
@@ -131,7 +130,6 @@ export const authController = {
       // Fetch all addresses associated with the user
       const userAddresses = await authService.findAddressByUserId(user._id);
 
-      
       return res.status(StatusCodes.OK).json({ user, address: userAddresses });
     } catch (error) {
       console.error("Error fetching user profile:", error);
@@ -191,7 +189,7 @@ export const authController = {
           if (addr._id) {
             // If address ID exists, update the existing address
             // await Address.findByIdAndUpdate(addr._id, addr);
-            await authService.findAddressandUpdate(addr._id , addr)
+            await authService.findAddressandUpdate(addr._id, addr);
           } else {
             // If no ID, create a new address for the user
             await Address.create({ ...addr, userId: user._id });
@@ -229,7 +227,6 @@ export const authController = {
       const user = await authService.findExistingEmail(email);
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({
-          
           message: "user is not in auth",
           status: StatusCodes.NOT_FOUND,
         });
@@ -238,6 +235,8 @@ export const authController = {
       // Generate a reset token
       const resetToken = crypto.randomBytes(32).toString("hex");
       const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+      console.log("Reset token (plain):", resetToken);
+      console.log("Reset token (hashed):", resetTokenHash);
       const resetTokenExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes expiration
 
       // Save the token and expiry to the user record
@@ -281,16 +280,25 @@ export const authController = {
   resetPassword: async (req: Request, res: Response) => {
     try {
       const { token } = req.params;
+      console.log("Received token:", token);
       const { password } = req.body;
+      console.log("Received password:", password);
 
-      // Hash the token and compare it to the stored token
+
       const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+      console.log("Hashed token:", hashedToken);
+
+      
 
       // Find user by the reset token and check expiration
       const user = await authService.findUserByResetToken(hashedToken);
+      console.log("USER: " , user)
       if (!user || !user.resetPasswordExpires || user.resetPasswordExpires < Date.now()) {
+        console.log("Token invalid or expired.");
         return res.status(StatusCodes.BAD_REQUEST).json({ message: "Invalid or expired token" });
       }
+
+      console.log("User found:", user);
 
       // Update the password and clear the reset token
       user.password = user.hashPassword(password);
@@ -303,7 +311,6 @@ export const authController = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing request" });
     }
   },
-
 };
 
 //   googleAuth: async (req: Request, res: Response, next: NextFunction) => {
