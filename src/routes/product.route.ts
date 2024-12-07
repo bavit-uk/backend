@@ -1,16 +1,21 @@
 import { productController } from "@/controllers";
+import { productValidation } from "@/validations";
 import { Router } from "express";
 
 
 export const product = (router: Router) => {
 
-    router.post("/", productController.addProduct);
+    router.post("/", productValidation.addProduct , productController.addProduct);
 
     router.get("/", productController.getAllProduct);
 
-    router.get("/:id" , productController.getProductById);
+    router.get("/:id" , productValidation.validateId , productController.getProductById);
 
-    // TODO: Working on update product
-    router.patch(":/id" , productController.updateProductById)
+    // router.delete("/:id" , productValidation.validateId , productController.deleteProduct)
+
+    router.patch("/:id" , productValidation.updateProduct , productController.updateProductById)
+
+    // route for toggle block status
+    router.patch("/block/:id" , productController.toggleBlock)
 
 }

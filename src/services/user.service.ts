@@ -35,6 +35,7 @@ export const userService = {
       dob,
     //   address,
     } = data;
+    // console.log(data);
     const hasedPassword = await createHash(password);
     const newUser = await new User({
       firstName,
@@ -72,8 +73,18 @@ export const userService = {
     return updateUser;
   },
 
-  createAddress: (address: IUserAddress) => {
-    const newAddress = new Address(address);
+  createAddress: (address: IUserAddress , userId: string) => {
+    const {label , street , city , state , postalCode , country , isDefault } = address
+    const newAddress = new Address({
+      userId,
+      label,
+      street,
+      city,
+      state,
+      postalCode,
+      country,
+      isDefault
+    });
     return newAddress.save();
   },
 

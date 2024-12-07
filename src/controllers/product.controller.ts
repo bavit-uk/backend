@@ -6,7 +6,7 @@ export const productController = {
 
   addProduct: async (req: Request, res: Response) => {
     try {
-      const productData = req.body; // Destructure product details from the request body
+      const productData = req.body; 
       console.log("asdasd : ", productData);
       const newProduct = await productService.addProduct(productData); // Call the service to add the product
       return res.status(StatusCodes.CREATED).json({
@@ -46,19 +46,49 @@ export const productController = {
     }
   },
 
+  // deleteProduct: async (req: Request, res: Response) => {
+  //   try {
+  //     const userId = req.params.id
+  //     const product = await productService.deleteProduct(userId);
+  //     res.status(StatusCodes.OK).json({ message: "Product deleted successfully" });
+  //     if (!product) return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
+  //   } catch (error) {
+  //     console.error("Error deleting product:", error);
+  //     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "An error occurred while deleting the product" });
+  //   }
+  // },
+
   updateProductById: async (req: Request, res: Response) => {
     try {
-        console.log("hello")
+        // console.log("hello")
         const prodId = req.params.id;
         const data = req.body
-        console.log(prodId)
-        console.log(data)
+        // console.log(prodId)
+        // console.log(data)
         const product = await productService.updateProduct(prodId , data)
         if (!product) return res.status(404).json({ message: "Product not found" });
         res.status(StatusCodes.OK).json({ success: true, product: product });
     } catch (error) {
         console.error("Update Product Error:", error);
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: "Error updating product" });
+    }
+  },
+
+  toggleBlock: async (req: Request, res: Response) => {
+    try {
+      const userId = req.params.id;
+      const { isBlocked } = req.body;
+      const result = await productService.toggleBlock(userId, isBlocked);
+      res.status(StatusCodes.OK).json({
+        success: true,
+        message: `Product ${isBlocked ? "blocked" : "unblocked"} successfully`,
+        data: result,
+      });
+    } catch (error) {
+      console.error("Toggle Block Error:", error);
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ success: false, message: "Error updating product status" });
     }
   }
 
