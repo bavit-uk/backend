@@ -10,4 +10,5 @@ export {productController} from "./product.controller"
 export {permissionsController} from "./permissions.controller"
 export {bundleController} from "./bundle.controller"
 export {orderController} from "./order.controller"
+export {cartController} from "./cart.controller"
 
