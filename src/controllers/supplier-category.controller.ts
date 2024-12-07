@@ -50,6 +50,7 @@
     getAllCategory: async (req: Request, res: Response) => {
         try {
         const categories = await supplierCategoryService.getAllCategory();
+        console.log(categories)
         res.status(StatusCodes.OK).json({ success: true, data: categories });
         } catch (error) {
         console.error("View Categories Error:", error);

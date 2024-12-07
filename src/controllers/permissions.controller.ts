@@ -20,11 +20,11 @@ export const permissionsController = {
                 parent: "SETTINGS"
               }
           };
-          console.log(permissions);
+          // console.log(permissions);
 
       res.status(StatusCodes.CREATED).json({
         success: true,
-        permissions: permissions,
+        permissions,
       });
     } catch (error) {
       console.error(error);
