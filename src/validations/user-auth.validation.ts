@@ -156,7 +156,7 @@ export const authValidation = {
     next: NextFunction
   ) => {
     const schema: ZodSchema = z.object({
-      newPassword: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one character) (between 8-20)"),
+      password: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one character) (between 8-20)"),
     });
     try {
       const validatedData = schema.parse(req.body);

@@ -10,7 +10,7 @@ export const supplierController = {
     try {
       const { email, address } = req.body;
 
-      console.log(req.body)
+      console.log(req.body);
 
       const userExists = await supplierService.findExistingEmail(email);
       if (userExists) {
@@ -23,10 +23,13 @@ export const supplierController = {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating supplier" });
       }
 
-      for (const addr of address) {
-        const createdAddress = await supplierService.createAddress({ ...addr, userId: supplier._id });
-        if (!createdAddress) {
-          return res.json({ message: "Error creating address" });
+      // Handle address update/addition if provided
+      if (address && Array.isArray(address)) {
+        for (const addr of address) {
+          const createdAddress = await supplierService.createAddress({ ...addr, userId: supplier._id });
+          if (!createdAddress) {
+            return res.json({ message: "Error creating address" });
+          }
         }
       }
 
@@ -86,6 +89,7 @@ export const supplierController = {
     try {
       // const categories = await UserCategory.findOne({})
       const allSuppliers = await supplierService.getAllSuppliers();
+      console.log(allSuppliers)
       res.status(StatusCodes.OK).json({ data: allSuppliers });
     } catch (error) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error });
@@ -97,8 +101,11 @@ export const supplierController = {
       const id = req.params.id;
       const supplier = await supplierService.findSupplierById(id, "+password");
       if (!supplier) return res.status(404).json({ message: "Supplier not found" });
-      const userAddresses = await supplierService.findAddressByUserId(id);
-      res.status(StatusCodes.OK).json({ supplier, adresses: userAddresses });
+      const address = await supplierService.findAddressByUserId(id);
+
+      const supplierWithAddresses = { ...supplier.toObject(), address };
+
+      res.status(200).json({ data: supplierWithAddresses });
     } catch (error) {
       console.error(error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error fetching supplier details" });
@@ -133,6 +140,4 @@ export const supplierController = {
         .json({ success: false, message: "Error updating supplier category status" });
     }
   },
-
-
 };

@@ -25,10 +25,13 @@ export const userController = {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating user" });
       }
 
-      for (const addr of address) {
-        const createdAddress = await userService.createAddress({ ...addr, userId: newUser._id });
-        if (!createdAddress) {
-          return res.json({ message: "Error creating address" });
+      // Handle address update/addition if provided
+      if (address && Array.isArray(address)) {
+        for (const addr of address) {
+          const createdAddress = await userService.createAddress(addr, newUser._id as string);
+          if (!createdAddress) {
+            return res.json({ message: "Error creating address" });
+          }
         }
       }
 
@@ -66,7 +69,7 @@ export const userController = {
             }
           } else {
             // Create new address if _id is not present
-            const createdAddress = await userService.createAddress({ ...addr, userId });
+            const createdAddress = await userService.createAddress(addr, userId);
             if (!createdAddress) {
               return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating address" });
             }
@@ -88,7 +91,7 @@ export const userController = {
   allUsers: async (req: Request, res: Response) => {
     try {
       const users = await userService.getAllUsers();
-      res.status(StatusCodes.OK).json({data : users});
+      res.status(StatusCodes.OK).json({ data: users });
     } catch (error) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error });
     }
@@ -111,7 +114,9 @@ export const userController = {
       return res.status(StatusCodes.OK).json({ address });
     } catch (error) {
       console.error(error); // Log the error for internal debugging
-      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "An error occurred while fetching the address" });
+      return res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ error: "An error occurred while fetching the address" });
     }
   },
 
@@ -120,8 +125,11 @@ export const userController = {
       const userId = req.params.id;
       const user = await userService.findUserById(userId, "+password");
       if (!user) return res.status(404).json({ message: "User not found" });
-      const userAddresses = await userService.findAddressByUserId(userId);
-      res.status(StatusCodes.OK).json({ user, addresses: userAddresses });
+      const address = await userService.findAddressByUserId(userId);
+
+      const userWithAddresses = { ...user.toObject(), address }
+
+      res.status(StatusCodes.OK).json({ data: userWithAddresses });
     } catch (error) {
       console.error(error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error fetching user details" });
@@ -156,5 +164,4 @@ export const userController = {
         .json({ success: false, message: "Error updating user category status" });
     }
   },
-
 };

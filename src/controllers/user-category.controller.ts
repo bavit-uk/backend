@@ -9,6 +9,7 @@ export const userCategoryController = {
     allUsersCategories: async (req: Request , res: Response) => {
         try {
             const usersCategories = await userCategoryService.getAllUsersCategories();
+            console.log(usersCategories)
             res.status(StatusCodes.OK).json(usersCategories);
         } catch (error) {
             console.log(error)
