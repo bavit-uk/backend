@@ -6,6 +6,7 @@ export interface IUserCategory extends Document {
     role: string;
     description?: string;
     permissions: string[];
+    isBlocked: boolean;
     // isSupplier: boolean;
 }
 
