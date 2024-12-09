@@ -7,7 +7,7 @@ import { IUserAddress } from "@/contracts/user-address.contracts";
 export const authService = {
   findExistingEmail: (email: string, select?: string) => {
     if (select) {
-      return User.findOne({ email }).select(select);
+      return User.findOne({ email }).select(select).populate("userType");
     }
     return User.findOne({ email });
   },

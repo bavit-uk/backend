@@ -12,6 +12,7 @@ import { productCategory } from "./product-category.route";
 import { productBrand } from "./product-brand.route";
 import { product } from "./product.route";
 import {permissions} from "./permissions.route"
+import { me } from "./me.route";
 
 // Create a new router to handle all routes
 const router: Router = Router();
@@ -19,7 +20,7 @@ const router: Router = Router();
 // Define all routes
 const routes: {
   [key: string]: (router: Router) => void;
-} = { files , permissions , user, auth, userCategory, supplier, supplierCategory, product , productCategory , productBrand };
+} = { me , files , permissions , user, auth, userCategory, supplier, supplierCategory, product , productCategory , productBrand };
 
 // Loop through all routes and pass the router to each route
 for (const route in routes) {
