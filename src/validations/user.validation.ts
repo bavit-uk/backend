@@ -2,74 +2,35 @@ import { getZodErrors } from "@/utils/get-zod-errors.util";
 import { NextFunction, Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { z, ZodSchema } from "zod";
-import {
-  IUser,
-  UserCreatePayload,
-  UserUpdatePayload,
-} from "@/contracts/user.contract";
+import { IUser, UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract";
 import { Types } from "mongoose";
 import { IBodyRequest } from "@/contracts/request.contract";
 import { REGEX } from "@/constants/regex";
 import { ENUMS } from "@/constants/enum";
 
 // Custom Zod validation for MongoDB ObjectId
-const objectId = z
-  .instanceof(Types.ObjectId)
-  .or(z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ObjectId"));
+const objectId = z.instanceof(Types.ObjectId).or(z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ObjectId"));
 
 export const userValidation = {
   // create new user validation
-  createUser: async (
-    req: IBodyRequest<UserCreatePayload>,
-    res: Response,
-    next: NextFunction
-  ) => {
+  createUser: async (req: IBodyRequest<UserCreatePayload>, res: Response, next: NextFunction) => {
     // Define the address schema
     const addressSchema = z.object({
       userId: z.string().optional(),
-      label: z
-        .string()
-        .trim()
-        .min(3, "Address label must be at least 3 characters")
-        .optional(),
-      street: z
-        .string()
-        .trim()
-        .min(3, "Street must be at least 3 characters")
-        .optional(),
-      city: z
-        .string()
-        .trim()
-        .min(2, "City must be at least 2 characters")
-        .optional(),
-      state: z
-        .string()
-        .trim()
-        .min(2, "State must be at least 2 characters")
-        .optional(),
+      label: z.string().trim().optional(),
+      street: z.string().trim().optional(),
+      city: z.string().trim().optional(),
+      state: z.string().trim().optional(),
       postalCode: z.string().trim().optional(),
-      country: z
-        .string()
-        .trim()
-        .min(2, "Country must be at least 2 characters")
-        .optional(),
+      country: z.string().trim().optional(),
       isDefault: z.boolean().optional(),
     });
 
     const schema: ZodSchema = z.object({
       firstName: z.string().trim().min(3, "First name is required"),
       lastName: z.string().trim().min(3, "Last name is required"),
-      email: z
-        .string()
-        .trim()
-        .min(3, "Email is required")
-        .regex(REGEX.EMAIL, "Invalid email format"),
-      password: z
-        .string()
-        .regex(
-          REGEX.PASSWORD,
-          "(A-Z) (a-z) (0-9) (one charcter) (between 8-20)"
-        ),
+      email: z.string().trim().min(3, "Email is required").regex(REGEX.EMAIL, "Invalid email format"),
+      password: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one charcter) (between 8-20)"),
       additionalAccessRights: z.array(z.string()).optional(),
       restrictedAccessRights: z.array(z.string()).optional(),
       phoneNumber: z.string().trim().min(3, "Phone number is required"),
@@ -101,11 +62,7 @@ export const userValidation = {
   },
 
   // update user validation
-  updateUser: async (
-    req: IBodyRequest<UserUpdatePayload>,
-    res: Response,
-    next: NextFunction
-  ) => {
+  updateUser: async (req: IBodyRequest<UserUpdatePayload>, res: Response, next: NextFunction) => {
     // Create a partial schema for updates
     const schema: ZodSchema = z
       .object({
@@ -126,13 +83,7 @@ export const userValidation = {
           .regex(REGEX.EMAIL, "Invalid email format")
           .max(50, "Email should not exceed then 50 char")
           .optional(),
-        password: z
-          .string()
-          .regex(
-            REGEX.PASSWORD,
-            "(A-Z) (a-z) (0-9) (one character) (between 8-20)"
-          )
-          .optional(),
+        password: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one character) (between 8-20)").optional(),
         signUpThrough: z.enum(["Google", "Apple", "Web"]).optional(),
         profileImage: z.string().optional(),
         EmailVerifiedOTP: z.string().optional(),
@@ -170,11 +121,7 @@ export const userValidation = {
   },
 
   // ID validation for get/delete
-  validateId: (
-    req: IBodyRequest<string>,
-    res: Response,
-    next: NextFunction
-  ) => {
+  validateId: (req: IBodyRequest<string>, res: Response, next: NextFunction) => {
     const schema = z.object({
       id: objectId,
     });
