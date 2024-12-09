@@ -7,7 +7,7 @@
     addCategory: async (req: Request, res: Response) => {
         try {
         const { name, description, image } = req.body;
-        console.log(name , description);
+        console.log(name , description , image);
         const newSupplierCategory = await supplierCategoryService.createCategory(name, description, image);
         res
             .status(StatusCodes.CREATED)

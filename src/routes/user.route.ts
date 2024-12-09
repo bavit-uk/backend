@@ -9,7 +9,7 @@ export const user = (router: Router) => {
     router.post("/" , userValidation.createUser , userController.createUser);
 
     // route for get all users 
-    router.get("/" , userController.allUsers)
+    router.get("/" , authGuard.isAuth , userController.allUsers)
 
     // route for get details (include permissions) of specific user by id
     router.get("/:id" ,  userValidation.validateId ,userController.getUserDetails)

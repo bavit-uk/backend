@@ -12,4 +12,8 @@ export const userCategory = (router: Router) => {
 
     router.delete("/:id" , userCategoryValidation.validateId , userCategoryController.deleteCategory)
 
+    router.get("/:id" , userCategoryValidation.validateId , userCategoryController.getSpecificCategory)
+
+    router.patch("/block/:id" , userCategoryValidation.validateId , userCategoryController.toggleBlock)
+
 }
