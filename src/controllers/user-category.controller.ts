@@ -19,15 +19,24 @@ export const userCategoryController = {
   createUserCategory: async (req: Request, res: Response) => {
     try {
       const { role, description, permissions } = req.body;
-      // console.log("sdad : " , role , description)
+  
       const newUserCategory = await userCategoryService.createCategory(role, description, permissions);
-      // console.log(newUserCategory)
-      res
-        .status(StatusCodes.CREATED)
-        .json({ message: "User category created successfully", userCategory: newUserCategory });
-    } catch (error) {
-      console.error(error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating user category" });
+  
+      res.status(StatusCodes.CREATED).json({
+        message: "User category created successfully",
+        userCategory: newUserCategory,
+      });
+    } catch (error: any) {
+      if (error.name === "MongoServerError" && error.code === 11000) {
+        // Handle duplicate key error (unique constraint violation)
+        const field = Object.keys(error.keyPattern)[0]; // Find the duplicate field
+        res.status(StatusCodes.BAD_REQUEST).json({
+          message: `The ${field} must be unique. "${req.body[field]}" is already in use.`,
+        });
+      } else {
+        console.error(error);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating user category" });
+      }
     }
   },
 
@@ -73,7 +82,7 @@ export const userCategoryController = {
     try {
     const { id } = req.params;
     const { isBlocked } = req.body;
-    console.log("id : ", id);
+    // console.log("id : ", id);
     const result = await userCategoryService.toggleBlock(id, isBlocked);
     res.status(StatusCodes.OK).json({
         success: true,
@@ -84,7 +93,7 @@ export const userCategoryController = {
     console.error("Toggle Block Category Error:", error);
     res
         .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ success: false, message: "Error updating supplier category status" });
+        .json({ success: false, message: "Error updating user category status" });
     }
 },
 

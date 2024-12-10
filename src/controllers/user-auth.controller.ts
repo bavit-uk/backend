@@ -1,10 +1,14 @@
 import { NextFunction, Request, Response } from "express";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { authService } from "@/services";
-import { Address, User } from "@/models";
+import { Address, User, UserCategory } from "@/models";
 import { jwtSign, jwtVerify } from "@/utils/jwt.util";
 import crypto from "crypto";
 import sendEmail from "@/utils/nodeMailer";
+import { OAuth2Client } from "google-auth-library";
+
+// Initialize Google OAuth client
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const authController = {
   registerUser: async (req: Request, res: Response) => {
@@ -88,6 +92,43 @@ export const authController = {
         message: ReasonPhrases.INTERNAL_SERVER_ERROR,
         status: StatusCodes.INTERNAL_SERVER_ERROR,
       });
+    }
+  },
+
+  googleLogin: async (req: Request, res: Response) => {
+    try {
+      const { email, firstName, lastName, profileImage, userType, isEmailVerified, signUpThrough } = req.body;
+      console.log("details : ", userType , email, firstName, lastName, profileImage, signUpThrough);
+      let user = await authService.findExistingEmail(email);
+      if (!user) {
+        user = await new User({
+          firstName,
+          lastName,
+          email,
+          signUpThrough,
+          userType,
+          isEmailVerified,
+          profileImage,
+        });
+      }
+      await user.save();
+
+      const userTypee = await UserCategory.findById(userType)
+      console.log("usertype : " , userTypee)
+
+      // Generate tokens
+      const { accessToken, refreshToken } = jwtSign(user?.id);
+      return res.status(StatusCodes.OK).json({
+        user,
+        userType: userTypee,
+        accessToken,
+        refreshToken,
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+      });
+    } catch (error) {
+      console.error("Google login error:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error during Google login" });
     }
   },
 
@@ -284,15 +325,12 @@ export const authController = {
       const { password } = req.body;
       console.log("Received password:", password);
 
-
       const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
       console.log("Hashed token:", hashedToken);
 
-      
-
       // Find user by the reset token and check expiration
       const user = await authService.findUserByResetToken(hashedToken);
-      console.log("USER: " , user)
+      console.log("USER: ", user);
       if (!user || !user.resetPasswordExpires || user.resetPasswordExpires < Date.now()) {
         console.log("Token invalid or expired.");
         return res.status(StatusCodes.BAD_REQUEST).json({ message: "Invalid or expired token" });
