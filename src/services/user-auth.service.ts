@@ -13,7 +13,8 @@ export const authService = {
   },
 
   createUser: async (data: UserRegisterPayload) => {
-    const { firstName, lastName, email, password, signUpThrough, phoneNumber } = data;
+    const { firstName, lastName, email, password, signUpThrough , userType } = data;
+    console.log("usertype : " , userType)
     // const hasedPassword = await createHash(password);
 
     const newUser = await new User({
@@ -22,7 +23,7 @@ export const authService = {
       email,
       password: User.prototype.hashPassword(password),
       signUpThrough,
-      phoneNumber,
+      userType,
     });
     return await newUser.save();
   },
