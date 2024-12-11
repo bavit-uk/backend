@@ -8,7 +8,8 @@ export {productCategoryController} from "./product-category.controller"
 export {productBrandController} from "./product-brand.controller"
 export {productController} from "./product.controller"
 export {permissionsController} from "./permissions.controller"
+export {meController} from "./me.controller"
+
 export {bundleController} from "./bundle.controller"
 export {orderController} from "./order.controller"
 export {cartController} from "./cart.controller"
-

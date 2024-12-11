@@ -7,13 +7,14 @@ import { IUserAddress } from "@/contracts/user-address.contracts";
 export const authService = {
   findExistingEmail: (email: string, select?: string) => {
     if (select) {
-      return User.findOne({ email }).select(select);
+      return User.findOne({ email }).select(select).populate("userType");
     }
     return User.findOne({ email });
   },
 
   createUser: async (data: UserRegisterPayload) => {
-    const { firstName, lastName, email, password, signUpThrough, phoneNumber } = data;
+    const { firstName, lastName, email, password, signUpThrough , userType } = data;
+    console.log("usertype : " , userType)
     // const hasedPassword = await createHash(password);
 
     const newUser = await new User({
@@ -22,7 +23,7 @@ export const authService = {
       email,
       password: User.prototype.hashPassword(password),
       signUpThrough,
-      phoneNumber,
+      userType,
     });
     return await newUser.save();
   },

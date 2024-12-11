@@ -7,6 +7,7 @@ import {
   UserCreatePayload,
   UserUpdatePayload,
 } from "@/contracts/user.contract";
+import { IUser, UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract";
 import { Types } from "mongoose";
 import { IBodyRequest } from "@/contracts/request.contract";
 import { REGEX } from "@/constants/regex";
@@ -19,40 +20,16 @@ const objectId = z
 
 export const userValidation = {
   // create new user validation
-  createUser: async (
-    req: IBodyRequest<UserCreatePayload>,
-    res: Response,
-    next: NextFunction
-  ) => {
+  createUser: async (req: IBodyRequest<UserCreatePayload>, res: Response, next: NextFunction) => {
     // Define the address schema
     const addressSchema = z.object({
       userId: z.string().optional(),
-      label: z
-        .string()
-        .trim()
-        .min(3, "Address label must be at least 3 characters")
-        .optional(),
-      street: z
-        .string()
-        .trim()
-        .min(3, "Street must be at least 3 characters")
-        .optional(),
-      city: z
-        .string()
-        .trim()
-        .min(2, "City must be at least 2 characters")
-        .optional(),
-      state: z
-        .string()
-        .trim()
-        .min(2, "State must be at least 2 characters")
-        .optional(),
+      label: z.string().trim().optional(),
+      street: z.string().trim().optional(),
+      city: z.string().trim().optional(),
+      state: z.string().trim().optional(),
       postalCode: z.string().trim().optional(),
-      country: z
-        .string()
-        .trim()
-        .min(2, "Country must be at least 2 characters")
-        .optional(),
+      country: z.string().trim().optional(),
       isDefault: z.boolean().optional(),
     });
 
@@ -75,6 +52,7 @@ export const userValidation = {
       phoneNumber: z.string().trim().min(3, "Phone number is required"),
       dob: z.string().optional(),
       // userType: z.objectId(),
+      address: z.array(addressSchema).optional(),
       address: z.array(addressSchema).optional(),
     });
     try {
@@ -126,13 +104,7 @@ export const userValidation = {
           .regex(REGEX.EMAIL, "Invalid email format")
           .max(50, "Email should not exceed then 50 char")
           .optional(),
-        password: z
-          .string()
-          .regex(
-            REGEX.PASSWORD,
-            "(A-Z) (a-z) (0-9) (one character) (between 8-20)"
-          )
-          .optional(),
+        password: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one character) (between 8-20)").optional(),
         signUpThrough: z.enum(["Google", "Apple", "Web"]).optional(),
         profileImage: z.string().optional(),
         EmailVerifiedOTP: z.string().optional(),
@@ -170,11 +142,7 @@ export const userValidation = {
   },
 
   // ID validation for get/delete
-  validateId: (
-    req: IBodyRequest<string>,
-    res: Response,
-    next: NextFunction
-  ) => {
+  validateId: (req: IBodyRequest<string>, res: Response, next: NextFunction) => {
     const schema = z.object({
       id: objectId,
     });
