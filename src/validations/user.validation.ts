@@ -7,7 +7,6 @@ import {
   UserCreatePayload,
   UserUpdatePayload,
 } from "@/contracts/user.contract";
-import { IUser, UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract";
 import { Types } from "mongoose";
 import { IBodyRequest } from "@/contracts/request.contract";
 import { REGEX } from "@/constants/regex";
@@ -20,7 +19,11 @@ const objectId = z
 
 export const userValidation = {
   // create new user validation
-  createUser: async (req: IBodyRequest<UserCreatePayload>, res: Response, next: NextFunction) => {
+  createUser: async (
+    req: IBodyRequest<UserCreatePayload>,
+    res: Response,
+    next: NextFunction
+  ) => {
     // Define the address schema
     const addressSchema = z.object({
       userId: z.string().optional(),
@@ -52,7 +55,6 @@ export const userValidation = {
       phoneNumber: z.string().trim().min(3, "Phone number is required"),
       dob: z.string().optional(),
       // userType: z.objectId(),
-      address: z.array(addressSchema).optional(),
       address: z.array(addressSchema).optional(),
     });
     try {
@@ -104,7 +106,13 @@ export const userValidation = {
           .regex(REGEX.EMAIL, "Invalid email format")
           .max(50, "Email should not exceed then 50 char")
           .optional(),
-        password: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one character) (between 8-20)").optional(),
+        password: z
+          .string()
+          .regex(
+            REGEX.PASSWORD,
+            "(A-Z) (a-z) (0-9) (one character) (between 8-20)"
+          )
+          .optional(),
         signUpThrough: z.enum(["Google", "Apple", "Web"]).optional(),
         profileImage: z.string().optional(),
         EmailVerifiedOTP: z.string().optional(),
@@ -142,7 +150,11 @@ export const userValidation = {
   },
 
   // ID validation for get/delete
-  validateId: (req: IBodyRequest<string>, res: Response, next: NextFunction) => {
+  validateId: (
+    req: IBodyRequest<string>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const schema = z.object({
       id: objectId,
     });
