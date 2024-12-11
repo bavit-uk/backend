@@ -13,12 +13,12 @@ const objectId = z.instanceof(Types.ObjectId).or(z.string().regex(/^[0-9a-fA-F]{
 // Address validation schema
 const addressSchema = z.object({
   userId: z.string().optional(), // Optional if it's an update; otherwise, it's for new addresses
-  label: z.string().trim().min(1, "Label is required"),
-  street: z.string().trim().min(1, "Street is required"),
-  city: z.string().trim().min(1, "City is required"),
-  state: z.string().trim().min(1, "State is required"),
-  postalCode: z.string().trim().min(1, "Postal code is required"),
-  country: z.string().trim().min(1, "Country is required"),
+  label: z.string().trim(),
+  street: z.string().trim(),
+  city: z.string().trim(),
+  state: z.string().trim(),
+  postalCode: z.string().trim(),
+  country: z.string().trim(),
   isDefault: z.boolean().optional(),
 });
 
