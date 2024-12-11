@@ -31,6 +31,8 @@ export const userCategoryService = {
   },
 
   toggleBlock: async (id: string, isBlocked: boolean) => {
+    console.log("block : " , isBlocked)
+    console.log("id : " , id)
     const updatedCategory = await UserCategory.findByIdAndUpdate(id, { isBlocked: isBlocked }, { new: true });
     if (!updatedCategory) {
       throw new Error("Category not found");
