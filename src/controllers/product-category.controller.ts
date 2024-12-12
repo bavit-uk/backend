@@ -5,9 +5,9 @@ import { StatusCodes, ReasonPhrases } from "http-status-codes";
 export const productCategoryController = {
   addCategory: async (req: Request, res: Response) => {
     try {
-      const { name, description, image, isBlocked } = req.body;
+      const { name, description, image, tags , isBlocked } = req.body;
       //   console.log(name, description, image);
-      const newProductCategory = await productCategoryService.createCategory(name, description, image, isBlocked);
+      const newProductCategory = await productCategoryService.createCategory(name, description, image, tags , isBlocked);
       res
         .status(StatusCodes.CREATED)
         .json({ success: true, message: "Product category created successfully", data: newProductCategory });
@@ -49,8 +49,8 @@ export const productCategoryController = {
   editCategory: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { name, description, image, isBlocked } = req.body;
-      const category = await productCategoryService.editCategory(id, { name, description, image, isBlocked });
+      const { name, description, image, tags , isBlocked } = req.body;
+      const category = await productCategoryService.editCategory(id, { name, description, image, tags , isBlocked });
       res.status(StatusCodes.OK).json({ success: true, message: "Category updated successfully", data: category });
     } catch (error) {
       console.error("Edit Category Error:", error);
