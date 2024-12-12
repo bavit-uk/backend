@@ -73,14 +73,14 @@ export const userService = {
     return updateUser;
   },
 
-  createAddress: (address: IUserAddress , userId: string) => {
-    const {label , street , city , state , postalCode , country , isDefault } = address
+  createAddress: (addresss: IUserAddress , userId: string) => {
+    const {country , address , label , appartment , city , postalCode , isDefault } = addresss
     const newAddress = new Address({
       userId,
       label,
-      street,
+      address,
       city,
-      state,
+      appartment,
       postalCode,
       country,
       isDefault

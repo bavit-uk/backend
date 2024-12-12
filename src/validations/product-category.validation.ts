@@ -20,7 +20,8 @@ export const productCategoryValidation = {
     const schema: ZodSchema = z.object({
       name: z.string().min(1, "Product Category Name is required"), // userType is required
       description: z.string().optional(), // description is optional
-      image: z.array(z.string()).nonempty("At least one image/icon is required"), // permissions array must have at least one string
+      image: z.string().nonempty("At least one image/icon is required"), // permissions array must have at least one string
+      tags: z.array(z.string()).nonempty("At least one tag is required"),
       isBlocked: z.boolean().optional(),
     });
     try {
@@ -55,7 +56,8 @@ export const productCategoryValidation = {
     const schema: ZodSchema = z.object({
       name: z.string().min(1, "Product Category Name is required").optional(), // userType is required
       description: z.string().optional(), // description is optional
-      image: z.array(z.string()).nonempty("At least one image/icon is required").optional(), // permissions array must have at least one string
+      image: z.string().nonempty("At least one image/icon is required").optional(), // permissions array must have at least one string
+      tags: z.array(z.string()).nonempty("At least one tag is required"),
       isBlocked: z.boolean().optional(),
     });
     try {
