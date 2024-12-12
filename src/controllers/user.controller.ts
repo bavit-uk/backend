@@ -4,6 +4,8 @@ import { Address, User, UserCategory } from "@/models";
 import { IUser } from "@/contracts/user.contract";
 import { createHash } from "@/utils/hash.util";
 import { userService } from "@/services";
+import sendEmail from "@/utils/nodeMailer";
+
 
 export const userController = {
   createUser: async (req: Request, res: Response) => {
@@ -35,7 +37,30 @@ export const userController = {
         }
       }
 
-      res.status(StatusCodes.CREATED).json({ message: "User created successfully", user: newUser });
+      // Send email to the new user
+    try {
+      const password = req.body.password; // Assuming the password is passed in the request body
+      const emailContent = `
+        <p>Dear ${newUser.firstName || "User"},</p>
+        <p>Your account has been created by the Bav-IT admin. Below are your login credentials:</p>
+        <p><strong>Email:</strong> ${newUser.email}</p>
+        <p><strong>Password:</strong> ${password}</p>
+      `;
+
+      await sendEmail({
+        to: newUser.email,
+        subject: "Your Bav-IT Account Has Been Created",
+        html: emailContent,
+      });
+    } catch (emailError) {
+      console.error("Error sending email:", emailError);
+      // Log the email failure but continue to return a success response
+    }
+
+    res.status(StatusCodes.CREATED).json({
+      message: "User created successfully, and email notification sent.",
+      user: newUser,
+    });
     } catch (error) {
       console.error(error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating user" });
