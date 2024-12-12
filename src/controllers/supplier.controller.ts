@@ -4,11 +4,13 @@ import { supplierService } from "@/services";
 import { IUserAddress } from "@/contracts/user-address.contracts";
 import { createHash } from "@/utils/hash.util";
 import { UserCategory } from "@/models";
+import sendEmail from "@/utils/nodeMailer";
+
 
 export const supplierController = {
   addSupplier: async (req: Request, res: Response) => {
     try {
-      const { email, address } = req.body;
+      const { email, address , password } = req.body;
 
       console.log(req.body);
 
@@ -33,7 +35,31 @@ export const supplierController = {
         }
       }
 
-      res.status(StatusCodes.CREATED).json({ message: "Supplier created successfully", supplier: supplier });
+      // Send email to the new supplier
+    try {
+      const emailContent = `
+        <p>Dear ${supplier.firstName || "Supplier"},</p>
+        <p>Your account has been created by the Bav-IT admin. Below are your login credentials:</p>
+        <p><strong>Email:</strong> ${supplier.email}</p>
+        <p><strong>Password:</strong> ${password}</p>
+      `;
+
+      await sendEmail({
+        to: supplier.email,
+        subject: "Your Bav-IT Supplier Account Has Been Created",
+        html: emailContent,
+      });
+    } catch (emailError) {
+      console.error("Error sending email:", emailError);
+      // Log the email failure but continue to return a success response
+    }
+
+
+      // Send a response back to the client
+    res.status(StatusCodes.CREATED).json({
+      message: "Supplier created successfully, and email notification sent.",
+      supplier: supplier,
+    });
     } catch (error) {
       console.error(error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating user" });
