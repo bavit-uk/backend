@@ -3,8 +3,8 @@ import { ProductCategory } from "@/models";
 
 export const productCategoryService = {
 
-  createCategory: (name: String, description: string, image: string, isBlocked:boolean) => {
-    const newProductCategory = new ProductCategory({ name, description, image , isBlocked});
+  createCategory: (name: String, description: string, image: string, tags: string[] , isBlocked:boolean) => {
+    const newProductCategory = new ProductCategory({ name, description, image , tags , isBlocked});
     return newProductCategory.save();
   },
 
