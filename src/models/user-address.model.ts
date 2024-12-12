@@ -4,12 +4,12 @@ import { IUserAddress , UserAddressModel} from "@/contracts/user-address.contrac
 const AddressSchema = new Schema<IUserAddress , UserAddressModel>(
     {
       userId: { type: Schema.Types.ObjectId, ref: "User"},
-      label: { type: String},
-      street: { type: String},
-      city: { type: String},
-      state: { type: String },
-      postalCode: { type: String},
       country: { type: String},
+      address: { type: String},
+      label: { type: String},
+      appartment: { type: String},
+      city: { type: String },
+      postalCode: { type: String},
       isDefault: { type: Boolean},
     },
     {

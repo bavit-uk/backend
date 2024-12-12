@@ -17,6 +17,10 @@ export const permissionsController = {
           parent: "MANAGE_SUPPLIERS",
           children: ["ADD_SUPPLIERS_CATEGORY", "VIEW_SUPPLIERS_CATEGORY", "ADD_SUPPLIERS", "VIEW_SUPPLIERS"],
         },
+        inventoryManagement: {
+          parent: "MANAGE_INVENTORY",
+          children: ["ADD_INVENTORY_CATEGORY", "VIEW_INVENTORY_CATEGORY", "ADD_INVENTORY", "VIEW_INVENTORY"],
+        },
         // inventoryManagement: {
         //   parent: "MANAGE_INVENTORY",
         //   children: ["ADD_INVENTORY_CATEGORY" , "VIEW_INVENTORY_CATEGORY" , "ADD_INVENTORY", "VIEW_INVENTORY"] 

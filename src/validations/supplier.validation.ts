@@ -10,15 +10,15 @@ import { REGEX } from "@/constants/regex";
 // Custom Zod validation for MongoDB ObjectId
 const objectId = z.instanceof(Types.ObjectId).or(z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ObjectId"));
 
-// Address validation schema
+// Define the address schema
 const addressSchema = z.object({
-  userId: z.string().optional(), // Optional if it's an update; otherwise, it's for new addresses
-  label: z.string().trim(),
-  street: z.string().trim(),
-  city: z.string().trim(),
-  state: z.string().trim(),
-  postalCode: z.string().trim(),
-  country: z.string().trim(),
+  userId: z.string().optional(),
+  country: z.string().trim().optional(),
+  address: z.string().trim().optional(),
+  label: z.string().trim().optional(),
+  appartment: z.string().trim().optional(),
+  city: z.string().trim().optional(),
+  postalCode: z.string().trim().optional(),
   isDefault: z.boolean().optional(),
 });
 
