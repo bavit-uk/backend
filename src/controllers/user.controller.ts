@@ -86,6 +86,14 @@ export const userController = {
       const { address } = updateData;
       //   console.log("address : " , address)
 
+      if (updateData.email) {
+        const email = updateData.email;
+        const userExists = await userService.findExistingEmail(email);
+        if (userExists) {
+          return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
+        }
+      }
+
       if (updateData.password) {
         updateData.password = await createHash(updateData.password);
       }
@@ -214,19 +222,37 @@ export const userController = {
       const userId = req.params.id;
       const { isBlocked } = req.body;
       const result = await userService.toggleBlock(userId, isBlocked);
+      const userEmailAddress = result?.email;
+      const userName = result?.firstName || "User"; // Get the user's name (fallback to "User" if undefined)
+
+      console.log("result: ", userEmailAddress, userName);
+
+      const emailContent = `
+      <p>Dear ${userName},</p>
+      <p>Your account has been ${isBlocked ? "blocked" : "activated"} by the Bav-IT admin.</p>
+      <p>If you have any questions, please contact support.</p>
+    `;
+
+      // Send the email
+      if (userEmailAddress) {
+        await sendEmail({
+          to: userEmailAddress,
+          subject: `Your Bav-IT Account Has Been ${isBlocked ? "Blocked" : "Activated"}`,
+          html: emailContent,
+        });
+      }
+
       res.status(StatusCodes.OK).json({
         success: true,
-        message: `User Category ${isBlocked ? "blocked" : "unblocked"} successfully`,
+        message: `User ${isBlocked ? "blocked" : "unblocked"} successfully`,
         data: result,
       });
     } catch (error) {
-      console.error("Toggle Block Category Error:", error);
+      console.error("Toggle Block Error:", error);
       res
         .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({
-          success: false,
-          message: "Error updating user category status",
-        });
+        .json({ success: false, message: "Error updating user status" });
     }
   },
+
 };
