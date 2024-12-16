@@ -6,7 +6,6 @@ import { createHash } from "@/utils/hash.util";
 import { userService } from "@/services";
 import sendEmail from "@/utils/nodeMailer";
 
-
 export const userController = {
   createUser: async (req: Request, res: Response) => {
     try {
@@ -14,23 +13,34 @@ export const userController = {
 
       const userExists = await userService.findExistingEmail(email);
       if (userExists) {
-        return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
+        return res
+          .status(StatusCodes.CONFLICT)
+          .json({ message: "User with this email already exists" });
       }
 
-      const userCategory = await userService.findCategoryById(req.body.userType);
+      const userCategory = await userService.findCategoryById(
+        req.body.userType
+      );
       if (!userCategory) {
-        return res.status(StatusCodes.BAD_REQUEST).json({ message: "Invalid user category" });
+        return res
+          .status(StatusCodes.BAD_REQUEST)
+          .json({ message: "Invalid user category" });
       }
 
       const newUser = await userService.createUser(req.body);
       if (!newUser) {
-        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating user" });
+        return res
+          .status(StatusCodes.INTERNAL_SERVER_ERROR)
+          .json({ message: "Error creating user" });
       }
 
       // Handle address update/addition if provided
       if (address && Array.isArray(address)) {
         for (const addr of address) {
-          const createdAddress = await userService.createAddress(addr, newUser._id as string);
+          const createdAddress = await userService.createAddress(
+            addr,
+            newUser._id as string
+          );
           if (!createdAddress) {
             return res.json({ message: "Error creating address" });
           }
@@ -38,32 +48,34 @@ export const userController = {
       }
 
       // Send email to the new user
-    try {
-      const password = req.body.password; // Assuming the password is passed in the request body
-      const emailContent = `
+      try {
+        const password = req.body.password; // Assuming the password is passed in the request body
+        const emailContent = `
         <p>Dear ${newUser.firstName || "User"},</p>
         <p>Your account has been created by the Bav-IT admin. Below are your login credentials:</p>
         <p><strong>Email:</strong> ${newUser.email}</p>
         <p><strong>Password:</strong> ${password}</p>
       `;
 
-      await sendEmail({
-        to: newUser.email,
-        subject: "Your Bav-IT Account Has Been Created",
-        html: emailContent,
-      });
-    } catch (emailError) {
-      console.error("Error sending email:", emailError);
-      // Log the email failure but continue to return a success response
-    }
+        await sendEmail({
+          to: newUser.email,
+          subject: "Your Bav-IT Account Has Been Created",
+          html: emailContent,
+        });
+      } catch (emailError) {
+        console.error("Error sending email:", emailError);
+        // Log the email failure but continue to return a success response
+      }
 
-    res.status(StatusCodes.CREATED).json({
-      message: "User created successfully, and email notification sent.",
-      user: newUser,
-    });
+      res.status(StatusCodes.CREATED).json({
+        message: "User created successfully, and email notification sent.",
+        user: newUser,
+      });
     } catch (error) {
       console.error(error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating user" });
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "Error creating user" });
     }
   },
 
@@ -80,7 +92,9 @@ export const userController = {
 
       const updatedUser = await userService.updateById(userId, updateData);
       if (!updatedUser) {
-        return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
+        return res
+          .status(StatusCodes.NOT_FOUND)
+          .json({ message: "User not found" });
       }
 
       // Handle address updates if provided
@@ -88,15 +102,25 @@ export const userController = {
         for (const addr of address) {
           if (addr._id) {
             // Update existing address
-            const updatedAddress = await userService.findAddressandUpdate(addr._id, addr);
+            const updatedAddress = await userService.findAddressandUpdate(
+              addr._id,
+              addr
+            );
             if (!updatedAddress) {
-              return res.status(StatusCodes.NOT_FOUND).json({ message: "Address not found" });
+              return res
+                .status(StatusCodes.NOT_FOUND)
+                .json({ message: "Address not found" });
             }
           } else {
             // Create new address if _id is not present
-            const createdAddress = await userService.createAddress(addr, userId);
+            const createdAddress = await userService.createAddress(
+              addr,
+              userId
+            );
             if (!createdAddress) {
-              return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating address" });
+              return res
+                .status(StatusCodes.INTERNAL_SERVER_ERROR)
+                .json({ message: "Error creating address" });
             }
           }
         }
@@ -109,7 +133,9 @@ export const userController = {
       });
     } catch (error) {
       console.error("Error updating user:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "An error occurred while updating the user" });
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "An error occurred while updating the user" });
     }
   },
 
@@ -127,13 +153,17 @@ export const userController = {
       const { id } = req.params;
       // Validate userId parameter
       if (!id) {
-        return res.status(StatusCodes.BAD_REQUEST).json({ error: "User ID is required" });
+        return res
+          .status(StatusCodes.BAD_REQUEST)
+          .json({ error: "User ID is required" });
       }
       // Find the address for the given userId
       const address = await Address.findOne({ userId: id });
       // Handle case where no address is found
       if (!address) {
-        return res.status(StatusCodes.NOT_FOUND).json({ error: "Address not found for this user" });
+        return res
+          .status(StatusCodes.NOT_FOUND)
+          .json({ error: "Address not found for this user" });
       }
       // Return the address
       return res.status(StatusCodes.OK).json({ address });
@@ -152,23 +182,30 @@ export const userController = {
       if (!user) return res.status(404).json({ message: "User not found" });
       const address = await userService.findAddressByUserId(userId);
 
-      const userWithAddresses = { ...user.toObject(), address }
+      const userWithAddresses = { ...user.toObject(), address };
 
       res.status(StatusCodes.OK).json({ data: userWithAddresses });
     } catch (error) {
       console.error(error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error fetching user details" });
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "Error fetching user details" });
     }
   },
 
   deleteUser: async (req: Request, res: Response) => {
     try {
       const user = await userService.deleteById(req.params.id);
-      if (!user) return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
+      if (!user)
+        return res
+          .status(StatusCodes.NOT_FOUND)
+          .json({ message: "User not found" });
       res.status(StatusCodes.OK).json({ message: "User deleted successfully" });
     } catch (error) {
       console.error("Error deleting user:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "An error occurred while deleting the user" });
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "An error occurred while deleting the user" });
     }
   },
 
@@ -186,7 +223,10 @@ export const userController = {
       console.error("Toggle Block Category Error:", error);
       res
         .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ success: false, message: "Error updating user category status" });
+        .json({
+          success: false,
+          message: "Error updating user category status",
+        });
     }
   },
 };
