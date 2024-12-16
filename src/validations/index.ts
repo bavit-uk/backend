@@ -7,5 +7,6 @@ export {supplierCategoryValidation} from "./supplier-category.validation"
 export {productCategoryValidation} from "./product-category.validation"
 export {productBrandValidation} from "./product-brand.validation"
 export {productValidation} from "./product.validation"
-
+export {orderValidation} from "./order.validation"
+export {cartValidation} from "./cart.validation"
 
