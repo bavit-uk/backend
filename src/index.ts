@@ -5,6 +5,7 @@ import morgan from "morgan";
 import { mongoose } from "./datasources";
 import { authMiddleware, corsMiddleware } from "./middlewares";
 import { router } from "./routes/index.route";
+import { Producttt } from "./models";
 // import Stripe from "stripe";
 // import { stripeController } from "./controllers/stripe.controller";
 
@@ -37,6 +38,26 @@ app.use(
   authMiddleware,
   helmet()
 );
+
+app.post("/", async (req, res) => {
+  await Producttt.create({
+    name: "PC",
+    kind: "PC",
+    cpu: "Intel Core i9",
+    gpu: "Nvidia RTX 3090",
+    ram: "32GB",
+  });
+
+  await Producttt.create({
+    name: "Projector",
+    kind: "Projector",
+    resolution: "1920x1080",
+    lumens: "5000",
+    contrast: "1000:1",
+  });
+
+  res.send("Product created");
+});
 
 app.use("/api", router);
 
