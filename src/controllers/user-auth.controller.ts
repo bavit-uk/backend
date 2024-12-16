@@ -181,7 +181,7 @@ export const authController = {
   updateProfile: async (req: Request, res: Response) => {
     try {
       const { firstName, lastName, phoneNumber, dob, address, profileImage, oldPassword, newPassword } = req.body;
-      // console.log("data in auth controller : " , address)
+      console.log("data in auth controller : " , address)
 
       const user = req.context.user;
       if (!user) {
