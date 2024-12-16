@@ -19,9 +19,9 @@ export const userCategoryController = {
   createUserCategory: async (req: Request, res: Response) => {
     try {
       const { role, description, permissions } = req.body;
-  
+
       const newUserCategory = await userCategoryService.createCategory(role, description, permissions);
-  
+
       res.status(StatusCodes.CREATED).json({
         message: "User category created successfully",
         userCategory: newUserCategory,
@@ -81,21 +81,19 @@ export const userCategoryController = {
 
   toggleBlock: async (req: Request, res: Response) => {
     try {
-    const { id } = req.params;
-    const { isBlocked } = req.body;
-    // console.log("id : ", id);
-    const result = await userCategoryService.toggleBlock(id, isBlocked);
-    res.status(StatusCodes.OK).json({
+      const { id } = req.params;
+      const { isBlocked } = req.body;
+      const result = await userCategoryService.toggleBlock(id, isBlocked);
+      res.status(StatusCodes.OK).json({
         success: true,
         message: `Category ${isBlocked ? "blocked" : "unblocked"} successfully`,
         data: result,
-    });
+      });
     } catch (error) {
-    console.error("Toggle Block Category Error:", error);
-    res
+      console.error("Toggle Block Category Error:", error);
+      res
         .status(StatusCodes.INTERNAL_SERVER_ERROR)
         .json({ success: false, message: "Error updating user category status" });
     }
-},
-
+  },
 };

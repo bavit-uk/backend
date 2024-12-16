@@ -11,8 +11,11 @@ import { supplierCategory } from "./supplier-category.routes";
 import { productCategory } from "./product-category.route";
 import { productBrand } from "./product-brand.route";
 import { product } from "./product.route";
+import { bundle } from "./bundle.route";
 import {permissions} from "./permissions.route"
 import { me } from "./me.route";
+import { orderRoutes } from "./order.route";
+import {cartRoutes} from "./cart.route"
 
 // Create a new router to handle all routes
 const router: Router = Router();
@@ -20,7 +23,7 @@ const router: Router = Router();
 // Define all routes
 const routes: {
   [key: string]: (router: Router) => void;
-} = { me , files , permissions , user, auth, userCategory, supplier, supplierCategory, product , productCategory , productBrand };
+} = { me , files , permissions , user, auth, userCategory, supplier, supplierCategory, product , productCategory , productBrand ,bundle, orderRoutes, cartRoutes};
 
 // Loop through all routes and pass the router to each route
 for (const route in routes) {

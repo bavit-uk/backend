@@ -1,5 +1,5 @@
 import { Address, User, UserCategory } from "@/models";
-import { IUser, UserCreatePayload } from "@/contracts/user.contract";
+import { IUser, UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract";
 import { createHash } from "@/utils/hash.util";
 import { IUserAddress } from "@/contracts/user-address.contracts";
 
@@ -56,7 +56,7 @@ export const userService = {
     return userExists;
   },
 
-  updateById: async (userId: string, updateData: IUser) => {
+  updateById: async (userId: string, updateData: UserUpdatePayload) => {
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
     return updatedUser;
   },

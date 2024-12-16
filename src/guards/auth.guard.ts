@@ -55,7 +55,7 @@ export const authGuard = {
   //   });
   // },
 
-  // isUnverfied: (
+  // isUnverified: (
   //   {
   //     context: {
   //       user: { emailVerified },

@@ -1,4 +1,3 @@
-
 export { multerController } from "./multer.controller";
 export {userController} from "./user.controller"
 export {userCategoryController} from "./user-category.controller"
@@ -11,3 +10,6 @@ export {productController} from "./product.controller"
 export {permissionsController} from "./permissions.controller"
 export {meController} from "./me.controller"
 
+export {bundleController} from "./bundle.controller"
+export {orderController} from "./order.controller"
+export {cartController} from "./cart.controller"
