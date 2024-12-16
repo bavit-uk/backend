@@ -6,7 +6,6 @@ import { createHash } from "@/utils/hash.util";
 import { userService } from "@/services";
 import sendEmail from "@/utils/nodeMailer";
 
-
 export const userController = {
   createUser: async (req: Request, res: Response) => {
     try {
@@ -38,29 +37,29 @@ export const userController = {
       }
 
       // Send email to the new user
-    try {
-      const password = req.body.password; // Assuming the password is passed in the request body
-      const emailContent = `
+      try {
+        const password = req.body.password; // Assuming the password is passed in the request body
+        const emailContent = `
         <p>Dear ${newUser.firstName || "User"},</p>
         <p>Your account has been created by the Bav-IT admin. Below are your login credentials:</p>
         <p><strong>Email:</strong> ${newUser.email}</p>
         <p><strong>Password:</strong> ${password}</p>
       `;
 
-      await sendEmail({
-        to: newUser.email,
-        subject: "Your Bav-IT Account Has Been Created",
-        html: emailContent,
-      });
-    } catch (emailError) {
-      console.error("Error sending email:", emailError);
-      // Log the email failure but continue to return a success response
-    }
+        await sendEmail({
+          to: newUser.email,
+          subject: "Your Bav-IT Account Has Been Created",
+          html: emailContent,
+        });
+      } catch (emailError) {
+        console.error("Error sending email:", emailError);
+        // Log the email failure but continue to return a success response
+      }
 
-    res.status(StatusCodes.CREATED).json({
-      message: "User created successfully, and email notification sent.",
-      user: newUser,
-    });
+      res.status(StatusCodes.CREATED).json({
+        message: "User created successfully, and email notification sent.",
+        user: newUser,
+      });
     } catch (error) {
       console.error(error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating user" });
@@ -73,6 +72,14 @@ export const userController = {
       const updateData = req.body;
       const { address } = updateData;
       //   console.log("address : " , address)
+
+      if (updateData.email) {
+        const email = updateData.email;
+        const userExists = await userService.findExistingEmail(email);
+        if (userExists) {
+          return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
+        }
+      }
 
       if (updateData.password) {
         updateData.password = await createHash(updateData.password);
@@ -152,7 +159,7 @@ export const userController = {
       if (!user) return res.status(404).json({ message: "User not found" });
       const address = await userService.findAddressByUserId(userId);
 
-      const userWithAddresses = { ...user.toObject(), address }
+      const userWithAddresses = { ...user.toObject(), address };
 
       res.status(StatusCodes.OK).json({ data: userWithAddresses });
     } catch (error) {
@@ -177,16 +184,37 @@ export const userController = {
       const userId = req.params.id;
       const { isBlocked } = req.body;
       const result = await userService.toggleBlock(userId, isBlocked);
+      const userEmailAddress = result?.email;
+      const userName = result?.firstName || "User"; // Get the user's name (fallback to "User" if undefined)
+
+      console.log("result: ", userEmailAddress, userName);
+
+      const emailContent = `
+      <p>Dear ${userName},</p>
+      <p>Your account has been ${isBlocked ? "blocked" : "activated"} by the Bav-IT admin.</p>
+      <p>If you have any questions, please contact support.</p>
+    `;
+
+      // Send the email
+      if (userEmailAddress) {
+        await sendEmail({
+          to: userEmailAddress,
+          subject: `Your Bav-IT Account Has Been ${isBlocked ? "Blocked" : "Activated"}`,
+          html: emailContent,
+        });
+      }
+
       res.status(StatusCodes.OK).json({
         success: true,
-        message: `User Category ${isBlocked ? "blocked" : "unblocked"} successfully`,
+        message: `User ${isBlocked ? "blocked" : "unblocked"} successfully`,
         data: result,
       });
     } catch (error) {
-      console.error("Toggle Block Category Error:", error);
+      console.error("Toggle Block Error:", error);
       res
         .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ success: false, message: "Error updating user category status" });
+        .json({ success: false, message: "Error updating user status" });
     }
   },
+
 };

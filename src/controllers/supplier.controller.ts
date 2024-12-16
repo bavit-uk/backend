@@ -6,11 +6,10 @@ import { createHash } from "@/utils/hash.util";
 import { UserCategory } from "@/models";
 import sendEmail from "@/utils/nodeMailer";
 
-
 export const supplierController = {
   addSupplier: async (req: Request, res: Response) => {
     try {
-      const { email, address , password } = req.body;
+      const { email, address, password } = req.body;
 
       console.log(req.body);
 
@@ -36,30 +35,29 @@ export const supplierController = {
       }
 
       // Send email to the new supplier
-    try {
-      const emailContent = `
+      try {
+        const emailContent = `
         <p>Dear ${supplier.firstName || "Supplier"},</p>
         <p>Your account has been created by the Bav-IT admin. Below are your login credentials:</p>
         <p><strong>Email:</strong> ${supplier.email}</p>
         <p><strong>Password:</strong> ${password}</p>
       `;
 
-      await sendEmail({
-        to: supplier.email,
-        subject: "Your Bav-IT Supplier Account Has Been Created",
-        html: emailContent,
-      });
-    } catch (emailError) {
-      console.error("Error sending email:", emailError);
-      // Log the email failure but continue to return a success response
-    }
-
+        await sendEmail({
+          to: supplier.email,
+          subject: "Your Bav-IT Supplier Account Has Been Created",
+          html: emailContent,
+        });
+      } catch (emailError) {
+        console.error("Error sending email:", emailError);
+        // Log the email failure but continue to return a success response
+      }
 
       // Send a response back to the client
-    res.status(StatusCodes.CREATED).json({
-      message: "Supplier created successfully, and email notification sent.",
-      supplier: supplier,
-    });
+      res.status(StatusCodes.CREATED).json({
+        message: "Supplier created successfully, and email notification sent.",
+        supplier: supplier,
+      });
     } catch (error) {
       console.error(error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating user" });
@@ -71,6 +69,14 @@ export const supplierController = {
       const userId = req.params.id;
       const updateData = req.body;
       const { address } = updateData;
+
+      if (updateData.email) {
+        const email = updateData.email;
+        const userExists = await supplierService.findExistingEmail(email);
+        if (userExists) {
+          return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
+        }
+      }
 
       if (updateData.password) {
         updateData.password = await createHash(updateData.password);
@@ -115,7 +121,7 @@ export const supplierController = {
     try {
       // const categories = await UserCategory.findOne({})
       const allSuppliers = await supplierService.getAllSuppliers();
-      console.log(allSuppliers)
+      console.log(allSuppliers);
       res.status(StatusCodes.OK).json({ data: allSuppliers });
     } catch (error) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error });
@@ -154,16 +160,32 @@ export const supplierController = {
       const userId = req.params.id;
       const { isBlocked } = req.body;
       const result = await supplierService.toggleBlock(userId, isBlocked);
+      const userEmailAddress = result?.email;
+      const userName = result?.firstName || "User";
+
+      const emailContent = `
+      <p>Dear ${userName},</p>
+      <p>Your account has been ${isBlocked ? "blocked" : "activated"} by the Bav-IT admin.</p>
+      <p>If you have any questions, please contact support.</p>
+    `;
+
+      // Send the email
+      if (userEmailAddress) {
+        await sendEmail({
+          to: userEmailAddress,
+          subject: `Your Bav-IT Account Has Been ${isBlocked ? "Blocked" : "Activated"}`,
+          html: emailContent,
+        });
+      }
+
       res.status(StatusCodes.OK).json({
         success: true,
-        message: `Supplier Category ${isBlocked ? "blocked" : "unblocked"} successfully`,
+        message: `Supplier ${isBlocked ? "blocked" : "unblocked"} successfully`,
         data: result,
       });
     } catch (error) {
-      console.error("Toggle Block Category Error:", error);
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ success: false, message: "Error updating supplier category status" });
+      console.error("Toggle Block Error:", error);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: "Error updating supplier status" });
     }
   },
 };
