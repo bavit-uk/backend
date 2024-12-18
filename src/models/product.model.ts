@@ -1,12 +1,20 @@
 import { Schema, model, Types } from "mongoose";
-import { IAmazonPlatformDetails, IEbayPlatformDetails, IProduct, IWebsitePlatformDetails } from "@/contracts/product.contract"; // Adjust the path if necessary
-
+import {
+  IAmazonPlatformDetails,
+  IEbayPlatformDetails,
+  IProduct,
+  IWebsitePlatformDetails,
+} from "@/contracts/product.contract"; // Adjust the path if necessary
 
 // Amazon-specific fields
 const amazonSchema = new Schema<IAmazonPlatformDetails>({
   title: { type: String, required: true },
   brand: { type: String, required: true },
-  category: { type: Schema.Types.ObjectId, ref: "productCategory", required: true },
+  category: {
+    type: Schema.Types.ObjectId,
+    ref: "productCategory",
+    required: true,
+  },
   technicalSpecifications: {
     processorType: { type: String },
     motherboard: { type: String }, // Added motherboard
@@ -19,9 +27,9 @@ const amazonSchema = new Schema<IAmazonPlatformDetails>({
     operatingSystem: { type: String },
     additionalSpecifications: { type: String },
   },
-  quantity: { type: Number, },
+  quantity: { type: Number },
   pricing: {
-    pricePerUnit: { type: Number, },
+    pricePerUnit: { type: Number },
     discountPrice: { type: Number },
   },
   condition: {
@@ -29,28 +37,32 @@ const amazonSchema = new Schema<IAmazonPlatformDetails>({
     details: { type: String },
   },
   shipping: {
-    weight: { type: String, },
+    weight: { type: String },
     options: [{ type: String }],
-    estimatedDeliveryTime: { type: String, },
+    estimatedDeliveryTime: { type: String },
   },
-  description: { type: String, },
+  description: { type: String },
   keywords: {
     relevantKeywords: [{ type: String }],
     suggestedKeywords: [{ type: String }],
   },
-  fulfillmentMethod: { type: String, enum: ["FBA", "FBM"]},
+  fulfillmentMethod: { type: String, enum: ["FBA", "FBM"] },
   identifier: { type: String }, // UPC, EAN, ISBN
   vatPercentage: { type: Number, default: 0 }, // VAT Percentage
-    salesTaxPercentage: { type: Number, default: 0 }, // Sales Tax Percentage
-    applyTaxAtCheckout: { type: Boolean }, // Apply Tax at checkout flag
-    taxConfirmation: { type: Boolean } // Tax confirmation flag
+  salesTaxPercentage: { type: Number, default: 0 }, // Sales Tax Percentage
+  applyTaxAtCheckout: { type: Boolean }, // Apply Tax at checkout flag
+  taxConfirmation: { type: Boolean }, // Tax confirmation flag
 });
 
 // eBay-specific fields
 const ebaySchema = new Schema<IEbayPlatformDetails>({
   title: { type: String, required: true },
   brand: { type: String, required: true },
-  category: { type: Schema.Types.ObjectId, ref: "ProductCategory", required: true },
+  category: {
+    type: Schema.Types.ObjectId,
+    ref: "ProductCategory",
+    required: true,
+  },
   technicalSpecifications: {
     modelNumber: { type: String },
     motherboard: { type: String }, // Added motherboard
@@ -71,33 +83,40 @@ const ebaySchema = new Schema<IEbayPlatformDetails>({
     auctionStartingPrice: { type: Number }, // Already present
   },
   condition: {
-    status: { type: String,  enum: ["New", "Refurbished", "Used"] }, // Added enum
+    status: { type: String, enum: ["New", "Refurbished", "Used"] }, // Added enum
     details: { type: String },
   },
   shipping: {
-    weight: { type: String, },
+    weight: { type: String },
     options: [{ type: String }],
-    estimatedDeliveryTime: { type: String,  },
+    estimatedDeliveryTime: { type: String },
     handlingTime: { type: String }, // Already present
   },
-  description: { type: String, },
+  description: { type: String },
   keywords: {
     relevantKeywords: [{ type: String }],
     suggestedKeywords: [{ type: String }],
   },
-  fulfillmentMethod: { type: String, enum: ["eBay Fulfillment", "Self-Fulfilled"],  },
-  identifier: { type: String,}, // UPC, EAN, ISBN
-  vatPercentage: { type: Number,  default: 0 }, // VAT Percentage
-    salesTaxPercentage: { type: Number, default: 0 }, // Sales Tax Percentage
-    applyTaxAtCheckout: { type: Boolean,  }, // Apply Tax at checkout flag
-    taxConfirmation: { type: Boolean, } // Tax confirmation flag
+  fulfillmentMethod: {
+    type: String,
+    enum: ["eBay Fulfillment", "Self-Fulfilled"],
+  },
+  identifier: { type: String }, // UPC, EAN, ISBN
+  vatPercentage: { type: Number, default: 0 }, // VAT Percentage
+  salesTaxPercentage: { type: Number, default: 0 }, // Sales Tax Percentage
+  applyTaxAtCheckout: { type: Boolean }, // Apply Tax at checkout flag
+  taxConfirmation: { type: Boolean }, // Tax confirmation flag
 });
 
 // Website-specific fields
 const websiteSchema = new Schema<IWebsitePlatformDetails>({
   title: { type: String, required: true },
   brand: { type: String, required: true },
-  category: { type: Schema.Types.ObjectId, ref: "ProductCategory", required: true },
+  category: {
+    type: Schema.Types.ObjectId,
+    ref: "ProductCategory",
+    required: true,
+  },
   technicalSpecifications: {
     modelNumber: { type: String },
     motherboard: { type: String }, // Added motherboard
@@ -112,29 +131,32 @@ const websiteSchema = new Schema<IWebsitePlatformDetails>({
   },
   quantity: { type: Number },
   pricing: {
-    pricePerUnit: { type: Number},
+    pricePerUnit: { type: Number },
     discountPrice: { type: Number },
   },
   condition: {
-    status: { type: String,  enum: ["New", "Refurbished", "Used"] }, // Added enum
+    status: { type: String, enum: ["New", "Refurbished", "Used"] }, // Added enum
     details: { type: String },
   },
   shipping: {
-    weight: { type: String, },
+    weight: { type: String },
     options: [{ type: String }],
-    estimatedDeliveryTime: { type: String,  },
+    estimatedDeliveryTime: { type: String },
   },
-  description: { type: String, },
+  description: { type: String },
   keywords: {
     relevantKeywords: [{ type: String }],
     suggestedKeywords: [{ type: String }],
   },
-  fulfillmentMethod: { type: String, enum: ["Dropshipping", "In-House Fulfillment"] },
+  fulfillmentMethod: {
+    type: String,
+    enum: ["Dropshipping", "In-House Fulfillment"],
+  },
   identifier: { type: String }, // UPC, EAN, ISBN
-  vatPercentage: { type: Number,  default: 0 }, // VAT Percentage
-    salesTaxPercentage: { type: Number,  default: 0 }, // Sales Tax Percentage
-    applyTaxAtCheckout: { type: Boolean, default: false }, // Apply Tax at checkout flag
-    taxConfirmation: { type: Boolean, default: false } // Tax confirmation flag
+  vatPercentage: { type: Number, default: 0 }, // VAT Percentage
+  salesTaxPercentage: { type: Number, default: 0 }, // Sales Tax Percentage
+  applyTaxAtCheckout: { type: Boolean, default: false }, // Apply Tax at checkout flag
+  taxConfirmation: { type: Boolean, default: false }, // Tax confirmation flag
 });
 
 // Main Product Schema
@@ -146,7 +168,7 @@ const productSchema = new Schema<IProduct>(
       ebay: ebaySchema, // eBay-specific details
       website: websiteSchema, // Website-specific details
     },
-    isBlocked: {type: Boolean , default: false},
+    isBlocked: { type: Boolean, default: false },
     status: { type: String, enum: ["draft", "published"], default: "draft" }, // Product status
   },
   { timestamps: true } // Automatically manage createdAt and updatedAt fields
