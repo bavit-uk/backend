@@ -25,6 +25,8 @@ export const user = (router: Router) => {
 
     // route for toggle block status
     router.patch("/block/:id" , userController.toggleBlock)
+
+    router.patch("/permissions/:id" , userController.updatePermissions)
 }
 
 
