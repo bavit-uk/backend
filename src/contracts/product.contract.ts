@@ -4,17 +4,24 @@ import { Document, Types } from "mongoose";
 // Technical specifications shared between platforms
 interface ITechnicalSpecifications {
   processorType?: string;
+  motherboard?: string;
+  cpuFan?: string;
+  case?: string;
+  accessories?: string;
+  expansionsNetworking?: string;
   ramSize?: string;
   storageDetails?: string;
+  graphicsCard?: string;
   operatingSystem?: string;
   additionalSpecifications?: string;
-  modelNumber?: string; // Specific to eBay and Website
+  // modelNumber?: string; // Specific to eBay and Website
 }
 
 // Pricing details shared between platforms
 interface IPricing {
   pricePerUnit: number;
   discountPrice?: number;
+  purchasePrice?: number;
   buyItNowPrice?: number; // Specific to eBay
   auctionStartingPrice?: number; // Specific to eBay
 }
@@ -44,7 +51,8 @@ interface IAmazonPlatformDetails {
   title: string;
   brand: string;
   category: Types.ObjectId;
-  technicalSpecifications: ITechnicalSpecifications;
+  images: string[]; // Array of image URLs
+  // technicalSpecifications: ITechnicalSpecifications;
   quantity: number; // Specific to Amazon
   pricing: Omit<IPricing, "buyItNowPrice" | "auctionStartingPrice">;
   condition: ICondition;
@@ -64,7 +72,8 @@ interface IEbayPlatformDetails {
   title: string;
   brand: string;
   category: Types.ObjectId;
-  technicalSpecifications: ITechnicalSpecifications;
+  images: string[]; // Array of image URLs
+  // technicalSpecifications: ITechnicalSpecifications;
   quantity: number;
   pricing: IPricing;
   condition: ICondition;
@@ -84,7 +93,8 @@ interface IWebsitePlatformDetails {
   title: string;
   brand: string;
   category: Types.ObjectId;
-  technicalSpecifications: ITechnicalSpecifications;
+  images: string[]; // Array of image URLs
+  // technicalSpecifications: ITechnicalSpecifications;
   quantity: number;
   pricing: Omit<IPricing, "buyItNowPrice" | "auctionStartingPrice">;
   condition: ICondition;
@@ -107,7 +117,6 @@ interface IWebsitePlatformDetails {
 
 // Full Product Interface
 interface IProduct {
-  images: string[]; // Array of image URLs
   isBlocked: boolean; // Common details for all platforms
   platformDetails: {
     amazon: IAmazonPlatformDetails; // Amazon-specific details

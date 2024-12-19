@@ -1,4 +1,4 @@
-import { Schema, model, Types } from "mongoose";
+import mongoose, { Schema, model, Types } from "mongoose";
 import {
   IAmazonPlatformDetails,
   IEbayPlatformDetails,
@@ -6,35 +6,35 @@ import {
   IWebsitePlatformDetails,
 } from "@/contracts/product.contract"; // Adjust the path if necessary
 
+const options = { discriminatorKey: "kind" };
+
 // Amazon-specific fields
 const amazonSchema = new Schema<IAmazonPlatformDetails>({
   title: { type: String, required: true },
   brand: { type: String, required: true },
-  category: {
-    type: Schema.Types.ObjectId,
-    ref: "productCategory",
-    required: true,
-  },
-  technicalSpecifications: {
-    processorType: { type: String },
-    motherboard: { type: String }, // Added motherboard
-    cpuFan: { type: String }, // Added CPU fan
-    case: { type: String }, // Added case
-    accessoriesExpansionsNetworking: { type: String }, // Added Accessories/Expansions/Networking
-    ramSize: { type: String },
-    storageDetails: { type: String },
-    graphicsCard: { type: String }, // Added Graphics Card
-    operatingSystem: { type: String },
-    additionalSpecifications: { type: String },
-  },
-  quantity: { type: Number },
-  pricing: {
-    pricePerUnit: { type: Number },
-    discountPrice: { type: Number },
-  },
+  category: { type: Schema.Types.ObjectId, ref: "productCategory", required: true },
+  images: [{ type: String, required: true }], // Image URLs
   condition: {
     status: { type: String, enum: ["New", "Refurbished", "Used"] }, // Added enum for consistency
     details: { type: String },
+  },
+  // technicalSpecifications: {
+  //   processorType: { type: String },
+  //   motherboard: { type: String }, // Added motherboard
+  //   cpuFan: { type: String }, // Added CPU fan
+  //   case: { type: String }, // Added case
+  //   accessoriesExpansionsNetworking: { type: String }, // Added Accessories/Expansions/Networking
+  //   ramSize: { type: String },
+  //   storageDetails: { type: String },
+  //   graphicsCard: { type: String }, // Added Graphics Card
+  //   operatingSystem: { type: String },
+  //   additionalSpecifications: { type: String },
+  // },
+  quantity: { type: Number, },
+  pricing: {
+    pricePerUnit: { type: Number },
+    purchasePrice: { type: Number },
+    discountPrice: { type: Number },
   },
   shipping: {
     weight: { type: String },
@@ -58,27 +58,25 @@ const amazonSchema = new Schema<IAmazonPlatformDetails>({
 const ebaySchema = new Schema<IEbayPlatformDetails>({
   title: { type: String, required: true },
   brand: { type: String, required: true },
-  category: {
-    type: Schema.Types.ObjectId,
-    ref: "ProductCategory",
-    required: true,
-  },
-  technicalSpecifications: {
-    modelNumber: { type: String },
-    motherboard: { type: String }, // Added motherboard
-    cpuFan: { type: String }, // Added CPU fan
-    case: { type: String }, // Added case
-    accessoriesExpansionsNetworking: { type: String }, // Added Accessories/Expansions/Networking
-    ramSize: { type: String },
-    storageDetails: { type: String },
-    graphicsCard: { type: String }, // Added Graphics Card
-    operatingSystem: { type: String },
-    additionalSpecifications: { type: String },
-  },
+  category: { type: Schema.Types.ObjectId, ref: "ProductCategory", required: true },
+  images: [{ type: String, required: true }], // Image URLs
+  // technicalSpecifications: {
+  //   modelNumber: { type: String },
+  //   motherboard: { type: String }, // Added motherboard
+  //   cpuFan: { type: String }, // Added CPU fan
+  //   case: { type: String }, // Added case
+  //   accessoriesExpansionsNetworking: { type: String }, // Added Accessories/Expansions/Networking
+  //   ramSize: { type: String },
+  //   storageDetails: { type: String },
+  //   graphicsCard: { type: String }, // Added Graphics Card
+  //   operatingSystem: { type: String },
+  //   additionalSpecifications: { type: String },
+  // },
   quantity: { type: Number },
   pricing: {
     pricePerUnit: { type: Number },
     discountPrice: { type: Number },
+    purchasePrice: { type: Number },
     buyItNowPrice: { type: Number }, // Already present
     auctionStartingPrice: { type: Number }, // Already present
   },
@@ -112,26 +110,24 @@ const ebaySchema = new Schema<IEbayPlatformDetails>({
 const websiteSchema = new Schema<IWebsitePlatformDetails>({
   title: { type: String, required: true },
   brand: { type: String, required: true },
-  category: {
-    type: Schema.Types.ObjectId,
-    ref: "ProductCategory",
-    required: true,
-  },
-  technicalSpecifications: {
-    modelNumber: { type: String },
-    motherboard: { type: String }, // Added motherboard
-    cpuFan: { type: String }, // Added CPU fan
-    case: { type: String }, // Added case
-    accessoriesExpansionsNetworking: { type: String }, // Added Accessories/Expansions/Networking
-    ramSize: { type: String },
-    storageDetails: { type: String },
-    graphicsCard: { type: String }, // Added Graphics Card
-    operatingSystem: { type: String },
-    additionalSpecifications: { type: String },
-  },
+  category: { type: Schema.Types.ObjectId, ref: "ProductCategory", required: true },
+  images: [{ type: String, required: true }], // Image URLs
+  // technicalSpecifications: {
+  //   modelNumber: { type: String },
+  //   motherboard: { type: String }, // Added motherboard
+  //   cpuFan: { type: String }, // Added CPU fan
+  //   case: { type: String }, // Added case
+  //   accessoriesExpansionsNetworking: { type: String }, // Added Accessories/Expansions/Networking
+  //   ramSize: { type: String },
+  //   storageDetails: { type: String },
+  //   graphicsCard: { type: String }, // Added Graphics Card
+  //   operatingSystem: { type: String },
+  //   additionalSpecifications: { type: String },
+  // },  
   quantity: { type: Number },
   pricing: {
     pricePerUnit: { type: Number },
+    purchasePrice: { type: Number },
     discountPrice: { type: Number },
   },
   condition: {
@@ -140,6 +136,7 @@ const websiteSchema = new Schema<IWebsitePlatformDetails>({
   },
   shipping: {
     weight: { type: String },
+    weightUnit: { type: String },
     options: [{ type: String }],
     estimatedDeliveryTime: { type: String },
   },
@@ -162,7 +159,7 @@ const websiteSchema = new Schema<IWebsitePlatformDetails>({
 // Main Product Schema
 const productSchema = new Schema<IProduct>(
   {
-    images: [{ type: String, required: true }], // Image URLs
+    // name: { type: String  , required: true},
     platformDetails: {
       amazon: amazonSchema, // Amazon-specific details
       ebay: ebaySchema, // eBay-specific details
@@ -171,8 +168,47 @@ const productSchema = new Schema<IProduct>(
     isBlocked: { type: Boolean, default: false },
     status: { type: String, enum: ["draft", "published"], default: "draft" }, // Product status
   },
-  { timestamps: true } // Automatically manage createdAt and updatedAt fields
+  options
+  // { timestamps: true } // Automatically manage createdAt and updatedAt fields
 );
 
 // Product Model
-export const Product = model<IProduct>("Product", productSchema);
+const Product = model<IProduct>("Product", productSchema);
+
+Product.discriminator(
+  "PC",
+  new mongoose.Schema(
+    {
+      processorType: {type: String},
+      motherboard: { type: String }, // Added motherboard
+      cpuFan: { type: String }, // Added CPU fan
+      case: { type: String }, // Added case
+      accessories: { type: String }, // Added Accessories/Expansions/Networking
+      expansionsNetworking: { type: String }, // Added Accessories/Expansions/Networking
+      ramSize: { type: String },
+      storageDetails: { type: String },
+      graphicsCard: { type: String }, // Added Graphics Card
+      operatingSystem: { type: String },
+      additionalSpecifications: { type: String },
+
+      // modelNumber: { type: String },
+    },
+    options
+  )
+);
+
+
+Product.discriminator(
+  "Projector",
+  new mongoose.Schema(
+    {
+      resolution: String,
+      lumens: String,
+      contrast: String,
+    },
+    options
+  )
+);
+
+
+export {Product}
