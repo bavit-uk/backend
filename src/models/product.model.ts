@@ -37,21 +37,21 @@ const amazonSchema = new Schema<IAmazonPlatformDetails>({
     discountPrice: { type: Number },
   },
   shipping: {
-    weight: { type: String, },
+    weight: { type: String },
     options: [{ type: String }],
-    estimatedDeliveryTime: { type: String, },
+    estimatedDeliveryTime: { type: String },
   },
-  description: { type: String, },
+  description: { type: String },
   keywords: {
     relevantKeywords: [{ type: String }],
     suggestedKeywords: [{ type: String }],
   },
-  fulfillmentMethod: { type: String, enum: ["FBA", "FBM"]},
+  fulfillmentMethod: { type: String, enum: ["FBA", "FBM"] },
   identifier: { type: String }, // UPC, EAN, ISBN
   vatPercentage: { type: Number, default: 0 }, // VAT Percentage
-    salesTaxPercentage: { type: Number, default: 0 }, // Sales Tax Percentage
-    applyTaxAtCheckout: { type: Boolean }, // Apply Tax at checkout flag
-    taxConfirmation: { type: Boolean } // Tax confirmation flag
+  salesTaxPercentage: { type: Number, default: 0 }, // Sales Tax Percentage
+  applyTaxAtCheckout: { type: Boolean }, // Apply Tax at checkout flag
+  taxConfirmation: { type: Boolean }, // Tax confirmation flag
 });
 
 // eBay-specific fields
@@ -81,26 +81,29 @@ const ebaySchema = new Schema<IEbayPlatformDetails>({
     auctionStartingPrice: { type: Number }, // Already present
   },
   condition: {
-    status: { type: String,  enum: ["New", "Refurbished", "Used"] }, // Added enum
+    status: { type: String, enum: ["New", "Refurbished", "Used"] }, // Added enum
     details: { type: String },
   },
   shipping: {
-    weight: { type: String, },
+    weight: { type: String },
     options: [{ type: String }],
-    estimatedDeliveryTime: { type: String,  },
+    estimatedDeliveryTime: { type: String },
     handlingTime: { type: String }, // Already present
   },
-  description: { type: String, },
+  description: { type: String },
   keywords: {
     relevantKeywords: [{ type: String }],
     suggestedKeywords: [{ type: String }],
   },
-  fulfillmentMethod: { type: String, enum: ["eBay Fulfillment", "Self-Fulfilled"],  },
-  identifier: { type: String,}, // UPC, EAN, ISBN
-  vatPercentage: { type: Number,  default: 0 }, // VAT Percentage
-    salesTaxPercentage: { type: Number, default: 0 }, // Sales Tax Percentage
-    applyTaxAtCheckout: { type: Boolean,  }, // Apply Tax at checkout flag
-    taxConfirmation: { type: Boolean, } // Tax confirmation flag
+  fulfillmentMethod: {
+    type: String,
+    enum: ["eBay Fulfillment", "Self-Fulfilled"],
+  },
+  identifier: { type: String }, // UPC, EAN, ISBN
+  vatPercentage: { type: Number, default: 0 }, // VAT Percentage
+  salesTaxPercentage: { type: Number, default: 0 }, // Sales Tax Percentage
+  applyTaxAtCheckout: { type: Boolean }, // Apply Tax at checkout flag
+  taxConfirmation: { type: Boolean }, // Tax confirmation flag
 });
 
 // Website-specific fields
@@ -142,7 +145,10 @@ const websiteSchema = new Schema<IWebsitePlatformDetails>({
     relevantKeywords: [{ type: String }],
     suggestedKeywords: [{ type: String }],
   },
-  fulfillmentMethod: { type: String, enum: ["Dropshipping", "In-House Fulfillment"] },
+  fulfillmentMethod: {
+    type: String,
+    enum: ["Dropshipping", "In-House Fulfillment"],
+  },
   identifier: { type: String }, // UPC, EAN, ISBN
   vatPercentage: { type: Number, default: 0 }, // VAT Percentage
   salesTaxPercentage: { type: Number, default: 0 }, // Sales Tax Percentage
