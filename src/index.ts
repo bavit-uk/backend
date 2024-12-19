@@ -39,25 +39,25 @@ app.use(
   helmet()
 );
 
-app.post("/", async (req, res) => {
-  await Producttt.create({
-    name: "PC",
-    kind: "PC",
-    cpu: "Intel Core i9",
-    gpu: "Nvidia RTX 3090",
-    ram: "32GB",
-  });
+// app.post("/", async (req, res) => {
+//   await Producttt.create({
+//     name: "PC",
+//     kind: "PC",
+//     cpu: "Intel Core i9",
+//     gpu: "Nvidia RTX 3090",
+//     ram: "32GB",
+//   });
 
-  await Producttt.create({
-    name: "Projector",
-    kind: "Projector",
-    resolution: "1920x1080",
-    lumens: "5000",
-    contrast: "1000:1",
-  });
+//   await Producttt.create({
+//     name: "Projector",
+//     kind: "Projector",
+//     resolution: "1920x1080",
+//     lumens: "5000",
+//     contrast: "1000:1",
+//   });
 
-  res.send("Product created");
-});
+//   res.send("Product created");
+// });
 
 app.use("/api", router);
 

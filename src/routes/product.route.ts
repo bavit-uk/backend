@@ -5,7 +5,8 @@ import { Router } from "express";
 
 export const product = (router: Router) => {
 
-    router.post("/", productValidation.addProduct , productController.addProduct);
+    // TODO: productValidation.addProduct
+    router.post("/" , productController.addProduct);
 
     router.get("/", productController.getAllProduct);
 
