@@ -42,7 +42,13 @@ export const permissionsController = {
         },
         policies: {
           parent: "MANAGE_POLICIES",
-          children: ["VIEW_POLICIES", "VIEW_SUBSCRIPTIONS", "VIEW_FAQS"],
+          children: [
+            "VIEW_POLICIES",
+            "VIEW_PAYMENT_POLICIES",
+            "VIEW_POSTAGE_POLICIES",
+            "VIEW_SUBSCRIPTIONS",
+            "VIEW_FAQS",
+          ],
         },
         setting: {
           parent: "SETTINGS",
