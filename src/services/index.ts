@@ -10,3 +10,6 @@ export {productService} from "./product.service"
 export {bundleService} from "./bundle.service"
 export {orderService} from "./order.service"
 export {cartService} from "./cart.service"
+export {paymentPolicyService} from "./payment-policy.service"
+export {postagePolicyService} from "./postage-policy.service"
+
