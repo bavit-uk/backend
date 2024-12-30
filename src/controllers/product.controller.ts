@@ -1,21 +1,42 @@
 import { productService } from "@/services";
 import { Request, Response } from "express";
-import { StatusCodes, ReasonPhrases } from "http-status-codes";
+import { StatusCodes } from "http-status-codes";
 
 export const productController = {
-
+  // Add a new product
   addProduct: async (req: Request, res: Response) => {
     try {
-      const productData = req.body; 
-      console.log("asdasd : ", productData);
-      const newProduct = await productService.addProduct(productData); // Call the service to add the product
+      const { fields } = req.body;
+
+      // Parse and structure platform-specific data
+      const platformDetails: any = {
+        amazon: {},
+        ebay: {},
+        website: {},
+      };
+
+      fields.forEach(({ name, value, isAmz, isEbay, isWebsite }: any) => {
+        if (isAmz) platformDetails.amazon[name] = value;
+        if (isEbay) platformDetails.ebay[name] = value;
+        if (isWebsite) platformDetails.website[name] = value;
+      });
+
+      // Create a new product with platform-specific details
+      const productData = {
+        platformDetails,
+        isBlocked: false,
+        status: "draft",
+      };
+
+      const newProduct = await productService.addProduct(productData);
+
       return res.status(StatusCodes.CREATED).json({
         success: true,
         message: "Product added successfully",
         data: newProduct,
       });
     } catch (error) {
-      console.error(error);
+      console.error("Error adding product:", error);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error adding product",
@@ -23,29 +44,58 @@ export const productController = {
     }
   },
 
-  getAllProduct: async (req: Request, res: Response) => {
+  // Get all products
+  getAllProduct: async (_req: Request, res: Response) => {
     try {
       const products = await productService.getAllProducts();
-      res.status(StatusCodes.OK).json({ success: true, products: products });
+
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        products,
+      });
     } catch (error) {
-      console.error("View Products Error:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: "Error getting all products" });
+      console.error("Error fetching products:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Error fetching products",
+      });
     }
   },
 
+  // Get a product by ID for a specific platform
   getProductById: async (req: Request, res: Response) => {
     try {
-      const prodId = req.params.id;
-      console.log(prodId)
-      const product = await productService.getById(prodId);
-      if (!product) return res.status(404).json({ message: "Product not found" });
-      res.status(StatusCodes.OK).json({ success: true , product: product });
+      const { id } = req.params;
+      const platform = req.query.platform as "amazon" | "ebay" | "website";
+
+      if (!platform) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Platform query parameter is required",
+        });
+      }
+
+      const product = await productService.getProductById(id, platform);
+
+      if (!product) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Product not found",
+        });
+      }
+
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        product,
+      });
     } catch (error) {
-      console.error("View Product Error:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: "Error getting product" });
+      console.error("Error fetching product by ID:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Error fetching product",
+      });
     }
   },
-
   // deleteProduct: async (req: Request, res: Response) => {
   //   try {
   //     const userId = req.params.id
@@ -60,36 +110,76 @@ export const productController = {
 
   updateProductById: async (req: Request, res: Response) => {
     try {
-        // console.log("hello")
-        const prodId = req.params.id;
-        const data = req.body
-        // console.log(prodId)
-        // console.log(data)
-        const product = await productService.updateProduct(prodId , data)
-        if (!product) return res.status(404).json({ message: "Product not found" });
-        res.status(StatusCodes.OK).json({ success: true, product: product });
+      const { id } = req.params;
+      const { platform, data } = req.body;
+
+      if (!platform || !data) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Platform and data are required to update the product",
+        });
+      }
+
+      const updatedProduct = await productService.updateProduct(
+        id,
+        platform,
+        data
+      );
+
+      if (!updatedProduct) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Product not found",
+        });
+      }
+
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Product updated successfully",
+        data: updatedProduct,
+      });
     } catch (error) {
-        console.error("Update Product Error:", error);
-        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: "Error updating product" });
+      console.error("Error updating product:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Error updating product",
+      });
     }
   },
 
+  // Toggle block status for a product
   toggleBlock: async (req: Request, res: Response) => {
     try {
-      const userId = req.params.id;
+      const { id } = req.params;
       const { isBlocked } = req.body;
-      const result = await productService.toggleBlock(userId, isBlocked);
-      res.status(StatusCodes.OK).json({
+
+      if (typeof isBlocked !== "boolean") {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "isBlocked must be a boolean value",
+        });
+      }
+
+      const updatedProduct = await productService.toggleBlock(id, isBlocked);
+
+      if (!updatedProduct) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Product not found",
+        });
+      }
+
+      return res.status(StatusCodes.OK).json({
         success: true,
         message: `Product ${isBlocked ? "blocked" : "unblocked"} successfully`,
-        data: result,
+        data: updatedProduct,
       });
     } catch (error) {
-      console.error("Toggle Block Error:", error);
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ success: false, message: "Error updating product status" });
+      console.error("Error toggling block status:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Error toggling block status",
+      });
     }
-  }
-
+  },
 };
