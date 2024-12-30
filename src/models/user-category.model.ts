@@ -10,3 +10,4 @@ const userCategorySchema = new Schema<IUserCategory >({
 }, { timestamps: true });
 
 export const UserCategory = model<IUserCategory , UserCategoryModel>('UserCategory', userCategorySchema);
+
