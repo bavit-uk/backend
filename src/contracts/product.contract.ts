@@ -51,11 +51,25 @@ interface IAmazonPlatformDetails {
   title: string;
   brand: string;
   category: Types.ObjectId;
-  images: string[]; // Array of image URLs
-  // technicalSpecifications: ITechnicalSpecifications;
-  quantity: number; // Specific to Amazon
-  pricing: Omit<IPricing, "buyItNowPrice" | "auctionStartingPrice">;
-  condition: ICondition;
+  productCondition: string;
+  screenSize: string;
+  nonNewConditionDetails: string;
+  images: string[]; 
+  
+  // quantity: number; // Specific to Amazon
+  // pricing: Omit<IPricing, "buyItNowPrice" | "auctionStartingPrice">;
+  variation: string;
+  condition: string;
+  conditionDescription: string;
+  productDescription: string;
+  pricingFormat: string;
+  vat: string;
+  paymentPolicy: string;
+  buy2andSave: string;
+  buy3andSave: string;
+  buy4andSave: string;
+  
+  // condition: ICondition;
   shipping: IShipping;
   description: string;
   keywords: IKeywords;
@@ -72,11 +86,25 @@ interface IEbayPlatformDetails {
   title: string;
   brand: string;
   category: Types.ObjectId;
-  images: string[]; // Array of image URLs
-  // technicalSpecifications: ITechnicalSpecifications;
-  quantity: number;
-  pricing: IPricing;
-  condition: ICondition;
+  productCondition: string;
+  screenSize: string;
+  nonNewConditionDetails: string;
+  images: string[]; 
+
+  // quantity: number;
+  // pricing: IPricing;
+  variation: string;
+  condition: string;
+  conditionDescription: string;
+  productDescription: string;
+  pricingFormat: string;
+  vat: string;
+  paymentPolicy: string;
+  buy2andSave: string;
+  buy3andSave: string;
+  buy4andSave: string;
+
+  // condition: ICondition;
   shipping: IShipping;
   description: string;
   keywords: IKeywords;
@@ -93,11 +121,26 @@ interface IWebsitePlatformDetails {
   title: string;
   brand: string;
   category: Types.ObjectId;
-  images: string[]; // Array of image URLs
-  // technicalSpecifications: ITechnicalSpecifications;
-  quantity: number;
-  pricing: Omit<IPricing, "buyItNowPrice" | "auctionStartingPrice">;
-  condition: ICondition;
+  productCondition: string;
+  screenSize: string;
+  nonNewConditionDetails: string;
+  images: string[]; 
+
+  // quantity: number;
+  // pricing: Omit<IPricing, "buyItNowPrice" | "auctionStartingPrice">;
+  
+  variation: string;
+  condition: string;
+  conditionDescription: string;
+  productDescription: string;
+  pricingFormat: string;
+  vat: string;
+  paymentPolicy: string;
+  buy2andSave: string;
+  buy3andSave: string;
+  buy4andSave: string;
+  
+  // condition: ICondition;
   shipping: IShipping;
   description: string;
   keywords: IKeywords;
