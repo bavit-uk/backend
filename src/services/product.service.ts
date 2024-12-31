@@ -1,29 +1,17 @@
 import { Product } from "@/models";
-import { IProductUpdatePayload } from "@/contracts/product.contract";
+import mongoose from "mongoose";
 
 export const productService = {
-  // Add a new product
-  addProduct: async (productData: any) => {
-    try {
-      const newProduct = new Product(productData);
-      await newProduct.save();
-      return newProduct;
-    } catch (error) {
-      console.error("Error adding product:", error);
-      throw new Error("Failed to add product");
-    }
-  },
-
   // Add or update product draft for a step
   addOrUpdateDraftProduct: async (stepData: any) => {
     try {
-      // Check for an existing draft product
       let draftProduct: any = await Product.findOne({ status: "draft" });
+      console.log("draftProduct : " , draftProduct)
 
       const validPlatforms = ["amazon", "ebay", "website"] as const;
 
       if (!draftProduct) {
-        // If no draft exists, initialize a new product draft
+        // Create a new draft product if none exists
         draftProduct = new Product({
           platformDetails: {
             amazon: {},
@@ -35,20 +23,48 @@ export const productService = {
         });
       }
 
-      // Update platform-specific details dynamically
-      Object.keys(stepData).forEach((field) => {
-        validPlatforms.forEach((platform) => {
-          if (
-            stepData[field]?.[
-              `is${platform.charAt(0).toUpperCase() + platform.slice(1)}`
-            ]
-          ) {
-            draftProduct.platformDetails[platform][field] =
-              stepData[field].value;
-          }
-        });
+      // Extract `productCategory` separately
+      let commonCategoryValue: mongoose.Types.ObjectId | undefined;
+
+      if (stepData.productCategory) {
+        if (mongoose.isValidObjectId(stepData.productCategory)) {
+          commonCategoryValue = new mongoose.Types.ObjectId(
+            stepData.productCategory
+          );
+        } else {
+          throw new Error("Invalid productCategory value.");
+        }
+      }
+
+      // Iterate through stepData to populate platform-specific details
+      Object.keys(stepData).forEach((key) => {
+        const { value, isAmz, isEbay, isWeb } = stepData[key] || {};
+
+        const processedValue =
+          key === "productCategory" && mongoose.isValidObjectId(value)
+            ? new mongoose.Types.ObjectId(value)
+            : value;
+
+        if (isAmz) {
+          draftProduct.platformDetails.amazon[key] = processedValue;
+        }
+        if (isEbay) {
+          draftProduct.platformDetails.ebay[key] = processedValue;
+        }
+        if (isWeb) {
+          draftProduct.platformDetails.website[key] = processedValue;
+        }
       });
 
+      // Assign `productCategory` to all platform details
+      if (commonCategoryValue) {
+        validPlatforms.forEach((platform) => {
+          draftProduct.platformDetails[platform].productCategory =
+            commonCategoryValue;
+        });
+      }
+
+      // Save the draft product
       await draftProduct.save();
       return draftProduct;
     } catch (error) {
@@ -56,6 +72,7 @@ export const productService = {
       throw new Error("Failed to add or update draft product");
     }
   },
+
   // Get all products
   getAllProducts: async () => {
     try {
@@ -94,7 +111,7 @@ export const productService = {
   updateProduct: async (
     id: string,
     platform: "amazon" | "ebay" | "website",
-    data: IProductUpdatePayload
+    data: any
   ) => {
     try {
       const updateQuery = { [`platformDetails.${platform}`]: data };
