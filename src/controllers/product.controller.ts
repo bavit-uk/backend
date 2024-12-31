@@ -15,10 +15,10 @@ export const productController = {
         website: {},
       };
 
-      fields.forEach(({ name, value, isAmz, isEbay, isWebsite }: any) => {
+      fields.forEach(({ name, value, isAmz, isEbay, isWeb }: any) => {
         if (isAmz) platformDetails.amazon[name] = value;
         if (isEbay) platformDetails.ebay[name] = value;
-        if (isWebsite) platformDetails.website[name] = value;
+        if (isWeb) platformDetails.website[name] = value;
       });
 
       // Create a new product with platform-specific details
