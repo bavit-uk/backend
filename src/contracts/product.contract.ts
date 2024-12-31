@@ -49,7 +49,7 @@ interface IKeywords {
 interface IAmazonPlatformDetails {
   title: string;
   brand: string;
-  category: Types.ObjectId;
+  productCategory: Types.ObjectId;
   productCondition: string;
   screenSize: string;
   nonNewConditionDetails?: string;
@@ -100,7 +100,7 @@ interface IAmazonPlatformDetails {
 interface IEbayPlatformDetails {
   title: string;
   brand: string;
-  category: Types.ObjectId;
+  productCategory: Types.ObjectId;
   productCondition: string;
   screenSize: string;
   nonNewConditionDetails?: string;
@@ -152,7 +152,7 @@ interface IEbayPlatformDetails {
 interface IWebsitePlatformDetails {
   title: string;
   brand: string;
-  category: Types.ObjectId;
+  productCategory: Types.ObjectId;
   productCondition: string;
   screenSize: string;
   nonNewConditionDetails?: string;

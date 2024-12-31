@@ -1,6 +1,7 @@
 import { productService } from "@/services";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
+import mongoose from "mongoose";
 
 export const productController = {
   // Add a new product
@@ -8,20 +9,50 @@ export const productController = {
     try {
       const { fields } = req.body;
 
-      // Parse and structure platform-specific data
+      if (!fields || !Array.isArray(fields)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid or missing 'fields' in request payload",
+        });
+      }
+
       const platformDetails: any = {
         amazon: {},
         ebay: {},
         website: {},
       };
 
-      fields.forEach(({ name, value, isAmz, isEbay, isWeb }: any) => {
-        if (isAmz) platformDetails.amazon[name] = value;
-        if (isEbay) platformDetails.ebay[name] = value;
-        if (isWeb) platformDetails.website[name] = value;
-      });
+      // Iterate through fields and map values to their platforms
+      for (const field of fields) {
+        const { name, value, isAmz, isEbay, isWeb } = field;
 
-      // Create a new product with platform-specific details
+        if (!name) {
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            message: "Field name is missing in the payload",
+          });
+        }
+
+        // Convert productCategory value to ObjectId if applicable
+        let processedValue = value;
+        if (name === "productCategory") {
+          if (mongoose.isValidObjectId(value)) {
+            processedValue = new mongoose.Types.ObjectId(value);
+          } else {
+            return res.status(StatusCodes.BAD_REQUEST).json({
+              success: false,
+              message: `Invalid productCategory value: ${value}`,
+            });
+          }
+        }
+
+        // Map values to respective platforms
+        if (isAmz) platformDetails.amazon[name] = processedValue;
+        if (isEbay) platformDetails.ebay[name] = processedValue;
+        if (isWeb) platformDetails.website[name] = processedValue;
+      }
+
+      // Create product with structured platformDetails
       const productData = {
         platformDetails,
         isBlocked: false,
@@ -40,6 +71,52 @@ export const productController = {
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error adding product",
+      });
+    }
+  },
+  addOrUpdateProductStep: async (req: Request, res: Response) => {
+    try {
+      const { fields } = req.body;
+
+      if (!fields || !Array.isArray(fields)) {
+        console.error("Invalid fields payload:", req.body);
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid or missing 'fields' in request payload",
+        });
+      }
+
+      // Parse and structure platform-specific data
+      const platformDetails: any = {
+        amazon: {},
+        ebay: {},
+        website: {},
+      };
+
+      fields.forEach(({ name, value, isAmz, isEbay, isWeb }: any) => {
+        if (isAmz) platformDetails.amazon[name] = value;
+        if (isEbay) platformDetails.ebay[name] = value;
+        if (isWeb) platformDetails.website[name] = value;
+      });
+
+      const productData = {
+        platformDetails,
+        isBlocked: false,
+        status: "draft",
+      };
+
+      const newProduct = await productService.addProduct(productData);
+
+      return res.status(StatusCodes.CREATED).json({
+        success: true,
+        message: "Product added successfully",
+        data: newProduct,
+      });
+    } catch (error) {
+      console.error("Error adding/updating product step:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Error adding/updating product step",
       });
     }
   },
