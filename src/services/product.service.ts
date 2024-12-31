@@ -14,6 +14,48 @@ export const productService = {
     }
   },
 
+  // Add or update product draft for a step
+  addOrUpdateDraftProduct: async (stepData: any) => {
+    try {
+      // Check for an existing draft product
+      let draftProduct: any = await Product.findOne({ status: "draft" });
+
+      const validPlatforms = ["amazon", "ebay", "website"] as const;
+
+      if (!draftProduct) {
+        // If no draft exists, initialize a new product draft
+        draftProduct = new Product({
+          platformDetails: {
+            amazon: {},
+            ebay: {},
+            website: {},
+          },
+          status: "draft",
+          isBlocked: false,
+        });
+      }
+
+      // Update platform-specific details dynamically
+      Object.keys(stepData).forEach((field) => {
+        validPlatforms.forEach((platform) => {
+          if (
+            stepData[field]?.[
+              `is${platform.charAt(0).toUpperCase() + platform.slice(1)}`
+            ]
+          ) {
+            draftProduct.platformDetails[platform][field] =
+              stepData[field].value;
+          }
+        });
+      });
+
+      await draftProduct.save();
+      return draftProduct;
+    } catch (error) {
+      console.error("Error adding/updating draft product:", error);
+      throw new Error("Failed to add or update draft product");
+    }
+  },
   // Get all products
   getAllProducts: async () => {
     try {

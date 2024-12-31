@@ -12,7 +12,7 @@ const options = { discriminatorKey: "kind" };
 const amazonSchema = new Schema<IAmazonPlatformDetails>({
   title: { type: String, required: true },
   brand: { type: String, required: true },
-  category: {
+  productCategory: {
     type: Schema.Types.ObjectId,
     ref: "productCategory",
     required: true,
@@ -73,7 +73,7 @@ const amazonSchema = new Schema<IAmazonPlatformDetails>({
 const ebaySchema = new Schema<IEbayPlatformDetails>({
   title: { type: String, required: true },
   brand: { type: String, required: true },
-  category: {
+  productCategory: {
     type: Schema.Types.ObjectId,
     ref: "productCategory",
     required: true,
@@ -139,7 +139,7 @@ const ebaySchema = new Schema<IEbayPlatformDetails>({
 const websiteSchema = new Schema<IWebsitePlatformDetails>({
   title: { type: String, required: true },
   brand: { type: String, required: true },
-  category: {
+  productCategory: {
     type: Schema.Types.ObjectId,
     ref: "productCategory",
     required: true,
