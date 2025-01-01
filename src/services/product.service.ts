@@ -2,74 +2,73 @@ import { Product } from "@/models";
 import mongoose from "mongoose";
 
 export const productService = {
-  // Add or update product draft for a step
-  addOrUpdateDraftProduct: async (stepData: any) => {
+  createDraftProduct: async (stepData: any) => {
     try {
-      let draftProduct: any = await Product.findOne({ status: "draft" });
-      console.log("draftProduct : " , draftProduct)
+      const productCategory =
+        stepData.productCategory &&
+        mongoose.isValidObjectId(stepData.productCategory)
+          ? new mongoose.Types.ObjectId(stepData.productCategory)
+          : null;
 
-      const validPlatforms = ["amazon", "ebay", "website"] as const;
-
-      if (!draftProduct) {
-        // Create a new draft product if none exists
-        draftProduct = new Product({
-          platformDetails: {
-            amazon: {},
-            ebay: {},
-            website: {},
-          },
-          status: "draft",
-          isBlocked: false,
-        });
+      if (!productCategory) {
+        throw new Error("Invalid or missing 'productCategory'");
       }
 
-      // Extract `productCategory` separately
-      let commonCategoryValue: mongoose.Types.ObjectId | undefined;
+      // Initialize a new product draft
+      const draftProduct: any = new Product({
+        platformDetails: {
+          amazon: {},
+          ebay: {},
+          website: {},
+        },
+        status: "draft",
+        isBlocked: false,
+      });
 
-      if (stepData.productCategory) {
-        if (mongoose.isValidObjectId(stepData.productCategory)) {
-          commonCategoryValue = new mongoose.Types.ObjectId(
-            stepData.productCategory
-          );
-        } else {
-          throw new Error("Invalid productCategory value.");
-        }
-      }
-
-      // Iterate through stepData to populate platform-specific details
+      // Populate the platform details for the first step
       Object.keys(stepData).forEach((key) => {
         const { value, isAmz, isEbay, isWeb } = stepData[key] || {};
 
-        const processedValue =
-          key === "productCategory" && mongoose.isValidObjectId(value)
-            ? new mongoose.Types.ObjectId(value)
-            : value;
-
-        if (isAmz) {
-          draftProduct.platformDetails.amazon[key] = processedValue;
-        }
-        if (isEbay) {
-          draftProduct.platformDetails.ebay[key] = processedValue;
-        }
-        if (isWeb) {
-          draftProduct.platformDetails.website[key] = processedValue;
-        }
+        if (isAmz) draftProduct.platformDetails.amazon[key] = value;
+        if (isEbay) draftProduct.platformDetails.ebay[key] = value;
+        if (isWeb) draftProduct.platformDetails.website[key] = value;
       });
 
-      // Assign `productCategory` to all platform details
-      if (commonCategoryValue) {
-        validPlatforms.forEach((platform) => {
-          draftProduct.platformDetails[platform].productCategory =
-            commonCategoryValue;
-        });
-      }
+      draftProduct.platformDetails.amazon.productCategory = productCategory;
+      draftProduct.platformDetails.ebay.productCategory = productCategory;
+      draftProduct.platformDetails.website.productCategory = productCategory;
 
-      // Save the draft product
       await draftProduct.save();
       return draftProduct;
     } catch (error) {
-      console.error("Error adding/updating draft product:", error);
-      throw new Error("Failed to add or update draft product");
+      console.error("Error creating draft product:", error);
+      throw new Error("Failed to create draft product");
+    }
+  },
+
+  // Update an existing draft product
+  updateDraftProduct: async (productId: string, stepData: any) => {
+    try {
+      const draftProduct: any = await Product.findById(productId);
+
+      if (!draftProduct) {
+        throw new Error("Draft product not found");
+      }
+
+      // Populate the platform details for the current step
+      Object.keys(stepData).forEach((key) => {
+        const { value, isAmz, isEbay, isWeb } = stepData[key] || {};
+
+        if (isAmz) draftProduct.platformDetails.amazon[key] = value;
+        if (isEbay) draftProduct.platformDetails.ebay[key] = value;
+        if (isWeb) draftProduct.platformDetails.website[key] = value;
+      });
+
+      await draftProduct.save();
+      return draftProduct;
+    } catch (error) {
+      console.error("Error updating draft product:", error);
+      throw new Error("Failed to update draft product");
     }
   },
 

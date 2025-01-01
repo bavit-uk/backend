@@ -1,14 +1,12 @@
 import { productService } from "@/services";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
+import mongoose from "mongoose";
 
 export const productController = {
-  // Add or update product draft for a step
-  addOrUpdateProductStep: async (req: Request, res: Response) => {
+  createDraftProduct: async (req: Request, res: Response) => {
     try {
       const { stepData } = req.body;
-
-      // console.log("stepData : " , stepData)
 
       if (!stepData || typeof stepData !== "object") {
         return res.status(StatusCodes.BAD_REQUEST).json({
@@ -17,24 +15,60 @@ export const productController = {
         });
       }
 
-      // Add or update draft product
-      const updatedDraft =
-        await productService.addOrUpdateDraftProduct(stepData);
+      const draftProduct = await productService.createDraftProduct(stepData);
 
-      return res.status(StatusCodes.OK).json({
+      return res.status(StatusCodes.CREATED).json({
         success: true,
-        message: "Product draft updated successfully",
-        data: updatedDraft,
+        message: "Draft product created successfully",
+        data: { productId: draftProduct._id },
       });
     } catch (error) {
-      console.error("Error adding/updating product step:", error);
+      console.error("Error creating draft product:", error);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: "Error adding/updating product step",
+        message: "Error creating draft product",
       });
     }
   },
 
+  // Handle subsequent steps to update the draft product
+  updateDraftProduct: async (req: Request, res: Response) => {
+    try {
+      const { productId } = req.params;
+      const { stepData } = req.body;
+
+      if (!mongoose.isValidObjectId(productId)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid or missing 'productId'",
+        });
+      }
+
+      if (!stepData || typeof stepData !== "object") {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid or missing 'stepData' in request payload",
+        });
+      }
+
+      const updatedProduct = await productService.updateDraftProduct(
+        productId,
+        stepData
+      );
+
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Draft product updated successfully",
+        data: updatedProduct,
+      });
+    } catch (error) {
+      console.error("Error updating draft product:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Error updating draft product",
+      });
+    }
+  },
   // Get all products
   getAllProduct: async (_req: Request, res: Response) => {
     try {
