@@ -5,6 +5,8 @@ export interface IPaymentPolicy extends Document {
     policyDescription: string;
     immediatePayment: boolean;
     cashOnPickUp: boolean;
+    isBlocked: boolean;
 }
 
 export type PaymentPolicyModel = Model<IPaymentPolicy>;
+
