@@ -31,16 +31,10 @@ export const productController = {
     }
   },
 
-  // Handle subsequent steps to update the draft product
   updateDraftProduct: async (req: Request, res: Response) => {
     try {
-      const { productId } = req.body;
-      const { stepData } = req.body;
+      const { productId, stepData } = req.body;
 
-      console.log(  "productId : ",productId)
-      console.log(  "stepData : ",stepData)
-
-      // Validate productId
       if (!mongoose.isValidObjectId(productId)) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,
@@ -48,7 +42,6 @@ export const productController = {
         });
       }
 
-      // Validate stepData
       if (!stepData || typeof stepData !== "object") {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,
@@ -56,7 +49,6 @@ export const productController = {
         });
       }
 
-      // Call service to update draft product
       const updatedProduct = await productService.updateDraftProduct(
         productId,
         stepData
@@ -75,11 +67,10 @@ export const productController = {
       });
     }
   },
-  // Get all products
+
   getAllProduct: async (_req: Request, res: Response) => {
     try {
       const products = await productService.getAllProducts();
-
       return res.status(StatusCodes.OK).json({
         success: true,
         products,
@@ -93,7 +84,6 @@ export const productController = {
     }
   },
 
-  // Get a product by ID for a specific platform
   getProductById: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -128,7 +118,6 @@ export const productController = {
     }
   },
 
-  // Update product by ID
   updateProductById: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -168,7 +157,6 @@ export const productController = {
     }
   },
 
-  // Toggle block status for a product
   toggleBlock: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
