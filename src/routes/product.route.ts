@@ -6,7 +6,7 @@ import { Router } from "express";
 export const product = (router: Router) => {
 
     // TODO: productValidation.addProduct
-    router.post("/" , productController.addOrUpdateProductStep);
+    router.post("/" , productController.createDraftProduct, productController.updateDraftProduct);
 
     router.get("/", productController.getAllProduct);
 
