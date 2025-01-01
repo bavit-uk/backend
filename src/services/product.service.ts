@@ -48,19 +48,23 @@ export const productService = {
   // Update an existing draft product
   updateDraftProduct: async (productId: string, stepData: any) => {
     try {
+      // Fetch the existing draft product
       const draftProduct: any = await Product.findById(productId);
 
       if (!draftProduct) {
         throw new Error("Draft product not found");
       }
 
-      Object.entries(stepData).forEach(([key, value]: [string, any]) => {
-        const { value: fieldValue, isAmz, isEbay, isWeb } = value || {};
-        if (isAmz) draftProduct.platformDetails.amazon[key] = fieldValue;
-        if (isEbay) draftProduct.platformDetails.ebay[key] = fieldValue;
-        if (isWeb) draftProduct.platformDetails.website[key] = fieldValue;
+      // Merge current step data with existing draft data
+      Object.keys(stepData).forEach((key) => {
+        const { value, isAmz, isEbay, isWeb } = stepData[key] || {};
+
+        if (isAmz) draftProduct.platformDetails.amazon[key] = value;
+        if (isEbay) draftProduct.platformDetails.ebay[key] = value;
+        if (isWeb) draftProduct.platformDetails.website[key] = value;
       });
 
+      // Save the updated draft product
       await draftProduct.save();
       return draftProduct;
     } catch (error) {

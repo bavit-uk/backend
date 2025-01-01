@@ -22,11 +22,11 @@ export const productController = {
         message: "Draft product created successfully",
         data: { productId: draftProduct._id },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating draft product:", error);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: "Error creating draft product",
+        message: error.message || "Error creating draft product",
       });
     }
   },
@@ -59,11 +59,11 @@ export const productController = {
         message: "Draft product updated successfully",
         data: updatedProduct,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating draft product:", error);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: "Error updating draft product",
+        message: error.message || "Error updating draft product",
       });
     }
   },
@@ -75,11 +75,11 @@ export const productController = {
         success: true,
         products,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching products:", error);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: "Error fetching products",
+        message: error.message || "Error fetching products",
       });
     }
   },
@@ -109,11 +109,11 @@ export const productController = {
         success: true,
         product,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching product by ID:", error);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: "Error fetching product",
+        message: error.message || "Error fetching product",
       });
     }
   },
@@ -148,11 +148,11 @@ export const productController = {
         message: "Product updated successfully",
         data: updatedProduct,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating product:", error);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: "Error updating product",
+        message: error.message || "Error updating product",
       });
     }
   },
@@ -183,11 +183,11 @@ export const productController = {
         message: `Product ${isBlocked ? "blocked" : "unblocked"} successfully`,
         data: updatedProduct,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error toggling block status:", error);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: "Error toggling block status",
+        message: error.message || "Error toggling block status",
       });
     }
   },
