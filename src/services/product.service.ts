@@ -49,21 +49,35 @@ export const productService = {
   // Update an existing draft product
   updateDraftProduct: async (productId: string, stepData: any) => {
     try {
+      // Find the draft product by ID
       const draftProduct: any = await Product.findById(productId);
 
       if (!draftProduct) {
         throw new Error("Draft product not found");
       }
 
-      // Populate the platform details for the current step
+      // Merge the new step data into the existing platformDetails
       Object.keys(stepData).forEach((key) => {
         const { value, isAmz, isEbay, isWeb } = stepData[key] || {};
 
-        if (isAmz) draftProduct.platformDetails.amazon[key] = value;
-        if (isEbay) draftProduct.platformDetails.ebay[key] = value;
-        if (isWeb) draftProduct.platformDetails.website[key] = value;
+        // Convert `productCategory` to ObjectId if applicable
+        const processedValue =
+          key === "productCategory" && mongoose.isValidObjectId(value)
+            ? new mongoose.Types.ObjectId(value)
+            : value;
+
+        if (isAmz) {
+          draftProduct.platformDetails.amazon[key] = processedValue;
+        }
+        if (isEbay) {
+          draftProduct.platformDetails.ebay[key] = processedValue;
+        }
+        if (isWeb) {
+          draftProduct.platformDetails.website[key] = processedValue;
+        }
       });
 
+      // Save the updated draft product
       await draftProduct.save();
       return draftProduct;
     } catch (error) {

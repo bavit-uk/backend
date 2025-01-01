@@ -34,9 +34,13 @@ export const productController = {
   // Handle subsequent steps to update the draft product
   updateDraftProduct: async (req: Request, res: Response) => {
     try {
-      const { productId } = req.params;
+      const { productId } = req.body;
       const { stepData } = req.body;
 
+      console.log(  "productId : ",productId)
+      console.log(  "stepData : ",stepData)
+
+      // Validate productId
       if (!mongoose.isValidObjectId(productId)) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,
@@ -44,6 +48,7 @@ export const productController = {
         });
       }
 
+      // Validate stepData
       if (!stepData || typeof stepData !== "object") {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,
@@ -51,6 +56,7 @@ export const productController = {
         });
       }
 
+      // Call service to update draft product
       const updatedProduct = await productService.updateDraftProduct(
         productId,
         stepData
