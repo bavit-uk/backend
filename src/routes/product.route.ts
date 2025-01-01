@@ -10,7 +10,7 @@ export const product = (router: Router) => {
   // Update a draft product by ID (subsequent steps)
   router.patch(
     "/:id",
-    productValidation.updateProduct,
+    // productValidation.updateProduct,
     productController.updateDraftProduct
   );
   router.get("/", productController.getAllProduct);
