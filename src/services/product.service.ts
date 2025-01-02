@@ -6,8 +6,7 @@ export const productService = {
   createDraftProduct: async (stepData: any) => {
     try {
       const productCategory =
-        stepData.productCategory &&
-        mongoose.isValidObjectId(stepData.productCategory)
+        stepData.productCategory && mongoose.isValidObjectId(stepData.productCategory)
           ? new mongoose.Types.ObjectId(stepData.productCategory)
           : null;
 
@@ -33,8 +32,7 @@ export const productService = {
       });
 
       ["amazon", "ebay", "website"].forEach((platform) => {
-        draftProduct.platformDetails[platform].productCategory =
-          productCategory;
+        draftProduct.platformDetails[platform].productCategory = productCategory;
       });
 
       await draftProduct.save();
@@ -47,8 +45,6 @@ export const productService = {
 
   // Update an existing draft product
   updateDraftProduct: async (productId: string, stepData: any) => {
-    // console.log("productid in service",productId)
-
     try {
       // Fetch the existing draft product
       const draftProduct: any = await Product.findById(productId);
@@ -57,15 +53,73 @@ export const productService = {
       }
       console.log("stepDataaa : ", stepData);
 
-      // Merge current step data with existing draft data
-      Object.keys(stepData).forEach((key) => {
-        const { value, isAmz, isEbay, isWeb } = stepData[key] || {};
-        console.log("value : ", value);
+     
+        if (stepData.status) {
+          console.log("asdadadads");
+          console.log("draftProduct ka status: ", draftProduct.status);
+          console.log("draftProduct ka templare: ", draftProduct.isTemplate);
+          draftProduct.status = stepData.status; // Corrected to assignment
+          draftProduct.isTemplate = stepData.isTemplate;
+          await draftProduct.save(); // Assuming save is an async function
+          return draftProduct;
+        }
+      
+      
 
-        if (isAmz) draftProduct.platformDetails.amazon[key] = value;
-        if (isEbay) draftProduct.platformDetails.ebay[key] = value;
-        if (isWeb) draftProduct.platformDetails.website[key] = value;
-      });
+      // Helper function to process step data recursively
+      const processStepData = (
+        data: any,
+        platformDetails: any,
+        keyPrefix: string = "",
+        inheritedFlags: { isAmz?: boolean; isEbay?: boolean; isWeb?: boolean } = {}
+      ) => {
+        Object.keys(data).forEach((key) => {
+          const currentKey = keyPrefix ? `${keyPrefix}.${key}` : key; // Maintain context for nested keys
+          const entry = data[key];
+
+          // Inherit platform flags if not explicitly defined
+          const {
+            isAmz = inheritedFlags.isAmz,
+            isEbay = inheritedFlags.isEbay,
+            isWeb = inheritedFlags.isWeb,
+          } = entry || {};
+
+          if (entry && typeof entry === "object" && !Array.isArray(entry) && entry.value === undefined) {
+            // Recurse for nested objects, passing inherited flags
+            processStepData(entry, platformDetails, currentKey, { isAmz, isEbay, isWeb });
+          } else {
+            const { value } = entry || {};
+            console.log("current key : ", currentKey);
+            console.log("value : ", value);
+            console.log("platforms : ", isEbay, isAmz, isWeb);
+            console.log("  ");
+
+            // Handle nested fields explicitly
+            const fieldSegments = currentKey.split(".");
+            const fieldRoot = fieldSegments[0]; // e.g., "packageWeight"
+
+            if (fieldRoot === "packageWeight" || fieldRoot === "packageDimensions") {
+              // Handle nested objects like packageWeight
+              const subField = fieldSegments.slice(1).join("."); // e.g., "weightKg" or "dimensionLength"
+              if (isAmz) platformDetails.amazon[fieldRoot] = platformDetails.amazon[fieldRoot] || {};
+              if (isEbay) platformDetails.ebay[fieldRoot] = platformDetails.ebay[fieldRoot] || {};
+              if (isWeb) platformDetails.website[fieldRoot] = platformDetails.website[fieldRoot] || {};
+
+              if (isAmz && subField) platformDetails.amazon[fieldRoot][subField] = value;
+              if (isEbay && subField) platformDetails.ebay[fieldRoot][subField] = value;
+              if (isWeb && subField) platformDetails.website[fieldRoot][subField] = value;
+            } else {
+              // Handle flat fields
+              if (isAmz) platformDetails.amazon[currentKey] = value;
+              if (isEbay) platformDetails.ebay[currentKey] = value;
+              if (isWeb) platformDetails.website[currentKey] = value;
+            }
+          }
+        });
+      };
+
+      // Process step data
+      processStepData(stepData, draftProduct.platformDetails);
 
       // Save the updated draft product
       await draftProduct.save();
@@ -78,17 +132,14 @@ export const productService = {
 
   getAllProducts: async () => {
     try {
-      return await Product.find();
+      return await Product.find().populate("platformDetails.website.productCategory").populate("platformDetails.amazon.productCategory").populate("platformDetails.ebay.productCategory");
     } catch (error) {
       console.error("Error fetching all products:", error);
       throw new Error("Failed to fetch products");
     }
   },
 
-  getProductById: async (
-    id: string,
-    platform: "amazon" | "ebay" | "website"
-  ) => {
+  getProductById: async (id: string, platform: "amazon" | "ebay" | "website") => {
     try {
       const product = await Product.findById(id);
       if (!product) throw new Error("Product not found");
@@ -97,38 +148,12 @@ export const productService = {
       }
       throw new Error(`No details found for platform: ${platform}`);
     } catch (error) {
-      console.error(
-        `Error fetching product by ID for platform ${platform}:`,
-        error
-      );
+      console.error(`Error fetching product by ID for platform ${platform}:`, error);
       throw new Error("Failed to fetch product");
     }
   },
 
-  saveTransformedProduct: async (id: string, transformedProduct: any) => {
-    try {
-      return await Product.findByIdAndUpdate(id, transformedProduct, {
-        new: true,
-      });
-    } catch (error) {
-      console.error("Error saving transformed product:", error);
-      throw new Error("Failed to save transformed product");
-    }
-  },
-  getFullProductById: async (id: string) => {
-    try {
-      return await Product.findById(id);
-    } catch (error) {
-      console.error("Error fetching product by ID:", error);
-      throw new Error("Failed to fetch product");
-    }
-  },
-
-  updateProduct: async (
-    id: string,
-    platform: "amazon" | "ebay" | "website",
-    data: any
-  ) => {
+  updateProduct: async (id: string, platform: "amazon" | "ebay" | "website", data: any) => {
     try {
       const updateQuery = { [`platformDetails.${platform}`]: data };
       const updatedProduct = await Product.findByIdAndUpdate(id, updateQuery, {
@@ -144,11 +169,7 @@ export const productService = {
 
   toggleBlock: async (id: string, isBlocked: boolean) => {
     try {
-      const updatedProduct = await Product.findByIdAndUpdate(
-        id,
-        { isBlocked },
-        { new: true }
-      );
+      const updatedProduct = await Product.findByIdAndUpdate(id, { isBlocked }, { new: true });
       if (!updatedProduct) throw new Error("Product not found");
       return updatedProduct;
     } catch (error) {

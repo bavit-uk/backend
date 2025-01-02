@@ -10,6 +10,7 @@ export const productController = {
     try {
       const { stepData } = req.body;
 
+
       if (!stepData || typeof stepData !== "object") {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,

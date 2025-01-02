@@ -266,6 +266,7 @@ interface IProduct {
     website?: IWebsitePlatformDetails; // Website-specific details
   };
   status: "draft" | "published"; // Product status
+  isTemplate: boolean
 }
 
 // Update payload for product
