@@ -1,12 +1,8 @@
 import { PaymentPolicy } from "@/models";
 
 export const paymentPolicyService = {
-  createPaymentPolicy: (
-    policyName: string,
-    policyDescription: string,
-    immediatePayment: boolean,
-    cashOnPickUp: boolean
-  ) => {
+  createPaymentPolicy: (data: {policyName: string , policyDescription: string , immediatePayment: boolean , cashOnPickUp: boolean }) => {
+    const {policyName , policyDescription , immediatePayment , cashOnPickUp} = data
     const paymentPolicy = new PaymentPolicy({
       policyName,
       policyDescription,
@@ -38,5 +34,15 @@ export const paymentPolicyService = {
     }
     return policy;
   },
-  
+
+  toggleBlock: async (id: string, isBlocked: boolean) => {
+    console.log("block : " , isBlocked)
+    console.log("id : " , id)
+    const updatedCategory = await PaymentPolicy.findByIdAndUpdate(id, { isBlocked: isBlocked }, { new: true });
+    if (!updatedCategory) {
+      throw new Error("Policy not found");
+    }
+    return updatedCategory;
+  },
+
 };
