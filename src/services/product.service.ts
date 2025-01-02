@@ -32,7 +32,6 @@ export const productService = {
         if (isWeb) draftProduct.platformDetails.website[key] = fieldValue;
       });
 
-
       ["amazon", "ebay", "website"].forEach((platform) => {
         draftProduct.platformDetails[platform].productCategory =
           productCategory;
@@ -48,7 +47,7 @@ export const productService = {
 
   // Update an existing draft product
   updateDraftProduct: async (productId: string, stepData: any) => {
-// console.log("productid in service",productId)
+    // console.log("productid in service",productId)
 
     try {
       // Fetch the existing draft product
@@ -56,12 +55,12 @@ export const productService = {
       if (!draftProduct) {
         throw new Error("Draft product not found");
       }
-      console.log("stepDataaa : " , stepData)
+      console.log("stepDataaa : ", stepData);
 
       // Merge current step data with existing draft data
       Object.keys(stepData).forEach((key) => {
         const { value, isAmz, isEbay, isWeb } = stepData[key] || {};
-        console.log("value : " , value)
+        console.log("value : ", value);
 
         if (isAmz) draftProduct.platformDetails.amazon[key] = value;
         if (isEbay) draftProduct.platformDetails.ebay[key] = value;
@@ -102,6 +101,25 @@ export const productService = {
         `Error fetching product by ID for platform ${platform}:`,
         error
       );
+      throw new Error("Failed to fetch product");
+    }
+  },
+
+  saveTransformedProduct: async (id: string, transformedProduct: any) => {
+    try {
+      return await Product.findByIdAndUpdate(id, transformedProduct, {
+        new: true,
+      });
+    } catch (error) {
+      console.error("Error saving transformed product:", error);
+      throw new Error("Failed to save transformed product");
+    }
+  },
+  getFullProductById: async (id: string) => {
+    try {
+      return await Product.findById(id);
+    } catch (error) {
+      console.error("Error fetching product by ID:", error);
       throw new Error("Failed to fetch product");
     }
   },
