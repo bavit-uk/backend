@@ -33,7 +33,10 @@ export const productController = {
 
   updateDraftProduct: async (req: Request, res: Response) => {
     try {
-      const { productId, stepData } = req.body;
+      const  productId  = req.params.id;
+      console.log("productId in controller",productId)
+
+      const { stepData } = req.body;
 
       if (!mongoose.isValidObjectId(productId)) {
         return res.status(StatusCodes.BAD_REQUEST).json({

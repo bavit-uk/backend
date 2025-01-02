@@ -60,16 +60,36 @@ interface IAmazonPlatformDetails {
   productDescription: string;
   pricingFormat: string;
   vat: string;
-  paymentPolicy: string;
+  paymentPolicy: Types.ObjectId;
   buy2andSave: string;
   buy3andSave: string;
+
+  postagePolicy: string;
+
+  packageWeight: {
+    weightKg: string;
+    weightG: string;
+  };
+
+  packageDimensions: {
+    dimensionLength: string;
+
+    dimensionWidth: string;
+
+    dimensionHeight: string;
+  };
+
+  irregularPackage: boolean;
   buy4andSave: string;
   shipping: IShipping;
   description: string;
   keywords: IKeywords;
   fulfillmentMethod: "FBA" | "FBM";
-  identifier: string; // UPC, EAN, ISBN, etc.
+  identifier: string; // UPC; EAN, ISBN, etc.
   vatPercentage: number;
+  seoTags: string[];
+  relevantTags: string[];
+  suggestedTags: string[];
   salesTaxPercentage: number;
   applyTaxAtCheckout: boolean;
   taxConfirmation: boolean;
@@ -111,11 +131,12 @@ interface IEbayPlatformDetails {
   productDescription: string;
   pricingFormat: string;
   vat: string;
-  paymentPolicy: string;
+  paymentPolicy: Types.ObjectId;
   buy2andSave: string;
   buy3andSave: string;
   buy4andSave: string;
   shipping: IShipping;
+
   description: string;
   keywords: IKeywords;
   fulfillmentMethod: "eBay Fulfillment" | "Self-Fulfilled";
@@ -127,6 +148,24 @@ interface IEbayPlatformDetails {
   processor: string;
   model: string;
 
+  postagePolicy: string;
+
+  packageWeight: {
+    weightKg: string;
+    weightG: string;
+  };
+
+  packageDimensions: {
+    dimensionLength: string;
+
+    dimensionWidth: string;
+
+    dimensionHeight: string;
+  };
+  seoTags: string[];
+  relevantTags: string[];
+  suggestedTags: string[];
+  irregularPackage: boolean;
   operatingSystem: String;
   storageType: String;
   features: String;
@@ -165,13 +204,32 @@ interface IWebsitePlatformDetails {
   productDescription: string;
   pricingFormat: string;
   vat: string;
-  paymentPolicy: string;
+  paymentPolicy: Types.ObjectId;
   buy2andSave: string;
   buy3andSave: string;
   buy4andSave: string;
   shipping: IShipping;
   description: string;
   keywords: IKeywords;
+  seoTags: string[];
+  relevantTags: string[];
+  suggestedTags: string[];
+  postagePolicy: string;
+
+  packageWeight: {
+    weightKg: string;
+    weightG: string;
+  };
+
+  packageDimensions: {
+    dimensionLength: string;
+
+    dimensionWidth: string;
+
+    dimensionHeight: string;
+  };
+
+  irregularPackage: boolean;
   fulfillmentMethod: "Dropshipping" | "In-House Fulfillment";
   identifier: string; // UPC, EAN, ISBN, etc.
   vatPercentage: number;
