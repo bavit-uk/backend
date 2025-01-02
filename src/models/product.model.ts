@@ -8,13 +8,105 @@ import {
 
 const options = { discriminatorKey: "kind" };
 
+// const amazonSchema = new Schema<IAmazonPlatformDetails>({
+//   prodInfo: {
+//     title: { type: String, required: true },
+//     brand: { type: String, required: true },
+//     productCategory: {
+//       type: Schema.Types.ObjectId,
+//       ref: "productCategory",
+//       required: true,
+//     },
+//     screenSize: { type: String, required: true },
+//     productCondition: { type: String, required: true },
+//     nonNewConditionDetails: { type: String },
+//     images: [{ type: String, required: true }],
+//   },
+
+//   technicalInfo: {
+//     processor: { type: String },
+//     model: { type: String },
+//     operatingSystem: { type: String },
+//     storageType: { type: String },
+//     features: { type: String },
+//     ssdCapacity: { type: String },
+//     gpu: { type: String },
+//     type: { type: String },
+//     releaseYear: { type: String },
+//     hardDriveCapacity: { type: String },
+//     color: { type: String },
+//     maxResolution: { type: String },
+//     mostSuitableFor: { type: String },
+//     graphicsProcessingType: { type: String },
+//     connectivity: { type: String },
+//     manufacturerWarranty: { type: String },
+//     regionOfManufacture: { type: String },
+//     height: { type: String },
+//     length: { type: String },
+//   },
+
+//   productPricing: {
+//     condition: { type: String },
+//     conditionDescription: { type: String },
+//     productDescription: { type: String },
+//     pricingFormat: { type: String },
+//     vat: { type: String },
+//     paymentPolicy: { type: Schema.Types.ObjectId, ref: "paymentPolicy" },
+//     buy2andSave: { type: String },
+//     buy3andSave: { type: String },
+//     buy4andSave: { type: String },
+//   },
+
+//   productDelivery: {
+//     postagePolicy: {
+//       type: String,
+//     },
+//     packageWeight: {
+//       weightKg: {
+//         type: String,
+//         // default:"0kg"
+//       },
+//       weightG: {
+//         type: String,
+//         // default:"0g"
+//       },
+//     },
+//     packageDimensions: {
+//       dimensionLength: {
+//         type: String,
+//       },
+//       dimensionWidth: {
+//         type: String,
+//       },
+//       dimensionHeight: {
+//         type: String,
+//       },
+//     },
+//     irregularPackage: { type: Boolean },
+//   },
+
+//   productSeo: {
+//     seoTags: {
+//       type: [String],
+//     },
+//     relevantTags: {
+//       type: [String],
+//     },
+//     suggestedTags: {
+//       type: [String],
+//     },
+//   },
+// });
+
 // Amazon-specific schema
+
+
 const amazonSchema = new Schema<IAmazonPlatformDetails>({
   title: { type: String, required: true },
   brand: { type: String, required: true },
   productCategory: {
     type: Schema.Types.ObjectId,
-    ref: "productCategory",
+    ref: "ProductCategory",
     required: true,
   },
   screenSize: { type: String, required: true },
@@ -42,13 +134,13 @@ const amazonSchema = new Schema<IAmazonPlatformDetails>({
   length: { type: String },
 
   seoTags: {
-    type: [String]
+    type: [String],
   },
   relevantTags: {
-    type: [String]
+    type: [String],
   },
   suggestedTags: {
-    type: [String]
+    type: [String],
   },
   postagePolicy: {
     type: String,
@@ -56,9 +148,11 @@ const amazonSchema = new Schema<IAmazonPlatformDetails>({
   packageWeight: {
     weightKg: {
       type: String,
+      // default:"0kg"
     },
     weightG: {
       type: String,
+      // default:"0g"
     },
   },
   packageDimensions: {
@@ -74,7 +168,6 @@ const amazonSchema = new Schema<IAmazonPlatformDetails>({
   },
   irregularPackage: { type: Boolean },
 
-
   weight: { type: String },
   width: { type: String },
   condition: { type: String },
@@ -82,7 +175,7 @@ const amazonSchema = new Schema<IAmazonPlatformDetails>({
   productDescription: { type: String },
   pricingFormat: { type: String },
   vat: { type: String },
-  paymentPolicy: { type: Schema.Types.ObjectId, ref: "paymentPolicy",},
+  paymentPolicy: { type: Schema.Types.ObjectId, ref: "paymentPolicy" },
   buy2andSave: { type: String },
   buy3andSave: { type: String },
   buy4andSave: { type: String },
@@ -110,7 +203,7 @@ const ebaySchema = new Schema<IEbayPlatformDetails>({
   brand: { type: String, required: true },
   productCategory: {
     type: Schema.Types.ObjectId,
-    ref: "productCategory",
+    ref: "ProductCategory",
     required: true,
   },
   screenSize: { type: String, required: true },
@@ -129,13 +222,13 @@ const ebaySchema = new Schema<IEbayPlatformDetails>({
   hardDriveCapacity: { type: String },
 
   seoTags: {
-    type: [String]
+    type: [String],
   },
   relevantTags: {
-    type: [String]
+    type: [String],
   },
   suggestedTags: {
-    type: [String]
+    type: [String],
   },
 
   postagePolicy: {
@@ -178,7 +271,7 @@ const ebaySchema = new Schema<IEbayPlatformDetails>({
   productDescription: { type: String },
   pricingFormat: { type: String },
   vat: { type: String },
-  paymentPolicy: { type: Schema.Types.ObjectId, ref: "paymentPolicy",},
+  paymentPolicy: { type: Schema.Types.ObjectId, ref: "paymentPolicy" },
   buy2andSave: { type: String },
   buy3andSave: { type: String },
   buy4andSave: { type: String },
@@ -210,7 +303,7 @@ const websiteSchema = new Schema<IWebsitePlatformDetails>({
   brand: { type: String, required: true },
   productCategory: {
     type: Schema.Types.ObjectId,
-    ref: "productCategory",
+    ref: "ProductCategory",
     required: true,
   },
   screenSize: { type: String, required: true },
@@ -225,9 +318,6 @@ const websiteSchema = new Schema<IWebsitePlatformDetails>({
   ssdCapacity: { type: String },
   gpu: { type: String },
   type: { type: String },
-
-
-
 
   postagePolicy: {
     type: String,
@@ -252,13 +342,13 @@ const websiteSchema = new Schema<IWebsitePlatformDetails>({
     },
   },
   seoTags: {
-    type: [String]
+    type: [String],
   },
   relevantTags: {
-    type: [String]
+    type: [String],
   },
   suggestedTags: {
-    type: [String]
+    type: [String],
   },
   irregularPackage: { type: Boolean },
   releaseYear: { type: String },
@@ -280,7 +370,7 @@ const websiteSchema = new Schema<IWebsitePlatformDetails>({
   productDescription: { type: String },
   pricingFormat: { type: String },
   vat: { type: String },
-  paymentPolicy: { type: Schema.Types.ObjectId, ref: "paymentPolicy",},
+  paymentPolicy: { type: Schema.Types.ObjectId, ref: "paymentPolicy" },
   buy2andSave: { type: String },
   buy3andSave: { type: String },
   buy4andSave: { type: String },
@@ -316,6 +406,7 @@ const productSchema = new Schema<IProduct>(
     },
     isBlocked: { type: Boolean, default: false },
     status: { type: String, enum: ["draft", "published"], default: "draft" },
+    isTemplate: { type: Boolean, default: false },
   },
   { timestamps: true, discriminatorKey: "kind" }
 );
