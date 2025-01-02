@@ -80,8 +80,15 @@ export function transformProductData(data: any) {
       data.platformDetails.website?.[field] ||
       null; // Default to null if field is not present
 
-    result.stepData[field] = createField(field, value);
+    if (value !== null) {
+      result.stepData[field] = createField(field, value);
+    }
   });
+
+  // Remove null fields from the productCategory as well
+  if (!result.stepData.productCategory) {
+    delete result.stepData.productCategory;
+  }
 
   return result;
 }
