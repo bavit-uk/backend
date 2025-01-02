@@ -10,3 +10,5 @@ const paymentPolicySchema = new Schema<IPaymentPolicy> ({
 }, {timestamps: true})
 
 export const PaymentPolicy = model<IPaymentPolicy , PaymentPolicyModel>('PaymentPolicy' , paymentPolicySchema)
+
+
