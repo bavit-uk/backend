@@ -2,6 +2,8 @@ import { productService } from "@/services";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import mongoose from "mongoose";
+import { transformProductData } from "@/utils/transformProductData.util";
+
 
 export const productController = {
   createDraftProduct: async (req: Request, res: Response) => {
@@ -33,8 +35,8 @@ export const productController = {
 
   updateDraftProduct: async (req: Request, res: Response) => {
     try {
-      const  productId  = req.params.id;
-      console.log("productId in controller",productId)
+      const productId = req.params.id;
+      console.log("productId in controller", productId);
 
       const { stepData } = req.body;
 
@@ -117,6 +119,44 @@ export const productController = {
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: error.message || "Error fetching product",
+      });
+    }
+  },
+  transformAndSendProduct: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid product ID",
+        });
+      }
+
+      // Fetch product from DB
+      const product = await productService.getFullProductById(id);
+
+      if (!product) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Product not found",
+        });
+      }
+
+      // Transform product using utility
+      const transformedProduct = transformProductData(product);
+
+      // Send transformed product as response
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Product transformed successfully",
+        data: transformedProduct,
+      });
+    } catch (error: any) {
+      console.error("Error transforming product:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error.message || "Error transforming product",
       });
     }
   },
