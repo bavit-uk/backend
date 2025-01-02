@@ -13,6 +13,7 @@ export const product = (router: Router) => {
     // productValidation.updateProduct,
     productController.updateDraftProduct
   );
+  
   router.get("/", productController.getAllProduct);
 
   router.get(
