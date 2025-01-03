@@ -129,7 +129,21 @@ export const productService = {
       throw new Error("Failed to update draft product");
     }
   },
-
+  getFullProductById: async (id: string) => {
+    try {
+      const product = await Product.findById(id)
+        .populate("platformDetails.amazon.productCategory")
+        .populate("platformDetails.ebay.productCategory")
+        .populate("platformDetails.website.productCategory")
+        .lean();
+      if (!product) throw new Error("Product not found");
+      return product;
+    } catch (error) {
+      console.error(`Error fetching full product by ID: ${id}`, error);
+      throw new Error("Failed to fetch full product");
+    }
+  },
+  
   getAllProducts: async () => {
     try {
       return await Product.find().populate("platformDetails.website.productCategory").populate("platformDetails.amazon.productCategory").populate("platformDetails.ebay.productCategory");

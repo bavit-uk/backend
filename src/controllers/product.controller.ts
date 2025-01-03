@@ -4,12 +4,10 @@ import { StatusCodes } from "http-status-codes";
 import mongoose from "mongoose";
 import { transformProductData } from "@/utils/transformProductData.util";
 
-
 export const productController = {
   createDraftProduct: async (req: Request, res: Response) => {
     try {
       const { stepData } = req.body;
-
 
       if (!stepData || typeof stepData !== "object") {
         return res.status(StatusCodes.BAD_REQUEST).json({
@@ -126,27 +124,27 @@ export const productController = {
   transformAndSendProduct: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-
+  
       if (!mongoose.isValidObjectId(id)) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,
           message: "Invalid product ID",
         });
       }
-
+  
       // Fetch product from DB
       const product = await productService.getFullProductById(id);
-
+  
       if (!product) {
         return res.status(StatusCodes.NOT_FOUND).json({
           success: false,
           message: "Product not found",
         });
       }
-
+  
       // Transform product using utility
       const transformedProduct = transformProductData(product);
-
+  
       // Send transformed product as response
       return res.status(StatusCodes.OK).json({
         success: true,
@@ -161,6 +159,7 @@ export const productController = {
       });
     }
   },
+  
 
   updateProductById: async (req: Request, res: Response) => {
     try {
