@@ -17,9 +17,7 @@ export const authController = {
       // Check if user already exists
       const existingUser = await authService.findExistingEmail(email);
       if (existingUser) {
-        return res
-          .status(StatusCodes.CONFLICT)
-          .json({ message: "User with this email already exists" });
+        return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
       }
       // Create new user
       const newUser = await authService.createUser(req.body);
@@ -38,16 +36,13 @@ export const authController = {
         html,
       });
       res.status(StatusCodes.CREATED).json({
-        message:
-          "User registered successfully, Please check your email to verify your account.",
+        message: "User registered successfully, Please check your email to verify your account.",
         user: newUser,
         verificationToken: verificationToken.accessToken, // Include token for testing purposes
       });
     } catch (error) {
       console.error("Error registering user:", error);
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ message: "Error registering user" });
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error registering user" });
     }
   },
 
@@ -103,7 +98,7 @@ export const authController = {
   googleLogin: async (req: Request, res: Response) => {
     try {
       const { email, firstName, lastName, profileImage, userType, isEmailVerified, signUpThrough } = req.body;
-      console.log("details : ", userType , email, firstName, lastName, profileImage, signUpThrough);
+      console.log("details : ", userType, email, firstName, lastName, profileImage, signUpThrough);
       let user = await authService.findExistingEmail(email);
       if (!user) {
         user = await new User({
@@ -118,8 +113,45 @@ export const authController = {
       }
       await user.save();
 
-      const userTypee = await UserCategory.findById(userType)
-      console.log("usertype : " , userTypee)
+      const userTypee = await UserCategory.findById(userType);
+      console.log("usertype : ", userTypee);
+
+      // Generate tokens
+      const { accessToken, refreshToken } = jwtSign(user?.id);
+      return res.status(StatusCodes.OK).json({
+        user,
+        userType: userTypee,
+        accessToken,
+        refreshToken,
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+      });
+    } catch (error) {
+      console.error("Google login error:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error during Google login" });
+    }
+  },
+
+  facebookLogin: async (req: Request, res: Response) => {
+    try {
+      const { email, firstName, lastName, profileImage, userType, signUpThrough } = req.body;
+      console.log("details : ", userType, email, firstName, lastName, profileImage, signUpThrough);
+      let user = await authService.findExistingEmail(email);
+      if (!user) {
+        user = await new User({
+          firstName,
+          lastName,
+          email,
+          signUpThrough,
+          userType,
+          // isEmailVerified,
+          profileImage,
+        });
+      }
+      await user.save();
+
+      const userTypee = await UserCategory.findById(userType);
+      console.log("usertype : ", userTypee);
 
       // Generate tokens
       const { accessToken, refreshToken } = jwtSign(user?.id);
@@ -141,37 +173,27 @@ export const authController = {
     try {
       const { token } = req.params;
       if (!token || typeof token !== "string") {
-        return res
-          .status(StatusCodes.BAD_REQUEST)
-          .json({ success: false, message: "Invalid verification token." });
+        return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: "Invalid verification token." });
       }
       const decoded = jwtVerify(token);
       const userId = decoded.id.toString();
       const user = await authService.findUserById(userId);
       if (!user) {
-        return res
-          .status(StatusCodes.NOT_FOUND)
-          .json({ success: false, message: "User not found." });
+        return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: "User not found." });
       }
       // Check if already verified
       if (user.isEmailVerified) {
-        return res
-          .status(StatusCodes.BAD_REQUEST)
-          .json({ success: false, message: "Email is already verified." });
+        return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: "Email is already verified." });
       }
 
       // Update user's verification status
       user.isEmailVerified = true;
       user.EmailVerifiedAt = new Date();
       await user.save();
-      res
-        .status(StatusCodes.OK)
-        .json({ success: true, message: "Email verified successfully." });
+      res.status(StatusCodes.OK).json({ success: true, message: "Email verified successfully." });
     } catch (error) {
       console.error("Error verifying email:", error);
-      res
-        .status(StatusCodes.UNAUTHORIZED)
-        .json({ success: false, message: "Invalid or expired token." });
+      res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: "Invalid or expired token." });
     }
   },
 
@@ -180,9 +202,7 @@ export const authController = {
       const user = req.context.user;
 
       if (!user) {
-        return res
-          .status(StatusCodes.NOT_FOUND)
-          .json({ message: "User not found" });
+        return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
       }
 
       // Fetch all addresses associated with the user
@@ -191,22 +211,18 @@ export const authController = {
       return res.status(StatusCodes.OK).json({ user, address: userAddresses });
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ message: "Error fetching user profile" });
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error fetching user profile" });
     }
   },
 
   updateProfile: async (req: Request, res: Response) => {
     try {
       const { firstName, lastName, phoneNumber, dob, address, profileImage, oldPassword, newPassword } = req.body;
-      console.log("data in auth controller : " , address)
+      console.log("data in auth controller : ", address);
 
       const user = req.context.user;
       if (!user) {
-        return res
-          .status(StatusCodes.NOT_FOUND)
-          .json({ message: "User not found" });
+        return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
       }
 
       if (firstName) {
@@ -335,9 +351,7 @@ export const authController = {
       }
     } catch (error) {
       console.error("Error in forgotPassword:", error);
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ message: "Error processing request" });
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing request" });
     }
   },
 
@@ -366,14 +380,10 @@ export const authController = {
       user.resetPasswordToken = undefined;
       user.resetPasswordExpires = undefined;
       await user.save();
-      return res
-        .status(StatusCodes.OK)
-        .json({ message: "Password updated successfully" });
+      return res.status(StatusCodes.OK).json({ message: "Password updated successfully" });
     } catch (error) {
       console.error("Error in resetPassword:", error);
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ message: "Error processing request" });
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing request" });
     }
   },
 };
