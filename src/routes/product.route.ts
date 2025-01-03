@@ -22,7 +22,7 @@ export const product = (router: Router) => {
     productController.getProductById
   );
 
-  // router.delete("/:id" , productValidation.validateId , productController.deleteProduct)
+  router.delete("/:id" , productValidation.validateId , productController.deleteProduct)
 
   router.patch(
     "/:id",
@@ -32,4 +32,6 @@ export const product = (router: Router) => {
 
   // route for toggle block status
   router.patch("/block/:id", productController.toggleBlock);
+
+
 };

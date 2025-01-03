@@ -167,6 +167,14 @@ export const productService = {
     }
   },
 
+  deleteProduct: (id: string) => {
+    const product = Product.findByIdAndDelete(id);
+    if (!product) {
+      throw new Error("Category not found");
+    }
+    return product;
+  },
+
   toggleBlock: async (id: string, isBlocked: boolean) => {
     try {
       const updatedProduct = await Product.findByIdAndUpdate(id, { isBlocked }, { new: true });

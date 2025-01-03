@@ -161,6 +161,19 @@ export const productController = {
     }
   },
 
+  deleteProduct: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const result = await productService.deleteProduct(id);
+      res.status(StatusCodes.OK).json({ success: true, message: "Product deleted successfully", deletedProduct: result });
+    } catch (error) {
+      console.error("Delete Product Error:", error);
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ success: false, message: "Error deleting product" });
+    }
+  },
+
   toggleBlock: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
