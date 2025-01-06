@@ -6,6 +6,7 @@ export const product = (router: Router) => {
   // TODO: productValidation.addProduct
   // Create or update a draft product
   router.post("/", productController.createDraftProduct);
+  
   router.get(
     "/transform/:id",
     productValidation.validateId,
