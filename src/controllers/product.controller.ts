@@ -72,7 +72,7 @@ export const productController = {
     }
   },
 
-  getAllProduct: async (_req: Request, res: Response) => {
+  getAllProduct: async (req: Request, res: Response) => {
     try {
       const products = await productService.getAllProducts();
       return res.status(StatusCodes.OK).json({
@@ -91,16 +91,16 @@ export const productController = {
   getProductById: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const platform = req.query.platform as "amazon" | "ebay" | "website";
+      // const platform = req.query.platform as "amazon" | "ebay" | "website";
 
-      if (!platform) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          success: false,
-          message: "Platform query parameter is required",
-        });
-      }
+      // if (!platform) {
+      //   return res.status(StatusCodes.BAD_REQUEST).json({
+      //     success: false,
+      //     message: "Platform query parameter is required",
+      //   });
+      // }
 
-      const product = await productService.getProductById(id, platform);
+      const product = await productService.getProductById(id);
 
       if (!product) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -121,6 +121,7 @@ export const productController = {
       });
     }
   },
+
   transformAndSendProduct: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;

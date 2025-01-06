@@ -146,23 +146,26 @@ export const productService = {
   
   getAllProducts: async () => {
     try {
-      return await Product.find().populate("platformDetails.website.productCategory").populate("platformDetails.amazon.productCategory").populate("platformDetails.ebay.productCategory");
+      return await Product.find().populate("platformDetails.website.productCategory").populate("platformDetails.amazon.productCategory").populate("platformDetails.ebay.productCategory").populate("platformDetails.website.paymentPolicy").populate("platformDetails.amazon.paymentPolicy").populate("platformDetails.ebay.paymentPolicy");
     } catch (error) {
       console.error("Error fetching all products:", error);
       throw new Error("Failed to fetch products");
     }
   },
 
-  getProductById: async (id: string, platform: "amazon" | "ebay" | "website") => {
+
+  getProductById: async (id: string) => {
     try {
-      const product = await Product.findById(id);
-      if (!product) throw new Error("Product not found");
-      if (product.platformDetails[platform]) {
-        return product.platformDetails[platform];
-      }
-      throw new Error(`No details found for platform: ${platform}`);
+      const product = await Product.findById(id).populate("platformDetails.website.productCategory").populate("platformDetails.amazon.productCategory").populate("platformDetails.ebay.productCategory").populate("platformDetails.website.paymentPolicy").populate("platformDetails.amazon.paymentPolicy").populate("platformDetails.ebay.paymentPolicy");
+      if (!product) throw new Error("Product not foundf");
+      // if (product.platformDetails[platform]) {
+      //   return product.platformDetails[platform];
+      // }
+      // throw new Error(`No details found for platform: ${platform}`);
+      return product;
     } catch (error) {
-      console.error(`Error fetching product by ID for platform ${platform}:`, error);
+      // console.error(`Error fetching product by ID for platform ${platform}:`, error);
+      console.error(`Error fetching product`, error);
       throw new Error("Failed to fetch product");
     }
   },
