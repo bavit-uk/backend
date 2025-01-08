@@ -6,6 +6,12 @@ export const product = (router: Router) => {
   // TODO: productValidation.addProduct
   // Create or update a draft product
   router.post("/", productController.createDraftProduct);
+  
+  router.get(
+    "/transform/:id",
+    productValidation.validateId,
+    productController.transformAndSendProduct
+  );
 
   // Update a draft product by ID (subsequent steps)
   router.patch(
@@ -13,6 +19,7 @@ export const product = (router: Router) => {
     // productValidation.updateProduct,
     productController.updateDraftProduct
   );
+  
   router.get("/", productController.getAllProduct);
 
   router.get(
@@ -21,7 +28,7 @@ export const product = (router: Router) => {
     productController.getProductById
   );
 
-  // router.delete("/:id" , productValidation.validateId , productController.deleteProduct)
+  router.delete("/:id" , productValidation.validateId , productController.deleteProduct)
 
   router.patch(
     "/:id",
@@ -31,4 +38,6 @@ export const product = (router: Router) => {
 
   // route for toggle block status
   router.patch("/block/:id", productController.toggleBlock);
+
+
 };

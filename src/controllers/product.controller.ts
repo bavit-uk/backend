@@ -2,11 +2,14 @@ import { productService } from "@/services";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import mongoose from "mongoose";
+import { transformProductData } from "@/utils/transformProductData.util";
 
 export const productController = {
   createDraftProduct: async (req: Request, res: Response) => {
     try {
       const { stepData } = req.body;
+
+      // console.log("stepData in controller : " , stepData)
 
       if (!stepData || typeof stepData !== "object") {
         return res.status(StatusCodes.BAD_REQUEST).json({
@@ -33,9 +36,7 @@ export const productController = {
 
   updateDraftProduct: async (req: Request, res: Response) => {
     try {
-      const  productId  = req.params.id;
-      console.log("productId in controller",productId)
-
+      const productId = req.params.id;
       const { stepData } = req.body;
 
       if (!mongoose.isValidObjectId(productId)) {
@@ -52,10 +53,8 @@ export const productController = {
         });
       }
 
-      const updatedProduct = await productService.updateDraftProduct(
-        productId,
-        stepData
-      );
+      // Call the service to update the draft product with conditional updates based on discriminator
+      const updatedProduct = await productService.updateDraftProduct(productId, stepData);
 
       return res.status(StatusCodes.OK).json({
         success: true,
@@ -71,7 +70,7 @@ export const productController = {
     }
   },
 
-  getAllProduct: async (_req: Request, res: Response) => {
+  getAllProduct: async (req: Request, res: Response) => {
     try {
       const products = await productService.getAllProducts();
       return res.status(StatusCodes.OK).json({
@@ -90,16 +89,16 @@ export const productController = {
   getProductById: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const platform = req.query.platform as "amazon" | "ebay" | "website";
+      // const platform = req.query.platform as "amazon" | "ebay" | "website";
 
-      if (!platform) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          success: false,
-          message: "Platform query parameter is required",
-        });
-      }
+      // if (!platform) {
+      //   return res.status(StatusCodes.BAD_REQUEST).json({
+      //     success: false,
+      //     message: "Platform query parameter is required",
+      //   });
+      // }
 
-      const product = await productService.getProductById(id, platform);
+      const product = await productService.getProductById(id);
 
       if (!product) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -121,6 +120,45 @@ export const productController = {
     }
   },
 
+  transformAndSendProduct: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid product ID",
+        });
+      }
+
+      // Fetch product from DB
+      const product = await productService.getFullProductById(id);
+
+      if (!product) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Product not found",
+        });
+      }
+
+      // Transform product using utility
+      const transformedProduct = transformProductData(product);
+
+      // Send transformed product as response
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Product transformed successfully",
+        data: transformedProduct,
+      });
+    } catch (error: any) {
+      console.error("Error transforming product:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error.message || "Error transforming product",
+      });
+    }
+  },
+
   updateProductById: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -133,11 +171,7 @@ export const productController = {
         });
       }
 
-      const updatedProduct = await productService.updateProduct(
-        id,
-        platform,
-        data
-      );
+      const updatedProduct = await productService.updateProduct(id, platform, data);
 
       if (!updatedProduct) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -157,6 +191,19 @@ export const productController = {
         success: false,
         message: error.message || "Error updating product",
       });
+    }
+  },
+
+  deleteProduct: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const result = await productService.deleteProduct(id);
+      res
+        .status(StatusCodes.OK)
+        .json({ success: true, message: "Product deleted successfully", deletedProduct: result });
+    } catch (error) {
+      console.error("Delete Product Error:", error);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: "Error deleting product" });
     }
   },
 

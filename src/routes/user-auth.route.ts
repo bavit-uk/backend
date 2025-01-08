@@ -14,6 +14,8 @@ export const auth = (router: Router) => {
   // Route for Google social login
   router.post("/google-login", authController.googleLogin);
 
+  router.post("/facebook-login", authController.facebookLogin);
+
   // Route for forgot password
   router.post("/forgot-password", authValidation.forgotPassword, authController.forgotPassword);
 
