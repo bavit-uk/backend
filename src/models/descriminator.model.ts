@@ -1,37 +1,47 @@
-// import mongoose from "mongoose";
+import mongoose from "mongoose";
 
-// const options = { discriminatorKey: "kind" };
+const options = { discriminatorKey: "kind" };
 
-// const ProductSchema = new mongoose.Schema(
-//   { 
-//     name: {type: String , required: true} 
-//   }, options )
+const ProductSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    details: {
+      processor: { type: String, },
+      model: { type: String },
+      brand: { type: String },
+    },
+  },
+  options
+);
 
-// const Producttt = mongoose.model("Producttt", ProductSchema);
+const Producttt = mongoose.model("Producttt", ProductSchema);
 
+Producttt.discriminator(
+  "PC",
+  new mongoose.Schema(
+    {
+      techSpecf: {
+        cpu: { type: String },
+        gpu: { type: String },
+        ram: { type: String },
+      },
+    },
+    options
+  )
+);
 
-// Producttt.discriminator(
-//   "PC",
-//   new mongoose.Schema(
-//     {
-//       cpu: String,
-//       gpu: String,
-//       ram: String,
-//     },
-//     options
-//   )
-// );
+Producttt.discriminator(
+  "Projector",
+  new mongoose.Schema(
+    {
+      techSpecf: {
+        resolution: { type: String },
+        lumens: { type: String},
+        contrast: { type: String },
+      },
+    },
+    options
+  )
+);
 
-// Producttt.discriminator(
-//   "Projector",
-//   new mongoose.Schema(
-//     {
-//       resolution: String,
-//       lumens: String,
-//       contrast: String,
-//     },
-//     options
-//   )
-// );
-
-// export { Producttt };
+export { Producttt };

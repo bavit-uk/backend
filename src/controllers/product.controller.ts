@@ -9,6 +9,8 @@ export const productController = {
     try {
       const { stepData } = req.body;
 
+      // console.log("stepData in controller : " , stepData)
+
       if (!stepData || typeof stepData !== "object") {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,
@@ -35,8 +37,6 @@ export const productController = {
   updateDraftProduct: async (req: Request, res: Response) => {
     try {
       const productId = req.params.id;
-      console.log("productId in controller", productId);
-
       const { stepData } = req.body;
 
       if (!mongoose.isValidObjectId(productId)) {
@@ -53,10 +53,8 @@ export const productController = {
         });
       }
 
-      const updatedProduct = await productService.updateDraftProduct(
-        productId,
-        stepData
-      );
+      // Call the service to update the draft product with conditional updates based on discriminator
+      const updatedProduct = await productService.updateDraftProduct(productId, stepData);
 
       return res.status(StatusCodes.OK).json({
         success: true,
@@ -125,27 +123,27 @@ export const productController = {
   transformAndSendProduct: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-  
+
       if (!mongoose.isValidObjectId(id)) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,
           message: "Invalid product ID",
         });
       }
-  
+
       // Fetch product from DB
       const product = await productService.getFullProductById(id);
-  
+
       if (!product) {
         return res.status(StatusCodes.NOT_FOUND).json({
           success: false,
           message: "Product not found",
         });
       }
-  
+
       // Transform product using utility
       const transformedProduct = transformProductData(product);
-  
+
       // Send transformed product as response
       return res.status(StatusCodes.OK).json({
         success: true,
@@ -160,7 +158,6 @@ export const productController = {
       });
     }
   },
-  
 
   updateProductById: async (req: Request, res: Response) => {
     try {
@@ -174,11 +171,7 @@ export const productController = {
         });
       }
 
-      const updatedProduct = await productService.updateProduct(
-        id,
-        platform,
-        data
-      );
+      const updatedProduct = await productService.updateProduct(id, platform, data);
 
       if (!updatedProduct) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -205,12 +198,12 @@ export const productController = {
     try {
       const { id } = req.params;
       const result = await productService.deleteProduct(id);
-      res.status(StatusCodes.OK).json({ success: true, message: "Product deleted successfully", deletedProduct: result });
+      res
+        .status(StatusCodes.OK)
+        .json({ success: true, message: "Product deleted successfully", deletedProduct: result });
     } catch (error) {
       console.error("Delete Product Error:", error);
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ success: false, message: "Error deleting product" });
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: "Error deleting product" });
     }
   },
 
