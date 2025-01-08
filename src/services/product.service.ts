@@ -14,6 +14,8 @@ export const productService = {
         throw new Error("Invalid or missing 'productCategory'");
       }
 
+      console.log("stepData in service for draft create : ", stepData);
+
       const draftProduct: any = new Product({
         platformDetails: {
           amazon: {},
@@ -33,6 +35,7 @@ export const productService = {
 
       ["amazon", "ebay", "website"].forEach((platform) => {
         draftProduct.platformDetails[platform].productCategory = productCategory;
+        draftProduct.kind = stepData.kind;
       });
 
       await draftProduct.save();
@@ -43,7 +46,7 @@ export const productService = {
     }
   },
 
-  // Update an existing draft product
+  // Update an existing draft product when user move to next stepper
   updateDraftProduct: async (productId: string, stepData: any) => {
     try {
       // Fetch the existing draft product
@@ -51,20 +54,18 @@ export const productService = {
       if (!draftProduct) {
         throw new Error("Draft product not found");
       }
-      console.log("stepDataaa : ", stepData);
+      console.log("stepDataaa in updateDraftProduct service : ", stepData);
 
-     
-        if (stepData.status) {
-          console.log("asdadadads");
-          console.log("draftProduct ka status: ", draftProduct.status);
-          console.log("draftProduct ka templare: ", draftProduct.isTemplate);
-          draftProduct.status = stepData.status; // Corrected to assignment
-          draftProduct.isTemplate = stepData.isTemplate;
-          await draftProduct.save(); // Assuming save is an async function
-          return draftProduct;
-        }
-      
-      
+      // this code will run only on final call (final stepper)
+      if (stepData.status) {
+        // console.log("asdadadads");
+        console.log("draftProduct ka status: ", draftProduct.status);
+        console.log("draftProduct ka templare: ", draftProduct.isTemplate);
+        draftProduct.status = stepData.status; // Corrected to assignment
+        draftProduct.isTemplate = stepData.isTemplate;
+        await draftProduct.save(); // Assuming save is an async function
+        return draftProduct;
+      }
 
       // Helper function to process step data recursively
       const processStepData = (
@@ -73,6 +74,8 @@ export const productService = {
         keyPrefix: string = "",
         inheritedFlags: { isAmz?: boolean; isEbay?: boolean; isWeb?: boolean } = {}
       ) => {
+        console.log("Before processing platformDetails:", platformDetails);
+
         Object.keys(data).forEach((key) => {
           const currentKey = keyPrefix ? `${keyPrefix}.${key}` : key; // Maintain context for nested keys
           const entry = data[key];
@@ -110,25 +113,75 @@ export const productService = {
               if (isWeb && subField) platformDetails.website[fieldRoot][subField] = value;
             } else {
               // Handle flat fields
+              console.log("asdasdasdasdasdasd")
+              // console.log(platformDetails.amazon[currentKey] = value)
+              console.log("is amz , is ebay , ie web : " , isAmz , isEbay , isWeb)
               if (isAmz) platformDetails.amazon[currentKey] = value;
               if (isEbay) platformDetails.ebay[currentKey] = value;
               if (isWeb) platformDetails.website[currentKey] = value;
             }
           }
         });
+        console.log("After processing platformDetails:", platformDetails);
       };
 
-      // Process step data
-      processStepData(stepData, draftProduct.platformDetails);
+      // Process technical details based on the discriminator (Laptops or others)
+      if (draftProduct.kind === "Laptops" && stepData.kind) {
+        // const { technicalInfo } = stepData;
+        if (stepData.kind) {
+          // Process technical details for Laptops
+          processStepData(stepData, draftProduct.platformDetails);
+        }
+      } else if (draftProduct.kind === "All In One PC" && stepData.kind) {
+        // const { technicalInfo } = stepData;
+        if (stepData.kind) {
+          // Process technical details for All In One PC
+          processStepData(stepData, draftProduct.platformDetails);
+        }
+      } else if (draftProduct.kind === "Projectors" && stepData.kind) {
+        // const { technicalInfo } = stepData;
+        if (stepData.kind) {
+          // Process technical details for Projectors
+          processStepData(stepData, draftProduct.platformDetails);
+        }
+      } else if (draftProduct.kind === "Monitors" && stepData.kind) {
+        // const { technicalInfo } = stepData;
+        if (stepData.kind) {
+          // Process technical details for Monitors
+          processStepData(stepData, draftProduct.platformDetails);
+        }
+      } else if (draftProduct.kind === "Gaming PC" && stepData.kind) {
+        // const { technicalInfo } = stepData;
+        if (stepData.kind) {
+          // Process technical details for Gaming PC
+          processStepData(stepData, draftProduct.platformDetails);
+        }
+      } else if (draftProduct.kind === "Network Equipments" && stepData.kind) {
+        // const { technicalInfo } = stepData;
+        if (stepData.kind) {
+          // Process technical details for Network Equipments
+          processStepData(stepData, draftProduct.platformDetails);
+        }
+      } else {
+        // Ensure platformDetails is initialized for all platforms
+        draftProduct.platformDetails = draftProduct.platformDetails || { amazon: {}, ebay: {}, website: {} };
+
+        // For all other product kinds, process the data normally
+        console.log("else workingggg .....");
+        processStepData(stepData, draftProduct.platformDetails);
+        console.log("draftProduct.platformDetails : " , draftProduct.platformDetails)
+      }
 
       // Save the updated draft product
       await draftProduct.save();
+      console.log("Draft product saved:", draftProduct);
       return draftProduct;
     } catch (error) {
       console.error("Error updating draft product:", error);
       throw new Error("Failed to update draft product");
     }
   },
+
   getFullProductById: async (id: string) => {
     try {
       const product = await Product.findById(id)
@@ -143,20 +196,31 @@ export const productService = {
       throw new Error("Failed to fetch full product");
     }
   },
-  
+
   getAllProducts: async () => {
     try {
-      return await Product.find().populate("platformDetails.website.productCategory").populate("platformDetails.amazon.productCategory").populate("platformDetails.ebay.productCategory").populate("platformDetails.website.paymentPolicy").populate("platformDetails.amazon.paymentPolicy").populate("platformDetails.ebay.paymentPolicy");
+      return await Product.find()
+        .populate("platformDetails.website.productCategory")
+        .populate("platformDetails.amazon.productCategory")
+        .populate("platformDetails.ebay.productCategory")
+        .populate("platformDetails.website.paymentPolicy")
+        .populate("platformDetails.amazon.paymentPolicy")
+        .populate("platformDetails.ebay.paymentPolicy");
     } catch (error) {
       console.error("Error fetching all products:", error);
       throw new Error("Failed to fetch products");
     }
   },
 
-
   getProductById: async (id: string) => {
     try {
-      const product = await Product.findById(id).populate("platformDetails.website.productCategory").populate("platformDetails.amazon.productCategory").populate("platformDetails.ebay.productCategory").populate("platformDetails.website.paymentPolicy").populate("platformDetails.amazon.paymentPolicy").populate("platformDetails.ebay.paymentPolicy");
+      const product = await Product.findById(id)
+        .populate("platformDetails.website.productCategory")
+        .populate("platformDetails.amazon.productCategory")
+        .populate("platformDetails.ebay.productCategory")
+        .populate("platformDetails.website.paymentPolicy")
+        .populate("platformDetails.amazon.paymentPolicy")
+        .populate("platformDetails.ebay.paymentPolicy");
       if (!product) throw new Error("Product not foundf");
       // if (product.platformDetails[platform]) {
       //   return product.platformDetails[platform];

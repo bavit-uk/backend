@@ -17,9 +17,14 @@ import { me } from "./me.route";
 import { orderRoutes } from "./order.route";
 import { cartRoutes } from "./cart.route";
 import { paymentPolicy } from "./payment-policy.route";
+// import {descriminator} from "./descriminator.route"
+import { descriminatorRouter } from "./descriminator.route";
+
 
 // Create a new router to handle all routes
 const router: Router = Router();
+
+router.use("/descriminator", descriminatorRouter);
 
 // Define all routes
 const routes: {
@@ -40,6 +45,7 @@ const routes: {
   orderRoutes,
   cartRoutes,
   paymentPolicy,
+  // descriminator,
 };
 
 // Loop through all routes and pass the router to each route
