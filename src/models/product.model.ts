@@ -211,7 +211,7 @@ const productSchema = new Schema(
 // Base Product Model
 const Product = model<IProduct>("Product", productSchema);
 
-// descriminator for laptops
+// discriminator for laptops
 Product.discriminator(
   "Laptops",
   new mongoose.Schema(
@@ -427,7 +427,7 @@ Product.discriminator(
   )
 );
 
-// descriminator for projectors
+// discriminator for projectors
 Product.discriminator(
   "Projectors",
   new mongoose.Schema(
@@ -508,7 +508,7 @@ Product.discriminator(
   )
 );
 
-// descriminator for Monitors
+// discriminator for Monitors
 Product.discriminator(
   "Monitors",
   new mongoose.Schema(
