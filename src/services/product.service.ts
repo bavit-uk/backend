@@ -25,16 +25,17 @@ export const productService = {
         status: "draft",
         isBlocked: false,
       });
+      console.log("draftProduct : ", draftProduct);
 
       Object.entries(stepData).forEach(([key, value]: [string, any]) => {
         const { value: fieldValue, isAmz, isEbay, isWeb } = value || {};
-        if (isAmz) draftProduct.platformDetails.amazon[key] = fieldValue;
-        if (isEbay) draftProduct.platformDetails.ebay[key] = fieldValue;
-        if (isWeb) draftProduct.platformDetails.website[key] = fieldValue;
+        if (isAmz) draftProduct.platformDetails.amazon.productInfo[key] = fieldValue;
+        if (isEbay) draftProduct.platformDetails.ebay.productInfo[key] = fieldValue;
+        if (isWeb) draftProduct.platformDetails.website.productInfo[key] = fieldValue;
       });
 
       ["amazon", "ebay", "website"].forEach((platform) => {
-        draftProduct.platformDetails[platform].productCategory = productCategory;
+        draftProduct.platformDetails[platform].productInfo.productCategory = productCategory;
         draftProduct.kind = stepData.kind;
       });
 
@@ -74,7 +75,7 @@ export const productService = {
         keyPrefix: string = "",
         inheritedFlags: { isAmz?: boolean; isEbay?: boolean; isWeb?: boolean } = {}
       ) => {
-        console.log("Before processing platformDetails:", platformDetails);
+        // console.log("Before processing platformDetails:", platformDetails);
 
         Object.keys(data).forEach((key) => {
           const currentKey = keyPrefix ? `${keyPrefix}.${key}` : key; // Maintain context for nested keys
@@ -95,8 +96,7 @@ export const productService = {
             console.log("current key : ", currentKey);
             console.log("value : ", value);
             console.log("platforms : ", isEbay, isAmz, isWeb);
-            console.log("  ");
-
+            // console.log("  ");
             // Handle nested fields explicitly
             const fieldSegments = currentKey.split(".");
             const fieldRoot = fieldSegments[0]; // e.g., "packageWeight"
@@ -104,77 +104,52 @@ export const productService = {
             if (fieldRoot === "packageWeight" || fieldRoot === "packageDimensions") {
               // Handle nested objects like packageWeight
               const subField = fieldSegments.slice(1).join("."); // e.g., "weightKg" or "dimensionLength"
-              if (isAmz) platformDetails.amazon[fieldRoot] = platformDetails.amazon[fieldRoot] || {};
-              if (isEbay) platformDetails.ebay[fieldRoot] = platformDetails.ebay[fieldRoot] || {};
-              if (isWeb) platformDetails.website[fieldRoot] = platformDetails.website[fieldRoot] || {};
+              if (isAmz)
+                platformDetails.amazon.prodDelivery[fieldRoot] = platformDetails.amazon.prodDelivery[fieldRoot] || {};
+              if (isEbay)
+                platformDetails.ebay.prodDelivery[fieldRoot] = platformDetails.ebay.prodDelivery[fieldRoot] || {};
+              if (isWeb)
+                platformDetails.website.prodDelivery[fieldRoot] = platformDetails.website.prodDelivery[fieldRoot] || {};
 
-              if (isAmz && subField) platformDetails.amazon[fieldRoot][subField] = value;
-              if (isEbay && subField) platformDetails.ebay[fieldRoot][subField] = value;
-              if (isWeb && subField) platformDetails.website[fieldRoot][subField] = value;
+              if (isAmz && subField) platformDetails.amazon.prodDelivery[fieldRoot][subField] = value;
+              if (isEbay && subField) platformDetails.ebay.prodDelivery[fieldRoot][subField] = value;
+              if (isWeb && subField) platformDetails.website.prodDelivery[fieldRoot][subField] = value;
             } else {
-              // Handle flat fields
-              console.log("asdasdasdasdasdasd")
-              // console.log(platformDetails.amazon[currentKey] = value)
-              console.log("is amz , is ebay , ie web : " , isAmz , isEbay , isWeb)
-              if (isAmz) platformDetails.amazon[currentKey] = value;
-              if (isEbay) platformDetails.ebay[currentKey] = value;
-              if (isWeb) platformDetails.website[currentKey] = value;
+              const step = stepData.step;
+              if (step === "prodTechInfo") {
+                if (isAmz) platformDetails.amazon.prodTechInfo[currentKey] = value;
+                if (isEbay) platformDetails.ebay.prodTechInfo[currentKey] = value;
+                if (isWeb) platformDetails.website.prodTechInfo[currentKey] = value;
+              } else if (step === "prodPricing") {
+                if (isAmz) platformDetails.amazon.prodPricing[currentKey] = value;
+                if (isEbay) platformDetails.ebay.prodPricing[currentKey] = value;
+                if (isWeb) platformDetails.website.prodPricing[currentKey] = value;
+              } else if (step === "prodDelivery") {
+                if (isAmz) platformDetails.amazon.prodDelivery[currentKey] = value;
+                if (isEbay) platformDetails.ebay.prodDelivery[currentKey] = value;
+                if (isWeb) platformDetails.website.prodDelivery[currentKey] = value;
+              } else {
+                if (isAmz) platformDetails.amazon.prodSeo[currentKey] = value;
+                if (isEbay) platformDetails.ebay.prodSeo[currentKey] = value;
+                if (isWeb) platformDetails.website.prodSeo[currentKey] = value;
+              }
             }
           }
         });
-        console.log("After processing platformDetails:", platformDetails);
+        // console.log("After processing platformDetails:", platformDetails);
       };
 
-      // Process technical details based on the discriminator (Laptops or others)
-      if (draftProduct.kind === "Laptops" && stepData.kind) {
-        // const { technicalInfo } = stepData;
-        if (stepData.kind) {
-          // Process technical details for Laptops
-          processStepData(stepData, draftProduct.platformDetails);
-        }
-      } else if (draftProduct.kind === "All In One PC" && stepData.kind) {
-        // const { technicalInfo } = stepData;
-        if (stepData.kind) {
-          // Process technical details for All In One PC
-          processStepData(stepData, draftProduct.platformDetails);
-        }
-      } else if (draftProduct.kind === "Projectors" && stepData.kind) {
-        // const { technicalInfo } = stepData;
-        if (stepData.kind) {
-          // Process technical details for Projectors
-          processStepData(stepData, draftProduct.platformDetails);
-        }
-      } else if (draftProduct.kind === "Monitors" && stepData.kind) {
-        // const { technicalInfo } = stepData;
-        if (stepData.kind) {
-          // Process technical details for Monitors
-          processStepData(stepData, draftProduct.platformDetails);
-        }
-      } else if (draftProduct.kind === "Gaming PC" && stepData.kind) {
-        // const { technicalInfo } = stepData;
-        if (stepData.kind) {
-          // Process technical details for Gaming PC
-          processStepData(stepData, draftProduct.platformDetails);
-        }
-      } else if (draftProduct.kind === "Network Equipments" && stepData.kind) {
-        // const { technicalInfo } = stepData;
-        if (stepData.kind) {
-          // Process technical details for Network Equipments
-          processStepData(stepData, draftProduct.platformDetails);
-        }
-      } else {
-        // Ensure platformDetails is initialized for all platforms
-        draftProduct.platformDetails = draftProduct.platformDetails || { amazon: {}, ebay: {}, website: {} };
-
-        // For all other product kinds, process the data normally
-        console.log("else workingggg .....");
-        processStepData(stepData, draftProduct.platformDetails);
-        console.log("draftProduct.platformDetails : " , draftProduct.platformDetails)
-      }
+      // // Process technical details based on the discriminator (Laptops or others)
+      // if (stepData.kind) {
+      //   // Process technical details for Laptops
+      //   processStepData(stepData, draftProduct.platformDetails);
+      // } else {
+      processStepData(stepData, draftProduct.platformDetails);
+      // }
 
       // Save the updated draft product
       await draftProduct.save();
-      console.log("Draft product saved:", draftProduct);
+      // console.log("Draft product saved:", draftProduct);
       return draftProduct;
     } catch (error) {
       console.error("Error updating draft product:", error);
