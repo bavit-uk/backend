@@ -1,3 +1,5 @@
+import { productCategory } from "@/routes/product-category.route";
+
 export function transformProductData(data: any) {
   // Initialize the result object
   const result: any = {
@@ -21,6 +23,7 @@ export function transformProductData(data: any) {
   // List of all fields from the schema
   const fieldsToTransform = [
     "title",
+    "productCategory",
     "brand",
     "screenSize",
     "productCondition",
