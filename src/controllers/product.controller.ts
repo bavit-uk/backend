@@ -205,13 +205,11 @@ export const productController = {
     try {
       const { id } = req.params;
       const result = await productService.deleteProduct(id);
-      res
-        .status(StatusCodes.OK)
-        .json({
-          success: true,
-          message: "Product deleted successfully",
-          deletedProduct: result,
-        });
+      res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Product deleted successfully",
+        deletedProduct: result,
+      });
     } catch (error) {
       console.error("Delete Product Error:", error);
       res
