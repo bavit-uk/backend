@@ -22,16 +22,16 @@ const prodInfoSchema = {
 
 const prodPricingSchema = {
   // prod pricing details
-  quantity: { type: String, default: "1" },
-  price: { type: String, default: "" },
-  condition: { type: String, default: "" },
-  conditionDescription: { type: String, default: "" },
-  pricingFormat: { type: String, default: "" },
-  vat: { type: String, default: "" },
+  quantity: { type: String },
+  price: { type: String },
+  condition: { type: String },
+  conditionDescription: { type: String },
+  pricingFormat: { type: String },
+  vat: { type: String },
   paymentPolicy: { type: Schema.Types.ObjectId, ref: "PaymentPolicy" },
-  buy2andSave: { type: String, default: "" },
-  buy3andSave: { type: String, default: "" },
-  buy4andSave: { type: String, default: "" },
+  buy2andSave: { type: String },
+  buy3andSave: { type: String },
+  buy4andSave: { type: String },
 };
 
 const prodDeliverySchema = {
@@ -134,8 +134,8 @@ Product.discriminator(
           prodTechInfo: {
             processor: { type: String },
             model: { type: String },
-            productCondition: { type: String },
-            nonNewConditionDetails: { type: String },
+            // productCondition: { type: String },
+            // nonNewConditionDetails: { type: String },
             operatingSystem: { type: String },
             storageType: { type: String },
             features: { type: String },
@@ -167,8 +167,8 @@ Product.discriminator(
           prodTechInfo: {
             processor: { type: String },
             model: { type: String },
-            productCondition: { type: String },
-            nonNewConditionDetails: { type: String },
+            // productCondition: { type: String },
+            // nonNewConditionDetails: { type: String },
             operatingSystem: { type: String },
             storageType: { type: String },
             features: { type: String },
@@ -200,8 +200,8 @@ Product.discriminator(
           prodTechInfo: {
             processor: { type: String },
             model: { type: String },
-            productCondition: { type: String },
-            nonNewConditionDetails: { type: String },
+            // productCondition: { type: String },
+            // nonNewConditionDetails: { type: String },
             operatingSystem: { type: String },
             storageType: { type: String },
             features: { type: String },
