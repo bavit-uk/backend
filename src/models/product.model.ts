@@ -22,16 +22,16 @@ const prodInfoSchema = {
 
 const prodPricingSchema = {
   // prod pricing details
-  quantity: { type: String,  },
-  price: { type: String,},
-  condition: { type: String,  },
-  conditionDescription: { type: String,  },
-  pricingFormat: { type: String,  },
-  vat: { type: String, },
+  quantity: { type: String },
+  price: { type: String },
+  condition: { type: String },
+  conditionDescription: { type: String },
+  pricingFormat: { type: String },
+  vat: { type: String },
   paymentPolicy: { type: Schema.Types.ObjectId, ref: "PaymentPolicy" },
-  buy2andSave: { type: String, },
-  buy3andSave: { type: String,  },
-  buy4andSave: { type: String,  },
+  buy2andSave: { type: String },
+  buy3andSave: { type: String },
+  buy4andSave: { type: String },
 };
 
 const prodDeliverySchema = {
