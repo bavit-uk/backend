@@ -175,12 +175,12 @@ export const productService = {
   getAllProducts: async () => {
     try {
       return await Product.find()
-        .populate("platformDetails.website.productCategory")
-        .populate("platformDetails.amazon.productCategory")
-        .populate("platformDetails.ebay.productCategory")
-        .populate("platformDetails.website.paymentPolicy")
-        .populate("platformDetails.amazon.paymentPolicy")
-        .populate("platformDetails.ebay.paymentPolicy");
+        .populate("platformDetails.website.productInfo.productCategory")
+        .populate("platformDetails.amazon.productInfo.productCategory")
+        .populate("platformDetails.ebay.productInfo.productCategory")
+        .populate("platformDetails.website.prodPricing.paymentPolicy")
+        .populate("platformDetails.amazon.prodPricing.paymentPolicy")
+        .populate("platformDetails.ebay.prodPricing.paymentPolicy");
     } catch (error) {
       console.error("Error fetching all products:", error);
       throw new Error("Failed to fetch products");
@@ -190,12 +190,12 @@ export const productService = {
   getProductById: async (id: string) => {
     try {
       const product = await Product.findById(id)
-        .populate("platformDetails.website.productCategory")
-        .populate("platformDetails.amazon.productCategory")
-        .populate("platformDetails.ebay.productCategory")
-        .populate("platformDetails.website.paymentPolicy")
-        .populate("platformDetails.amazon.paymentPolicy")
-        .populate("platformDetails.ebay.paymentPolicy");
+        .populate("platformDetails.website.productInfo.productCategory")
+        .populate("platformDetails.amazon.productInfo.productCategory")
+        .populate("platformDetails.ebay.productInfo.productCategory")
+        .populate("platformDetails.website.prodPricing.paymentPolicy")
+        .populate("platformDetails.amazon.prodPricing.paymentPolicy")
+        .populate("platformDetails.ebay.prodPricing.paymentPolicy");
       if (!product) throw new Error("Product not foundf");
       // if (product.platformDetails[platform]) {
       //   return product.platformDetails[platform];
