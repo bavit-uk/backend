@@ -1,139 +1,150 @@
-import { productCategory } from "@/routes/product-category.route";
-
 export function transformProductData(data: any) {
-  // Initialize the result object
   const result: any = {
     stepData: {
-      productCategory:
-        data.platformDetails.amazon.productCategory?.$oid || null,
+      productInfo: {},
+      prodTechInfo: {},
+      prodPricing: {},
+      prodDelivery: {},
+      prodSeo: {},
     },
   };
 
   // Helper function to create the common structure
-  const createField = (name: string, value: any) => {
-    return {
-      name: name,
-      value: value,
-      isEbay: !!data.platformDetails.ebay?.[name],
-      isAmz: !!data.platformDetails.amazon?.[name],
-      isWeb: !!data.platformDetails.website?.[name],
-    };
-  };
-
-  // List of all fields from the schema
-  const fieldsToTransform = [
-    "title",
-    "productCategory",
-    "brand",
-    "screenSize",
-    "productCondition",
-    "nonNewConditionDetails",
-    "images",
-    "processor",
-    "model",
-    "operatingSystem",
-    "storageType",
-    "features",
-    "ssdCapacity",
-    "gpu",
-    "maxRamCapacity",
-    "unitQuantity",
-    "unitType",
-    "productLine",
-    "mpn",
-    "type",
-    "ramSize",
-    "formFactor",
-    "ean",
-    "manufacturerWarranty",
-    "regionOfManufacture",
-    "interface",
-    "networkConnectivity",
-    "networkManagementType",
-    "networkType",
-    "processorManufacturer",
-    "numberOfProcessors",
-    "numberOfVANPorts",
-    "processorType",
-    "raidLevel",
-    "memoryType",
-    "processorSpeed",
-    "deviceConnectivity",
-    "connectorType",
-    "supportedWirelessProtocol",
-    "releaseYear",
-    "hardDriveCapacity",
-    "color",
-    "maxResolution",
-    "mostSuitableFor",
-    "graphicsProcessingType",
-    "motherboardModel",
-    "series",
-    "customBundle",
-    "aspectRatio",
-    "energyEfficiencyRating",
-    "videoInputs",
-    "refreshRate",
-    "responseType",
-    "brightness",
-    "contrastRatio",
-    "ecRange",
-    "numberOfLANPorts",
-    "maximumWirelessData",
-    "maximumLANDataRate",
-    "ports",
-    "toFit",
-    "memory",
-    "operatingSystemEdition",
-    "productType",
-    "All In One PC",
-    "connectivity",
-    "height",
-    "length",
-    "weight",
-    "width",
-    "condition",
-    "conditionDescription",
-    "productDescription",
-    "pricingFormat",
-    "vat",
-    "paymentPolicy",
-    "buy2andSave",
-    "buy3andSave",
-    "buy4andSave",
-    "shipping",
-    "seoTags",
-    "relevantTags",
-    "suggestedTags",
-    "postagePolicy",
-    "packageWeight",
-    "packageDimensions",
-    "irregularPackage",
-    "fulfillmentMethod",
-    "identifier",
-    "vatPercentage",
-    "salesTaxPercentage",
-    "applyTaxAtCheckout",
-    "taxConfirmation",
-  ];
-
-  // Transform each field dynamically
-  fieldsToTransform.forEach((field) => {
-    const value =
-      data.platformDetails.amazon?.[field] ||
-      data.platformDetails.ebay?.[field] ||
-      data.platformDetails.website?.[field] ||
-      null; // Default to null if field is not present
-
-    if (value !== null) {
-      result.stepData[field] = createField(field, value);
-    }
+  const createField = (name: string, value: any, platforms: any) => ({
+    name,
+    value,
+    isAmz: platforms.amazon?.hasOwnProperty(name) || false,
+    isEbay: platforms.ebay?.hasOwnProperty(name) || false,
+    isWeb: platforms.website?.hasOwnProperty(name) || false,
   });
 
-  // Remove null fields from the productCategory as well
-  if (!result.stepData.productCategory) {
-    delete result.stepData.productCategory;
-  }
+  // Generic transformation logic
+  const transformFields = (
+    fields: string[],
+    sectionKey: string,
+    target: any
+  ) => {
+    fields.forEach((field) => {
+      const platforms = {
+        amazon: data.platformDetails.amazon?.[sectionKey],
+        ebay: data.platformDetails.ebay?.[sectionKey],
+        website: data.platformDetails.website?.[sectionKey],
+      };
+
+      const value =
+        platforms.amazon?.[field] ||
+        platforms.ebay?.[field] ||
+        platforms.website?.[field] ||
+        null;
+
+      // Add field only if it has a value in at least one platform
+      if (value !== null) {
+        target[field] = createField(field, value, platforms);
+      }
+    });
+  };
+
+  // Define the field groups for each section
+  const fieldGroups = {
+    productInfo: [
+      "brand",
+      "title",
+      "productDescription",
+      "productCategory",
+      "images",
+    ],
+    prodTechInfo: [
+      "processor",
+      "model",
+      "operatingSystem",
+      "storageType",
+      "features",
+      "ssdCapacity",
+      "gpu",
+      "type",
+      "releaseYear",
+      "hardDriveCapacity",
+      "color",
+      "maxResolution",
+      "mostSuitableFor",
+      "screenSize",
+      "graphicsProcessingType",
+      "connectivity",
+      "motherboardModel",
+      "series",
+      "operatingSystemEdition",
+      "memory",
+      "maxRamCapacity",
+      "unitType",
+      "unitQuantity",
+      "mpn",
+      "processorSpeed",
+      "ramSize",
+      "formFactor",
+      "ean",
+      "productType",
+      "manufacturerWarranty",
+      "regionOfManufacture",
+      "height",
+      "length",
+      "width",
+      "weight",
+      "nonNewConditionDetails",
+      "productCondition",
+      "numberOfLANPorts",
+      "maximumWirelessData",
+      "maximumLANDataRate",
+      "ports",
+      "toFit",
+      "aspectRatio",
+      "energyEfficiencyRating",
+      "videoInputs",
+      "refreshRate",
+      "responseType",
+      "brightness",
+      "contrastRatio",
+      "ecRange",
+      "productLine",
+      "customBundle",
+      "interface",
+      "networkConnectivity",
+      "networkManagementType",
+      "networkType",
+      "processorManufacturer",
+      "numberOfProcessors",
+      "numberOfVANPorts",
+      "processorType",
+      "raidLevel",
+      "memoryType",
+      "deviceConnectivity",
+      "connectorType",
+      "supportedWirelessProtocol",
+    ],
+    prodPricing: [
+      "quantity",
+      "price",
+      "condition",
+      "conditionDescription",
+      "pricingFormat",
+      "vat",
+      "paymentPolicy",
+      "buy2andSave",
+      "buy3andSave",
+      "buy4andSave",
+    ],
+    prodDelivery: [
+      "postagePolicy",
+      "packageWeight",
+      "packageDimensions",
+      "irregularPackage",
+    ],
+    prodSeo: ["seoTags", "relevantTags", "suggestedTags"],
+  };
+
+  // Transform each section
+  Object.entries(fieldGroups).forEach(([sectionKey, fields]) => {
+    transformFields(fields, sectionKey, result.stepData[sectionKey]);
+  });
 
   return result;
 }
