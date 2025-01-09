@@ -54,7 +54,10 @@ export const productController = {
       }
 
       // Call the service to update the draft product with conditional updates based on discriminator
-      const updatedProduct = await productService.updateDraftProduct(productId, stepData);
+      const updatedProduct = await productService.updateDraftProduct(
+        productId,
+        stepData
+      );
 
       return res.status(StatusCodes.OK).json({
         success: true,
@@ -124,6 +127,7 @@ export const productController = {
     try {
       const { id } = req.params;
 
+      // Validate product ID
       if (!mongoose.isValidObjectId(id)) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,
@@ -141,7 +145,7 @@ export const productController = {
         });
       }
 
-      // Transform product using utility
+      // Transform product data using utility
       const transformedProduct = transformProductData(product);
 
       // Send transformed product as response
@@ -158,7 +162,6 @@ export const productController = {
       });
     }
   },
-
   updateProductById: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -171,7 +174,11 @@ export const productController = {
         });
       }
 
-      const updatedProduct = await productService.updateProduct(id, platform, data);
+      const updatedProduct = await productService.updateProduct(
+        id,
+        platform,
+        data
+      );
 
       if (!updatedProduct) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -200,10 +207,16 @@ export const productController = {
       const result = await productService.deleteProduct(id);
       res
         .status(StatusCodes.OK)
-        .json({ success: true, message: "Product deleted successfully", deletedProduct: result });
+        .json({
+          success: true,
+          message: "Product deleted successfully",
+          deletedProduct: result,
+        });
     } catch (error) {
       console.error("Delete Product Error:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: "Error deleting product" });
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ success: false, message: "Error deleting product" });
     }
   },
 
