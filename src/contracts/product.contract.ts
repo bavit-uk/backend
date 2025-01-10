@@ -113,19 +113,12 @@ interface IEbayPlatformDetails {
 
 // Platform-specific product details for Website
 interface IWebsitePlatformDetails {
-  productInfo?: {
-    productCategory?: {
-      name?: string;
-    };
-    brand?: string;
-    title?: string;
-    model?: string;
-  };
   title: string;
   brand: string;
   productCategory: Types.ObjectId;
   images: string[];
   productDescription: string;
+
   quantity: string;
   price: string;
   condition: string;
@@ -151,6 +144,31 @@ interface IWebsitePlatformDetails {
   seoTags: string[];
   relevantTags: string[];
   suggestedTags: string[];
+  prodTechInfo?: {
+    processor?: string;
+
+    model?: string;
+
+    ssdCapacity?: string;
+
+    hardDriveCapacity?: string;
+
+    manufacturerWarranty?: string;
+
+    type?: string;
+
+    memory?: string;
+
+    screenSize?: string;
+
+    maxResolution?: string;
+
+    gpu?: string;
+
+    networkType?: string;
+
+    processorType?: string;
+  };
 }
 
 interface IPlatformProductInfo {
@@ -170,7 +188,7 @@ interface IProduct {
     amazon?: IAmazonPlatformDetails; // Amazon-specific details
     ebay?: IEbayPlatformDetails; // eBay-specific details
     website?: IWebsitePlatformDetails;
-     // Website-specific details
+    // Website-specific details
   };
   status: "draft" | "published"; // Product status
   isTemplate: boolean;

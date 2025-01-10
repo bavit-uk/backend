@@ -168,33 +168,62 @@ export const productController = {
       const templates = await productService.getProductsByCondition({
         isTemplate: true,
       });
-
+  
       if (!templates.length) {
         return res.status(StatusCodes.NOT_FOUND).json({
           success: false,
           message: "No templates found",
         });
       }
-
+  
       const templateList = templates.map((template, index) => {
         const productId = template._id;
         const kind = template.kind || "UNKNOWN";
-
-        const productCategory =
-          template.platformDetails.website?.productInfo?.productCategory
-            ?.name || "UNKNOWN";
-        const brand =
-          template.platformDetails.website?.productInfo?.brand || "UNKNOWN";
-        const model =
-          template.platformDetails.website?.productInfo?.model || "UNKNOWN";
-
+  
+        // Determine fields based on category (kind)
+        let fields: string[] = [];
+        const prodInfo: any = template.platformDetails.website?.prodTechInfo|| {};
+  
+        switch (kind.toLowerCase()) {
+          case "laptops":
+            fields = [
+              prodInfo.processor,
+              prodInfo.model,
+              prodInfo.ssdCapacity,
+              prodInfo.hardDriveCapacity,
+              prodInfo.manufacturerWarranty,
+            ];
+            break;
+          case "all in one pc":
+            fields = [prodInfo.type, prodInfo.memory];
+            break;
+          case "projectors":
+            fields = [prodInfo.type, prodInfo.model];
+            break;
+          case "monitors":
+            fields = [prodInfo.screenSize, prodInfo.maxResolution];
+            break;
+          case "gaming pc":
+            fields = [prodInfo.processor, prodInfo.gpu];
+            break;
+          case "network equipments":
+            fields = [prodInfo.networkType, prodInfo.processorType];
+            break;
+          default:
+            fields = ["UNKNOWN"];
+            break;
+        }
+  
+        // Filter out undefined/null fields and join to form the name
+        const fieldString = fields.filter(Boolean).join("-") || "UNKNOWN";
+  
         const srno = (index + 1).toString().padStart(2, "0");
-
-        const templateName = `${kind.toUpperCase()}-${productCategory}-${brand}-${model}-${srno}`;
-
+  
+        const templateName = `${kind.toUpperCase()}-${fieldString}-${srno}`;
+  
         return { templateName, productId };
       });
-
+  
       return res.status(StatusCodes.OK).json({
         success: true,
         message: "Templates fetched successfully",
@@ -208,6 +237,8 @@ export const productController = {
       });
     }
   },
+  
+
 
   //Selected Template Product
   transformAndSendTemplateProduct: async (req: Request, res: Response) => {
