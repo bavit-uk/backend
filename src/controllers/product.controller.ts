@@ -193,11 +193,16 @@ export const productController = {
               prodInfo.ssdCapacity,
               prodInfo.hardDriveCapacity,
               prodInfo.manufacturerWarranty,
-              prodInfo.operatingSystem
+              prodInfo.operatingSystem,
             ];
             break;
           case "all in one pc":
-            fields = [prodInfo.type, prodInfo.memory,prodInfo.processor,prodInfo.operatingSystem ];
+            fields = [
+              prodInfo.type,
+              prodInfo.memory,
+              prodInfo.processor,
+              prodInfo.operatingSystem,
+            ];
             break;
           case "projectors":
             fields = [prodInfo.type, prodInfo.model];
@@ -206,7 +211,11 @@ export const productController = {
             fields = [prodInfo.screenSize, prodInfo.maxResolution];
             break;
           case "gaming pc":
-            fields = [prodInfo.processor, prodInfo.gpu,prodInfo.operatingSystem];
+            fields = [
+              prodInfo.processor,
+              prodInfo.gpu,
+              prodInfo.operatingSystem,
+            ];
             break;
           case "network equipments":
             fields = [prodInfo.networkType, prodInfo.processorType];
