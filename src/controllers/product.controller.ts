@@ -162,6 +162,93 @@ export const productController = {
       });
     }
   },
+  //Get All Template Product Names
+  getAllTemplateProducts: async (req: Request, res: Response) => {
+    try {
+      const templates = await productService.getProductsByCondition({
+        isTemplate: true,
+      });
+
+      if (!templates.length) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "No templates found",
+        });
+      }
+
+      const templateList = templates.map((template, index) => {
+        const productId = template._id;
+        const kind = template.kind || "UNKNOWN";
+
+        const productCategory =
+          template.platformDetails.website?.productInfo?.productCategory
+            ?.name || "UNKNOWN";
+        const brand =
+          template.platformDetails.website?.productInfo?.brand || "UNKNOWN";
+        const model =
+          template.platformDetails.website?.productInfo?.model || "UNKNOWN";
+
+        const srno = (index + 1).toString().padStart(2, "0");
+
+        const templateName = `${kind.toUpperCase()}-${productCategory}-${brand}-${model}-${srno}`;
+
+        return { templateName, productId };
+      });
+
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Templates fetched successfully",
+        data: templateList,
+      });
+    } catch (error: any) {
+      console.error("Error fetching templates:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error.message || "Error fetching templates",
+      });
+    }
+  },
+
+  //Selected Template Product
+  transformAndSendTemplateProduct: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      // Validate product ID
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid product ID",
+        });
+      }
+
+      // Fetch product from DB
+      const product = await productService.getFullProductById(id);
+
+      if (!product) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Product not found",
+        });
+      }
+
+      // Transform product data using utility
+      const transformedProduct = transformProductData(product);
+
+      // Send transformed product as response
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Product transformed successfully",
+        data: transformedProduct,
+      });
+    } catch (error: any) {
+      console.error("Error transforming product:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error.message || "Error transforming product",
+      });
+    }
+  },
   updateProductById: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
