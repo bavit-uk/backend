@@ -168,22 +168,23 @@ export const productController = {
       const templates = await productService.getProductsByCondition({
         isTemplate: true,
       });
-  
+
       if (!templates.length) {
         return res.status(StatusCodes.NOT_FOUND).json({
           success: false,
           message: "No templates found",
         });
       }
-  
+
       const templateList = templates.map((template, index) => {
         const productId = template._id;
         const kind = template.kind || "UNKNOWN";
-  
+
         // Determine fields based on category (kind)
         let fields: string[] = [];
-        const prodInfo: any = template.platformDetails.website?.prodTechInfo|| {};
-  
+        const prodInfo: any =
+          template.platformDetails.website?.prodTechInfo || {};
+
         switch (kind.toLowerCase()) {
           case "laptops":
             fields = [
@@ -192,10 +193,11 @@ export const productController = {
               prodInfo.ssdCapacity,
               prodInfo.hardDriveCapacity,
               prodInfo.manufacturerWarranty,
+              prodInfo.operatingSystem
             ];
             break;
           case "all in one pc":
-            fields = [prodInfo.type, prodInfo.memory];
+            fields = [prodInfo.type, prodInfo.memory,prodInfo.processor,prodInfo.operatingSystem ];
             break;
           case "projectors":
             fields = [prodInfo.type, prodInfo.model];
@@ -204,7 +206,7 @@ export const productController = {
             fields = [prodInfo.screenSize, prodInfo.maxResolution];
             break;
           case "gaming pc":
-            fields = [prodInfo.processor, prodInfo.gpu];
+            fields = [prodInfo.processor, prodInfo.gpu,prodInfo.operatingSystem];
             break;
           case "network equipments":
             fields = [prodInfo.networkType, prodInfo.processorType];
@@ -213,17 +215,17 @@ export const productController = {
             fields = ["UNKNOWN"];
             break;
         }
-  
+
         // Filter out undefined/null fields and join to form the name
         const fieldString = fields.filter(Boolean).join("-") || "UNKNOWN";
-  
+
         const srno = (index + 1).toString().padStart(2, "0");
-  
-        const templateName = `${kind.toUpperCase()}-${fieldString}-${srno}`;
-  
+
+        const templateName = `${kind}-${fieldString}-${srno}`.toUpperCase();
+
         return { templateName, productId };
       });
-  
+
       return res.status(StatusCodes.OK).json({
         success: true,
         message: "Templates fetched successfully",
@@ -237,8 +239,6 @@ export const productController = {
       });
     }
   },
-  
-
 
   //Selected Template Product
   transformAndSendTemplateProduct: async (req: Request, res: Response) => {
