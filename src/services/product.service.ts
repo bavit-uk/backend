@@ -255,7 +255,23 @@ export const productService = {
       throw new Error("Failed to fetch products");
     }
   },
+  //getting all template products name and their id
 
+  getProductsByCondition: async (condition: Record<string, any>) => {
+    try {
+      // Find products matching the condition
+      return await Product.find(condition)
+        .populate("platformDetails.website.productInfo.productCategory")
+        .populate("platformDetails.amazon.productInfo.productCategory")
+        .populate("platformDetails.ebay.productInfo.productCategory")
+        .select(
+          "_id platformDetails website.productInfo productCategory brand model srno kind"
+        );
+    } catch (error) {
+      console.error("Error fetching products by condition:", error);
+      throw new Error("Failed to fetch products by condition");
+    }
+  },
   getProductById: async (id: string) => {
     try {
       const product = await Product.findById(id)

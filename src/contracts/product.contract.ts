@@ -76,46 +76,6 @@ interface IAmazonPlatformDetails {
   seoTags: string[];
   relevantTags: string[];
   suggestedTags: string[];
-
-
-
-  // productCondition: string;
-  // screenSize: string;
-  // nonNewConditionDetails?: string;
-  // processor: string;
-  // model: string;
-  // variation: string;
-  // buy2andSave: string;
-  // buy3andSave: string;
-  // buy4andSave: string;
-  // shipping: IShipping;
-  // description: string;
-  // keywords: IKeywords;
-  // fulfillmentMethod: "Dropshipping" | "In-House Fulfillment";
-  // identifier: string; // UPC, EAN, ISBN, etc.
-  // vatPercentage: number;
-  // salesTaxPercentage: number;
-  // applyTaxAtCheckout: boolean;
-  // taxConfirmation: boolean;
-  // operatingSystem: String;
-  // storageType: String;
-  // features: String;
-  // ssdCapacity: String;
-  // gpu: String;
-  // type: String;
-  // releaseYear: String;
-  // hardDriveCapacity: String;
-  // color: String;
-  // maxResolution: String;
-  // mostSuitableFor: String;
-  // graphicsProcessingType: String;
-  // connectivity: String;
-  // manufacturerWarranty: String;
-  // regionOfManufacture: String;
-  // height: String;
-  // length: String;
-  // weight: String;
-  // width: String;
 }
 
 // Platform-specific product details for eBay
@@ -149,62 +109,31 @@ interface IEbayPlatformDetails {
   seoTags: string[];
   relevantTags: string[];
   suggestedTags: string[];
-
-
-
-  // productCondition: string;
-  // screenSize: string;
-  // nonNewConditionDetails?: string;
-  // processor: string;
-  // model: string;
-  // variation: string;
-  // buy2andSave: string;
-  // buy3andSave: string;
-  // buy4andSave: string;
-  // shipping: IShipping;
-  // description: string;
-  // keywords: IKeywords;
-  // fulfillmentMethod: "Dropshipping" | "In-House Fulfillment";
-  // identifier: string; // UPC, EAN, ISBN, etc.
-  // vatPercentage: number;
-  // salesTaxPercentage: number;
-  // applyTaxAtCheckout: boolean;
-  // taxConfirmation: boolean;
-  // operatingSystem: String;
-  // storageType: String;
-  // features: String;
-  // ssdCapacity: String;
-  // gpu: String;
-  // type: String;
-  // releaseYear: String;
-  // hardDriveCapacity: String;
-  // color: String;
-  // maxResolution: String;
-  // mostSuitableFor: String;
-  // graphicsProcessingType: String;
-  // connectivity: String;
-  // manufacturerWarranty: String;
-  // regionOfManufacture: String;
-  // height: String;
-  // length: String;
-  // weight: String;
-  // width: String;
 }
 
 // Platform-specific product details for Website
 interface IWebsitePlatformDetails {
+  productInfo?: {
+    productCategory?: {
+      name?: string;
+    };
+    brand?: string;
+    title?: string;
+    model?: string;
+  };
   title: string;
   brand: string;
   productCategory: Types.ObjectId;
   images: string[];
   productDescription: string;
-
   quantity: string;
   price: string;
   condition: string;
   conditionDescription?: string;
   pricingFormat: string;
   vat: string;
+  model?: string;
+
   paymentPolicy: Types.ObjectId;
 
   postagePolicy: string;
@@ -222,46 +151,16 @@ interface IWebsitePlatformDetails {
   seoTags: string[];
   relevantTags: string[];
   suggestedTags: string[];
+}
 
-
-
-  // productCondition: string;
-  // screenSize: string;
-  // nonNewConditionDetails?: string;
-  // processor: string;
-  // model: string;
-  // variation: string;
-  // buy2andSave: string;
-  // buy3andSave: string;
-  // buy4andSave: string;
-  // shipping: IShipping;
-  // description: string;
-  // keywords: IKeywords;
-  // fulfillmentMethod: "Dropshipping" | "In-House Fulfillment";
-  // identifier: string; // UPC, EAN, ISBN, etc.
-  // vatPercentage: number;
-  // salesTaxPercentage: number;
-  // applyTaxAtCheckout: boolean;
-  // taxConfirmation: boolean;
-  // operatingSystem: String;
-  // storageType: String;
-  // features: String;
-  // ssdCapacity: String;
-  // gpu: String;
-  // type: String;
-  // releaseYear: String;
-  // hardDriveCapacity: String;
-  // color: String;
-  // maxResolution: String;
-  // mostSuitableFor: String;
-  // graphicsProcessingType: String;
-  // connectivity: String;
-  // manufacturerWarranty: String;
-  // regionOfManufacture: String;
-  // height: String;
-  // length: String;
-  // weight: String;
-  // width: String;
+interface IPlatformProductInfo {
+  productCategory: Types.ObjectId; // Populated with category details
+  title: string;
+  brand: string;
+  productDescription: string;
+  images: string[];
+  model?: string;
+  srno?: string;
 }
 
 // Full Product Interface
@@ -270,10 +169,12 @@ interface IProduct {
   platformDetails: {
     amazon?: IAmazonPlatformDetails; // Amazon-specific details
     ebay?: IEbayPlatformDetails; // eBay-specific details
-    website?: IWebsitePlatformDetails; // Website-specific details
+    website?: IWebsitePlatformDetails;
+     // Website-specific details
   };
   status: "draft" | "published"; // Product status
-  isTemplate: boolean
+  isTemplate: boolean;
+  kind?: string;
 }
 
 // Update payload for product
@@ -290,4 +191,5 @@ export {
   IAmazonPlatformDetails,
   IEbayPlatformDetails,
   IWebsitePlatformDetails,
+  IPlatformProductInfo,
 };
