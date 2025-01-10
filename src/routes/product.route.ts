@@ -12,6 +12,15 @@ export const product = (router: Router) => {
     productValidation.validateId,
     productController.transformAndSendProduct
   );
+  // Fetch transformed template product by ID
+  router.get(
+    "/templates/:id",
+    productValidation.validateId,
+    productController.transformAndSendTemplateProduct
+  );
+
+  // Fetch all template products
+  router.get("/templates", productController.getAllTemplateProducts);
 
   // Update a draft product by ID (subsequent steps)
   router.patch(

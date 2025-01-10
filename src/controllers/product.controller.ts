@@ -162,6 +162,132 @@ export const productController = {
       });
     }
   },
+  //Get All Template Product Names
+  getAllTemplateProducts: async (req: Request, res: Response) => {
+    try {
+      const templates = await productService.getProductsByCondition({
+        isTemplate: true,
+      });
+
+      if (!templates.length) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "No templates found",
+        });
+      }
+
+      const templateList = templates.map((template, index) => {
+        const productId = template._id;
+        const kind = template.kind || "UNKNOWN";
+
+        // Determine fields based on category (kind)
+        let fields: string[] = [];
+        const prodInfo: any =
+          template.platformDetails.website?.prodTechInfo || {};
+
+        switch (kind.toLowerCase()) {
+          case "laptops":
+            fields = [
+              prodInfo.processor,
+              prodInfo.model,
+              prodInfo.ssdCapacity,
+              prodInfo.hardDriveCapacity,
+              prodInfo.manufacturerWarranty,
+              prodInfo.operatingSystem,
+            ];
+            break;
+          case "all in one pc":
+            fields = [
+              prodInfo.type,
+              prodInfo.memory,
+              prodInfo.processor,
+              prodInfo.operatingSystem,
+            ];
+            break;
+          case "projectors":
+            fields = [prodInfo.type, prodInfo.model];
+            break;
+          case "monitors":
+            fields = [prodInfo.screenSize, prodInfo.maxResolution];
+            break;
+          case "gaming pc":
+            fields = [
+              prodInfo.processor,
+              prodInfo.gpu,
+              prodInfo.operatingSystem,
+            ];
+            break;
+          case "network equipments":
+            fields = [prodInfo.networkType, prodInfo.processorType];
+            break;
+          default:
+            fields = ["UNKNOWN"];
+            break;
+        }
+
+        // Filter out undefined/null fields and join to form the name
+        const fieldString = fields.filter(Boolean).join("-") || "UNKNOWN";
+
+        const srno = (index + 1).toString().padStart(2, "0");
+
+        const templateName = `${kind}-${fieldString}-${srno}`.toUpperCase();
+
+        return { templateName, productId };
+      });
+
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Templates fetched successfully",
+        data: templateList,
+      });
+    } catch (error: any) {
+      console.error("Error fetching templates:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error.message || "Error fetching templates",
+      });
+    }
+  },
+  //Selected Template Product
+  transformAndSendTemplateProduct: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      // Validate product ID
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid template ID",
+        });
+      }
+
+      // Fetch product from DB
+      const product = await productService.getFullProductById(id);
+
+      if (!product) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Product not found",
+        });
+      }
+
+      // Transform product data using utility
+      const transformedProductTemplate = transformProductData(product);
+
+      // Send transformed product as response
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "template transformed and Fetched successfully",
+        data: transformedProductTemplate,
+      });
+    } catch (error: any) {
+      console.error("Error transforming product Template:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error.message || "Error transforming product Template",
+      });
+    }
+  },
   updateProductById: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
