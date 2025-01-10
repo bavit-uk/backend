@@ -248,7 +248,6 @@ export const productController = {
       });
     }
   },
-
   //Selected Template Product
   transformAndSendTemplateProduct: async (req: Request, res: Response) => {
     try {
@@ -258,7 +257,7 @@ export const productController = {
       if (!mongoose.isValidObjectId(id)) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,
-          message: "Invalid product ID",
+          message: "Invalid template ID",
         });
       }
 
@@ -273,19 +272,19 @@ export const productController = {
       }
 
       // Transform product data using utility
-      const transformedProduct = transformProductData(product);
+      const transformedProductTemplate = transformProductData(product);
 
       // Send transformed product as response
       return res.status(StatusCodes.OK).json({
         success: true,
-        message: "Product transformed successfully",
-        data: transformedProduct,
+        message: "template transformed and Fetched successfully",
+        data: transformedProductTemplate,
       });
     } catch (error: any) {
-      console.error("Error transforming product:", error);
+      console.error("Error transforming product Template:", error);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: error.message || "Error transforming product",
+        message: error.message || "Error transforming product Template",
       });
     }
   },
