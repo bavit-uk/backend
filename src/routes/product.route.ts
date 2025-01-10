@@ -14,7 +14,7 @@ export const product = (router: Router) => {
   );
   // Fetch transformed template product by ID
   router.get(
-    "/template/:id",
+    "/templates/:id",
     productValidation.validateId,
     productController.transformAndSendTemplateProduct
   );
