@@ -75,7 +75,12 @@ const prodSeoSchema = {
 };
 
 const amazonSchema = {
-  productInfo: prodInfoSchema,
+  productInfo: {
+    type: prodInfoSchema,
+    default: {},
+  },
+
+  // productInfo: prodInfoSchema,
 
   // prodPricing: prodPricingSchema,
 
@@ -86,7 +91,12 @@ const amazonSchema = {
 
 // eBay-specific schema
 const ebaySchema = {
-  productInfo: prodInfoSchema,
+  productInfo: {
+    type: prodInfoSchema,
+    default: {},
+  },
+
+  // productInfo: prodInfoSchema,
 
   // prodPricing: prodPricingSchema,
 
@@ -97,7 +107,12 @@ const ebaySchema = {
 
 // Website-specific schema
 const websiteSchema = {
-  productInfo: prodInfoSchema,
+  productInfo: {
+    type: prodInfoSchema,
+    default: {},
+  },
+
+  // productInfo: prodInfoSchema,
 
   // prodPricing: prodPricingSchema,
 
