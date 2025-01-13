@@ -1,7 +1,7 @@
-export function transformProductData(data: any) {
+export function transformVariationData(data: any) {
   const result: any = {
     stepData: {
-      productInfo: {},
+      variationInfo: {},
       prodTechInfo: {},
       prodPricing: {},
       prodDelivery: {},
@@ -46,11 +46,11 @@ export function transformProductData(data: any) {
 
   // Define the field groups for each section
   const fieldGroups = {
-    productInfo: [
+    variationInfo: [
       "brand",
       "title",
-      "productDescription",
-      "productCategory",
+      "variationDescription",
+      "variationCategory",
       "images",
     ],
     prodTechInfo: [
@@ -82,7 +82,7 @@ export function transformProductData(data: any) {
       "ramSize",
       "formFactor",
       "ean",
-      "productType",
+      "variationType",
       "manufacturerWarranty",
       "regionOfManufacture",
       "height",
@@ -90,30 +90,21 @@ export function transformProductData(data: any) {
       "width",
       "weight",
       "nonNewConditionDetails",
-      "productCondition",
+      "variationCondition",
       "numberOfLANPorts",
       "maximumWirelessData",
       "maximumLANDataRate",
       "ports",
       "toFit",
-      "displayType",
       "aspectRatio",
-      "imageBrightness",
-      "throwRatio",
-      "compatibleOperatingSystem",
-      "compatibleFormat",
-      "lensMagnification",
-      "yearManufactured",
-      "nativeResolution",
-      "displayTechnology",
       "energyEfficiencyRating",
       "videoInputs",
       "refreshRate",
-      "responseTime",
+      "responseType",
       "brightness",
       "contrastRatio",
       "ecRange",
-      "productLine",
+      "variationLine",
       "customBundle",
       "interface",
       "networkConnectivity",

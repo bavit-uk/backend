@@ -16,10 +16,9 @@ import { permissions } from "./permissions.route";
 import { me } from "./me.route";
 import { orderRoutes } from "./order.route";
 import { cartRoutes } from "./cart.route";
+import { variations } from "./variations.route";
 import { paymentPolicy } from "./payment-policy.route";
-// import {descriminator} from "./descriminator.route"
 import { descriminatorRouter } from "./descriminator.route";
-
 
 // Create a new router to handle all routes
 const router: Router = Router();
@@ -36,6 +35,7 @@ const routes: {
   user,
   auth,
   userCategory,
+  variations,
   supplier,
   supplierCategory,
   product,
