@@ -70,34 +70,14 @@ const prodSeoSchema = {
 
 const amazonSchema = {
   variationInfo: prodInfoSchema,
-
-  // prodPricing: prodPricingSchema,
-
-  // prodDelivery: prodDeliverySchema,
-
-  // prodSeo: prodSeoSchema,
 };
-
 // eBay-specific schema
 const ebaySchema = {
   variationInfo: prodInfoSchema,
-
-  // prodPricing: prodPricingSchema,
-
-  // prodDelivery: prodDeliverySchema,
-
-  // prodSeo: prodSeoSchema,
 };
-
 // Website-specific schema
 const websiteSchema = {
   variationInfo: prodInfoSchema,
-
-  // prodPricing: prodPricingSchema,
-
-  // prodDelivery: prodDeliverySchema,
-
-  // prodSeo: prodSeoSchema,
 };
 
 // Main Variation Schema
