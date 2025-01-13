@@ -60,6 +60,7 @@ export const productService = {
       if (!draftProduct) {
         throw new Error("Draft product not found");
       }
+      console.log("draftProduct in updateDraftProduct service : ", draftProduct);
       console.log("stepDataaa in updateDraftProduct service : ", stepData);
 
       // this code will run only on final call (final stepper)
