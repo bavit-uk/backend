@@ -134,7 +134,6 @@ export const productService = {
               if (isWeb)
                 platformDetails.website.prodDelivery[fieldRoot] =
                   platformDetails.website.prodDelivery[fieldRoot] || {};
-
               if (isAmz && subField)
                 platformDetails.amazon.prodDelivery[fieldRoot][subField] =
                   value;
@@ -145,7 +144,7 @@ export const productService = {
                   value;
             } else {
               const step = stepData.step;
-              console.log("step :" , step)
+              console.log("step :", step);
               if (step === "prodTechInfo") {
                 if (isAmz)
                   platformDetails.amazon.prodTechInfo[currentKey] = value;
