@@ -7,20 +7,15 @@ export const variations = (router: Router) => {
   // Create or update a draft variation
   router.post("/", variationController.createDraftVariation);
 
-  router.get(
-    "/transform/:id",
-    variationValidation.validateId,
-    variationController.transformAndSendVariation
-  );
-  // Fetch transformed template variation by ID
-  router.get(
-    "/templates/:id",
-    variationValidation.validateId,
-    variationController.transformAndSendTemplateVariation
-  );
 
-  // Fetch all template variations
-  router.get("/templates", variationController.getAllTemplateVariations);
+
+
+  
+  // Route to create a new variation
+  router.post('/', variationController.createVariation);
+  
+  // Route to get variations by product ID
+  router.get('/product/:productId', variationController.getVariationsByProduct);
 
   // Update a draft variation by ID (subsequent steps)
   router.patch(

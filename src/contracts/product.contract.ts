@@ -14,7 +14,22 @@ interface ITechnicalSpecifications {
   operatingSystem?: string;
   additionalSpecifications?: string;
 }
+interface IPart extends Document {
+  type: string;
+  name: string;
+  specifications: string;
+  price: number;
+}
 
+interface IVariation extends Document {
+  product: string;
+  cpu: IPart;
+  ram: IPart;
+  storage: IPart;
+  graphics: IPart;
+  price: number;
+  description?: string;
+}
 // Pricing details shared between platforms
 interface IPricing {
   pricePerUnit: number;
@@ -205,6 +220,8 @@ export {
   IPricing,
   ICondition,
   IShipping,
+  IVariation,
+  IPart,
   IKeywords,
   IAmazonPlatformDetails,
   IEbayPlatformDetails,
