@@ -84,7 +84,7 @@ export const productService = {
           isWeb?: boolean;
         } = {}
       ) => {
-        // console.log("Before processing platformDetails:", platformDetails);
+        console.log("Before processing platformDetails:", platformDetails);
 
         Object.keys(data).forEach((key) => {
           const currentKey = keyPrefix ? `${keyPrefix}.${key}` : key; // Maintain context for nested keys
@@ -145,6 +145,7 @@ export const productService = {
                   value;
             } else {
               const step = stepData.step;
+              console.log("step :" , step)
               if (step === "prodTechInfo") {
                 if (isAmz)
                   platformDetails.amazon.prodTechInfo[currentKey] = value;
@@ -152,6 +153,13 @@ export const productService = {
                   platformDetails.ebay.prodTechInfo[currentKey] = value;
                 if (isWeb)
                   platformDetails.website.prodTechInfo[currentKey] = value;
+              } else if (step === "productInfo") {
+                if (isAmz)
+                  platformDetails.amazon.productInfo[currentKey] = value;
+                if (isEbay)
+                  platformDetails.ebay.productInfo[currentKey] = value;
+                if (isWeb)
+                  platformDetails.website.productInfo[currentKey] = value;
               } else if (step === "prodPricing") {
                 if (isAmz)
                   platformDetails.amazon.prodPricing[currentKey] = value;
@@ -174,7 +182,7 @@ export const productService = {
             }
           }
         });
-        // console.log("After processing platformDetails:", platformDetails);
+        console.log("After processing platformDetails:", platformDetails);
       };
 
       // // Process technical details based on the discriminator (Laptops or others)

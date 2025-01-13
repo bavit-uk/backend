@@ -121,6 +121,7 @@ export function transformProductData(data: any) {
       "supportedWirelessProtocol",
     ],
     prodPricing: [
+      
       "quantity",
       "price",
       "condition",
