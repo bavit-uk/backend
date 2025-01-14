@@ -1,20 +1,18 @@
 import { Address, User, UserCategory } from "@/models";
-import { IUser, UserCreatePayload } from "@/contracts/user.contract";
+import { IUser, UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract";
 import { createHash } from "@/utils/hash.util";
 import { IUserAddress } from "@/contracts/user-address.contracts";
 
 export const userService = {
-
   getAllUsers: async () => {
     return await User.find().populate("userType");
   },
 
-  findUserById: async (id: string , select?: string) => {
-    if(select){
-        return await User.findById(id).populate("userType").select(select);
-    }
-    else {
-        return await User.findById(id).populate("userType")
+  findUserById: async (id: string, select?: string) => {
+    if (select) {
+      return await User.findById(id).populate("userType").select(select);
+    } else {
+      return await User.findById(id).populate("userType");
     }
   },
 
@@ -33,8 +31,9 @@ export const userService = {
       restrictedAccessRights,
       phoneNumber,
       dob,
-    //   address,
+      //   address,
     } = data;
+    // console.log(data);
     const hasedPassword = await createHash(password);
     const newUser = await new User({
       firstName,
@@ -45,7 +44,7 @@ export const userService = {
       additionalAccessRights,
       restrictedAccessRights,
       phoneNumber,
-      dob
+      dob,
     });
     return await newUser.save();
   },
@@ -55,7 +54,7 @@ export const userService = {
     return userExists;
   },
 
-  updateById: async (userId: string, updateData: IUser) => {
+  updateById: async (userId: string, updateData: UserUpdatePayload) => {
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
     return updatedUser;
   },
@@ -72,17 +71,34 @@ export const userService = {
     return updateUser;
   },
 
-  createAddress: (address: IUserAddress) => {
-    const newAddress = new Address(address);
+  createAddress: (addresss: IUserAddress, userId: string) => {
+    const { country, address, label, appartment, city, postalCode, isDefault } = addresss;
+    const newAddress = new Address({
+      userId,
+      label,
+      address,
+      city,
+      appartment,
+      postalCode,
+      country,
+      isDefault,
+    });
     return newAddress.save();
   },
 
-  findAddressandUpdate: (id: string , address: IUserAddress) => {
-    return Address.findByIdAndUpdate(id , address , {new: true})
+  findAddressandUpdate: (id: string, address: IUserAddress) => {
+    return Address.findByIdAndUpdate(id, address, { new: true });
   },
 
   findAddressByUserId: (userId: string) => {
     return Address.find({ userId: userId });
   },
 
+  updatePermission: (additionalAccessRights: string[], restrictedAccessRights: string[], id: string) => {
+    console.log("id : ", id);
+    console.log("additionalAccessRights : ", additionalAccessRights);
+    console.log("restrictedAccessRights : ", restrictedAccessRights);
+
+    return User.findByIdAndUpdate(id, { additionalAccessRights:additionalAccessRights , restrictedAccessRights: restrictedAccessRights });
+  },
 };

@@ -4,7 +4,7 @@ import { IFile } from "./user.contract";
 export interface ISupplierCategory extends Document {
     name: string;
     description?: string;
-    image: IFile;
+    image: string;
     isBlocked: boolean;
 }
 

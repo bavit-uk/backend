@@ -41,8 +41,8 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     supplierCategory: { type: Schema.Types.ObjectId, ref: "SupplierCategory" },
     additionalAccessRights: { type: [String], default: [] }, // Add specific rights
     restrictedAccessRights: { type: [String], default: [] }, // Remove specific rights
-    resetPasswordToken: { type: String, select: false },
-    resetPasswordExpires: { type: Number, select: false },
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Number },
     documents: [{ type: fileSchema }], // Store supplier-related files
     isBlocked: {type: Boolean , default: false}
   },

@@ -5,8 +5,7 @@ export const productBrandService = {
   createBrand: (name: string, description: string, logo: string[], isBlocked: boolean) => {
     const newBrand = new ProductBrand({ name, description, logo, isBlocked });
     return newBrand.save();
-  },
-
+  },// new chane is here
   getAllBrands: () => {
     return ProductBrand.find();
   },
@@ -24,6 +23,6 @@ export const productBrandService = {
   },
 
   toggleBlock: (id: string, isBlocked: boolean) => {
-    return ProductBrand.findByIdAndUpdate(id, { isBlocked }, { new: true });
+    return ProductBrand.findByIdAndUpdate(id, { isBlocked}, { new: true });
   },
 };
