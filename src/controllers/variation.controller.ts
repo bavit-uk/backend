@@ -126,179 +126,95 @@ export const variationController = {
         {
           $project: {
             cpu: {
-              $concatArrays: [
-                {
-                  $cond: [
-                    { $isArray: "$amazon.processor" },
-                    "$amazon.processor",
-                    ["$amazon.processor"],
+              $filter: {
+                input: {
+                  $concatArrays: [
+                    { $cond: [{ $isArray: "$amazon.processor" }, "$amazon.processor", ["$amazon.processor"]] },
+                    { $cond: [{ $isArray: "$ebay.processor" }, "$ebay.processor", ["$ebay.processor"]] },
+                    { $cond: [{ $isArray: "$website.processor" }, "$website.processor", ["$website.processor"]] },
                   ],
                 },
-                {
-                  $cond: [
-                    { $isArray: "$ebay.processor" },
-                    "$ebay.processor",
-                    ["$ebay.processor"],
-                  ],
-                },
-                {
-                  $cond: [
-                    { $isArray: "$website.processor" },
-                    "$website.processor",
-                    ["$website.processor"],
-                  ],
-                },
-              ],
+                as: "item",
+                cond: { $ne: ["$$item", null] },
+              },
             },
             ram: {
-              $concatArrays: [
-                {
-                  $cond: [
-                    { $isArray: "$amazon.ramSize" },
-                    "$amazon.ramSize",
-                    ["$amazon.ramSize"],
+              $filter: {
+                input: {
+                  $concatArrays: [
+                    { $cond: [{ $isArray: "$amazon.ramSize" }, "$amazon.ramSize", ["$amazon.ramSize"]] },
+                    { $cond: [{ $isArray: "$ebay.ramSize" }, "$ebay.ramSize", ["$ebay.ramSize"]] },
+                    { $cond: [{ $isArray: "$website.ramSize" }, "$website.ramSize", ["$website.ramSize"]] },
                   ],
                 },
-                {
-                  $cond: [
-                    { $isArray: "$ebay.ramSize" },
-                    "$ebay.ramSize",
-                    ["$ebay.ramSize"],
-                  ],
-                },
-                {
-                  $cond: [
-                    { $isArray: "$website.ramSize" },
-                    "$website.ramSize",
-                    ["$website.ramSize"],
-                  ],
-                },
-              ],
+                as: "item",
+                cond: { $ne: ["$$item", null] },
+              },
             },
             storage: {
-              $concatArrays: [
-                {
-                  $cond: [
-                    { $isArray: "$amazon.storageType" },
-                    "$amazon.storageType",
-                    ["$amazon.storageType"],
+              $filter: {
+                input: {
+                  $concatArrays: [
+                    { $cond: [{ $isArray: "$amazon.storageType" }, "$amazon.storageType", ["$amazon.storageType"]] },
+                    { $cond: [{ $isArray: "$ebay.storageType" }, "$ebay.storageType", ["$ebay.storageType"]] },
+                    { $cond: [{ $isArray: "$website.storageType" }, "$website.storageType", ["$website.storageType"]] },
                   ],
                 },
-                {
-                  $cond: [
-                    { $isArray: "$ebay.storageType" },
-                    "$ebay.storageType",
-                    ["$ebay.storageType"],
-                  ],
-                },
-                {
-                  $cond: [
-                    { $isArray: "$website.storageType" },
-                    "$website.storageType",
-                    ["$website.storageType"],
-                  ],
-                },
-              ],
+                as: "item",
+                cond: { $ne: ["$$item", null] },
+              },
             },
             graphics: {
-              $concatArrays: [
-                {
-                  $cond: [
-                    { $isArray: "$amazon.gpu" },
-                    "$amazon.gpu",
-                    ["$amazon.gpu"],
+              $filter: {
+                input: {
+                  $concatArrays: [
+                    { $cond: [{ $isArray: "$amazon.gpu" }, "$amazon.gpu", ["$amazon.gpu"]] },
+                    { $cond: [{ $isArray: "$ebay.gpu" }, "$ebay.gpu", ["$ebay.gpu"]] },
+                    { $cond: [{ $isArray: "$website.gpu" }, "$website.gpu", ["$website.gpu"]] },
                   ],
                 },
-                {
-                  $cond: [
-                    { $isArray: "$ebay.gpu" },
-                    "$ebay.gpu",
-                    ["$ebay.gpu"],
-                  ],
-                },
-                {
-                  $cond: [
-                    { $isArray: "$website.gpu" },
-                    "$website.gpu",
-                    ["$website.gpu"],
-                  ],
-                },
-              ],
+                as: "item",
+                cond: { $ne: ["$$item", null] },
+              },
             },
             height: {
-              $concatArrays: [
-                {
-                  $cond: [
-                    { $isArray: "$amazon.height" },
-                    "$amazon.height",
-                    ["$amazon.height"],
+              $filter: {
+                input: {
+                  $concatArrays: [
+                    { $cond: [{ $isArray: "$amazon.height" }, "$amazon.height", ["$amazon.height"]] },
+                    { $cond: [{ $isArray: "$ebay.height" }, "$ebay.height", ["$ebay.height"]] },
+                    { $cond: [{ $isArray: "$website.height" }, "$website.height", ["$website.height"]] },
                   ],
                 },
-                {
-                  $cond: [
-                    { $isArray: "$ebay.height" },
-                    "$ebay.height",
-                    ["$ebay.height"],
-                  ],
-                },
-                {
-                  $cond: [
-                    { $isArray: "$website.height" },
-                    "$website.height",
-                    ["$website.height"],
-                  ],
-                },
-              ],
+                as: "item",
+                cond: { $ne: ["$$item", null] },
+              },
             },
             length: {
-              $concatArrays: [
-                {
-                  $cond: [
-                    { $isArray: "$amazon.length" },
-                    "$amazon.length",
-                    ["$amazon.length"],
+              $filter: {
+                input: {
+                  $concatArrays: [
+                    { $cond: [{ $isArray: "$amazon.length" }, "$amazon.length", ["$amazon.length"]] },
+                    { $cond: [{ $isArray: "$ebay.length" }, "$ebay.length", ["$ebay.length"]] },
+                    { $cond: [{ $isArray: "$website.length" }, "$website.length", ["$website.length"]] },
                   ],
                 },
-                {
-                  $cond: [
-                    { $isArray: "$ebay.length" },
-                    "$ebay.length",
-                    ["$ebay.length"],
-                  ],
-                },
-                {
-                  $cond: [
-                    { $isArray: "$website.length" },
-                    "$website.length",
-                    ["$website.length"],
-                  ],
-                },
-              ],
+                as: "item",
+                cond: { $ne: ["$$item", null] },
+              },
             },
             width: {
-              $concatArrays: [
-                {
-                  $cond: [
-                    { $isArray: "$amazon.width" },
-                    "$amazon.width",
-                    ["$amazon.width"],
+              $filter: {
+                input: {
+                  $concatArrays: [
+                    { $cond: [{ $isArray: "$amazon.width" }, "$amazon.width", ["$amazon.width"]] },
+                    { $cond: [{ $isArray: "$ebay.width" }, "$ebay.width", ["$ebay.width"]] },
+                    { $cond: [{ $isArray: "$website.width" }, "$website.width", ["$website.width"]] },
                   ],
                 },
-                {
-                  $cond: [
-                    { $isArray: "$ebay.width" },
-                    "$ebay.width",
-                    ["$ebay.width"],
-                  ],
-                },
-                {
-                  $cond: [
-                    { $isArray: "$website.width" },
-                    "$website.width",
-                    ["$website.width"],
-                  ],
-                },
-              ],
+                as: "item",
+                cond: { $ne: ["$$item", null] },
+              },
             },
           },
         },
@@ -317,59 +233,17 @@ export const variationController = {
         {
           $project: {
             _id: 0,
-            cpu: {
-              $reduce: {
-                input: "$cpu",
-                initialValue: [],
-                in: { $setUnion: ["$$value", "$$this"] },
-              },
-            },
-            ram: {
-              $reduce: {
-                input: "$ram",
-                initialValue: [],
-                in: { $setUnion: ["$$value", "$$this"] },
-              },
-            },
-            storage: {
-              $reduce: {
-                input: "$storage",
-                initialValue: [],
-                in: { $setUnion: ["$$value", "$$this"] },
-              },
-            },
-            graphics: {
-              $reduce: {
-                input: "$graphics",
-                initialValue: [],
-                in: { $setUnion: ["$$value", "$$this"] },
-              },
-            },
-            height: {
-              $reduce: {
-                input: "$height",
-                initialValue: [],
-                in: { $setUnion: ["$$value", "$$this"] },
-              },
-            },
-            length: {
-              $reduce: {
-                input: "$length",
-                initialValue: [],
-                in: { $setUnion: ["$$value", "$$this"] },
-              },
-            },
-            width: {
-              $reduce: {
-                input: "$width",
-                initialValue: [],
-                in: { $setUnion: ["$$value", "$$this"] },
-              },
-            },
+            cpu: { $reduce: { input: "$cpu", initialValue: [], in: { $setUnion: ["$$value", "$$this"] } } },
+            ram: { $reduce: { input: "$ram", initialValue: [], in: { $setUnion: ["$$value", "$$this"] } } },
+            storage: { $reduce: { input: "$storage", initialValue: [], in: { $setUnion: ["$$value", "$$this"] } } },
+            graphics: { $reduce: { input: "$graphics", initialValue: [], in: { $setUnion: ["$$value", "$$this"] } } },
+            height: { $reduce: { input: "$height", initialValue: [], in: { $setUnion: ["$$value", "$$this"] } } },
+            length: { $reduce: { input: "$length", initialValue: [], in: { $setUnion: ["$$value", "$$this"] } } },
+            width: { $reduce: { input: "$width", initialValue: [], in: { $setUnion: ["$$value", "$$this"] } } },
           },
         },
       ]);
-
+  
       const result = parts[0] || {
         cpu: [],
         ram: [],
@@ -379,7 +253,7 @@ export const variationController = {
         length: [],
         width: [],
       };
-
+  
       res.status(StatusCodes.OK).json({
         success: true,
         message: "Fetched all parts successfully",
@@ -392,5 +266,6 @@ export const variationController = {
         message: "Error fetching unified parts",
       });
     }
-  },
+  }
+  
 };
