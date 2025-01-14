@@ -1,11 +1,11 @@
-// /services/variation.service.ts
 import { Product } from "@/models/product.model";
 
 export const variationService = {
   getPartsByPlatform: async (platform: string) => {
     try {
-      // Map platform to corresponding `prodTechInfo`
-      let productKey = "";
+      let productKey: string;
+
+      // Map platform to the corresponding field in the schema
       switch (platform.toLowerCase()) {
         case "amazon":
           productKey = "platformDetails.amazon.prodTechInfo";
@@ -20,7 +20,7 @@ export const variationService = {
           throw new Error("Invalid platform");
       }
 
-      // Aggregate distinct parts
+      // Fetch distinct parts from the product schema
       const parts = await Product.aggregate([
         {
           $project: {
@@ -60,9 +60,9 @@ export const variationService = {
       ]);
 
       return parts[0] || {};
-    } catch (error) {
-      console.error("Error fetching parts by platform:", error);
-      throw new Error("Unable to fetch parts.");
+    } catch (error: any) {
+      console.error("Error fetching parts by platform:", error.message);
+      throw new Error("Unable to fetch parts");
     }
   },
 };
