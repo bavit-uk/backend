@@ -10,15 +10,15 @@ import { REGEX } from "@/constants/regex";
 // Custom Zod validation for MongoDB ObjectId
 const objectId = z.instanceof(Types.ObjectId).or(z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ObjectId"));
 
-// Address validation schema
+// Define the address schema
 const addressSchema = z.object({
-  userId: z.string().optional(), // Optional if it's an update; otherwise, it's for new addresses
-  label: z.string().trim().min(1, "Label is required"),
-  street: z.string().trim().min(1, "Street is required"),
-  city: z.string().trim().min(1, "City is required"),
-  state: z.string().trim().min(1, "State is required"),
-  postalCode: z.string().trim().min(1, "Postal code is required"),
-  country: z.string().trim().min(1, "Country is required"),
+  userId: z.string().optional(),
+  country: z.string().trim().optional(),
+  address: z.string().trim().optional(),
+  label: z.string().trim().optional(),
+  appartment: z.string().trim().optional(),
+  city: z.string().trim().optional(),
+  postalCode: z.string().trim().optional(),
   isDefault: z.boolean().optional(),
 });
 
@@ -40,9 +40,9 @@ export const supplierValidation = {
       firstName: z.string().trim().min(3, "First name is required"),
       lastName: z.string().trim().min(3, "Last name is required"),
       email: z.string().trim().min(3, "Email is required").regex(REGEX.EMAIL, "Invalid email format"),
-      password: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one charcter) (between 8-20)"),
+      password: z.string().regex(REGEX.PASSWORD, " password: (A-Z) (a-z) (0-9) (one charcter) (between 8-20)"),
       phoneNumber: z.string().trim().min(3, "Phone number is required"),
-      address: z.array(addressSchema).min(1, "At least one address is required"),
+      address: z.array(addressSchema).min(1, "At least one address is required").optional(),
       documents: z.array(documentSchema).optional(),
       //   userType: objectId, // Reference to UserCategory
       // supplierCategory: objectId,

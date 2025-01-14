@@ -46,7 +46,7 @@ export type UserCreatePayload = Pick<
   | "userType"
   | "additionalAccessRights"
   | "restrictedAccessRights"
-> & {address: IUserAddress} ;
+> & {address: Partial<IUserAddress>} ;
 
 export type UserUpdatePayload = Partial<UserCreatePayload>;
 

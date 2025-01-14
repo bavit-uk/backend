@@ -52,7 +52,26 @@ export const supplierService = {
       },
       {
         // Flatten the 'userType' array into an object
-        $unwind: "$userType",
+        // $unwind: "$userType",
+        $unwind: {
+          path: "$userType",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        // Join with the 'suppliercategories' collection to get the supplier category details
+        $lookup: {
+          from: "suppliercategories",
+          localField: "supplierCategory",
+          foreignField: "_id",
+          as: "supplierCategory",
+        },
+      },
+      {
+        $unwind: {
+          path: "$supplierCategory",
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         // Match only users where the userType role is "Supplier"

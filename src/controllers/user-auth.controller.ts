@@ -1,22 +1,23 @@
 import { NextFunction, Request, Response } from "express";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import { authService } from "@/services";
-import { Address, User } from "@/models";
+import { Address, User, UserCategory } from "@/models";
 import { jwtSign, jwtVerify } from "@/utils/jwt.util";
 import crypto from "crypto";
 import sendEmail from "@/utils/nodeMailer";
+import { OAuth2Client } from "google-auth-library";
+
+// Initialize Google OAuth client
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const authController = {
-
   registerUser: async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
       // Check if user already exists
       const existingUser = await authService.findExistingEmail(email);
       if (existingUser) {
-        return res
-          .status(StatusCodes.CONFLICT)
-          .json({ message: "User with this email already exists" });
+        return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
       }
       // Create new user
       const newUser = await authService.createUser(req.body);
@@ -35,16 +36,13 @@ export const authController = {
         html,
       });
       res.status(StatusCodes.CREATED).json({
-        message:
-          "User registered successfully, Please check your email to verify your account.",
+        message: "User registered successfully, Please check your email to verify your account.",
         user: newUser,
         verificationToken: verificationToken.accessToken, // Include token for testing purposes
       });
     } catch (error) {
       console.error("Error registering user:", error);
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ message: "Error registering user" });
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error registering user" });
     }
   },
 
@@ -55,7 +53,7 @@ export const authController = {
       const user = await authService.findExistingEmail(email, "+password");
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({
-          message: ReasonPhrases.NOT_FOUND,
+          message: "Email not found!",
           status: StatusCodes.NOT_FOUND,
         });
       }
@@ -63,7 +61,7 @@ export const authController = {
       const isPasswordValid = user.comparePassword(password);
       if (!isPasswordValid) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
-          message: ReasonPhrases.UNAUTHORIZED,
+          message: "Incorrect Password!",
           status: StatusCodes.UNAUTHORIZED,
         });
       }
@@ -97,41 +95,105 @@ export const authController = {
     }
   },
 
+  googleLogin: async (req: Request, res: Response) => {
+    try {
+      const { email, firstName, lastName, profileImage, userType, isEmailVerified, signUpThrough } = req.body;
+      console.log("details : ", userType, email, firstName, lastName, profileImage, signUpThrough);
+      let user = await authService.findExistingEmail(email);
+      if (!user) {
+        user = await new User({
+          firstName,
+          lastName,
+          email,
+          signUpThrough,
+          userType,
+          isEmailVerified,
+          profileImage,
+        });
+      }
+      await user.save();
+
+      const userTypee = await UserCategory.findById(userType);
+      console.log("usertype : ", userTypee);
+
+      // Generate tokens
+      const { accessToken, refreshToken } = jwtSign(user?.id);
+      return res.status(StatusCodes.OK).json({
+        user,
+        userType: userTypee,
+        accessToken,
+        refreshToken,
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+      });
+    } catch (error) {
+      console.error("Google login error:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error during Google login" });
+    }
+  },
+
+  facebookLogin: async (req: Request, res: Response) => {
+    try {
+      const { email, firstName, lastName, profileImage, userType, signUpThrough } = req.body;
+      console.log("details : ", userType, email, firstName, lastName, profileImage, signUpThrough);
+      let user = await authService.findExistingEmail(email);
+      if (!user) {
+        user = await new User({
+          firstName,
+          lastName,
+          email,
+          signUpThrough,
+          userType,
+          // isEmailVerified,
+          profileImage,
+        });
+      }
+      await user.save();
+
+      const userTypee = await UserCategory.findById(userType);
+      console.log("usertype : ", userTypee);
+
+      // Generate tokens
+      const { accessToken, refreshToken } = jwtSign(user?.id);
+      return res.status(StatusCodes.OK).json({
+        user,
+        userType: userTypee,
+        accessToken,
+        refreshToken,
+        message: ReasonPhrases.OK,
+        status: StatusCodes.OK,
+      });
+    } catch (error) {
+      console.error("Google login error:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error during Google login" });
+    }
+  },
+
   verifyEmail: async (req: Request, res: Response) => {
     try {
       const { token } = req.params;
       if (!token || typeof token !== "string") {
-        return res
-          .status(StatusCodes.BAD_REQUEST)
-          .json({ success: false, message: "Invalid verification token." });
+        return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: "Invalid verification token." });
       }
       const decoded = jwtVerify(token);
       const userId = decoded.id.toString();
       const user = await authService.findUserById(userId);
       if (!user) {
-        return res
-          .status(StatusCodes.NOT_FOUND)
-          .json({ success: false, message: "User not found." });
+        return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: "User not found." });
       }
       // Check if already verified
       if (user.isEmailVerified) {
-        return res
-          .status(StatusCodes.BAD_REQUEST)
-          .json({ success: false, message: "Email is already verified." });
+        return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: "Email is already verified." });
       }
 
       // Update user's verification status
       user.isEmailVerified = true;
       user.EmailVerifiedAt = new Date();
       await user.save();
-      res
-        .status(StatusCodes.OK)
-        .json({ success: true, message: "Email verified successfully." });
+      res.status(StatusCodes.OK).json({ success: true, message: "Email verified successfully." });
     } catch (error) {
       console.error("Error verifying email:", error);
-      res
-        .status(StatusCodes.UNAUTHORIZED)
-        .json({ success: false, message: "Invalid or expired token." });
+      res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: "Invalid or expired token." });
     }
   },
 
@@ -140,34 +202,27 @@ export const authController = {
       const user = req.context.user;
 
       if (!user) {
-        return res
-          .status(StatusCodes.NOT_FOUND)
-          .json({ message: "User not found" });
+        return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
       }
 
       // Fetch all addresses associated with the user
       const userAddresses = await authService.findAddressByUserId(user._id);
 
-      
       return res.status(StatusCodes.OK).json({ user, address: userAddresses });
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ message: "Error fetching user profile" });
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error fetching user profile" });
     }
   },
 
   updateProfile: async (req: Request, res: Response) => {
     try {
       const { firstName, lastName, phoneNumber, dob, address, profileImage, oldPassword, newPassword } = req.body;
-      // console.log("data in auth controller : " , address)
+      console.log("data in auth controller : ", address);
 
       const user = req.context.user;
       if (!user) {
-        return res
-          .status(StatusCodes.NOT_FOUND)
-          .json({ message: "User not found" });
+        return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
       }
 
       if (firstName) {
@@ -212,7 +267,7 @@ export const authController = {
           if (addr._id) {
             // If address ID exists, update the existing address
             // await Address.findByIdAndUpdate(addr._id, addr);
-            await authService.findAddressandUpdate(addr._id , addr)
+            await authService.findAddressandUpdate(addr._id, addr);
           } else {
             // If no ID, create a new address for the user
             await Address.create({ ...addr, userId: user._id });
@@ -250,7 +305,6 @@ export const authController = {
       const user = await authService.findExistingEmail(email);
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({
-          
           message: "user is not in auth",
           status: StatusCodes.NOT_FOUND,
         });
@@ -258,10 +312,9 @@ export const authController = {
 
       // Generate a reset token
       const resetToken = crypto.randomBytes(32).toString("hex");
-      const resetTokenHash = crypto
-        .createHash("sha256")
-        .update(resetToken)
-        .digest("hex");
+      const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+      console.log("Reset token (plain):", resetToken);
+      console.log("Reset token (hashed):", resetTokenHash);
       const resetTokenExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes expiration
 
       // Save the token and expiry to the user record
@@ -298,51 +351,41 @@ export const authController = {
       }
     } catch (error) {
       console.error("Error in forgotPassword:", error);
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ message: "Error processing request" });
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing request" });
     }
   },
 
   resetPassword: async (req: Request, res: Response) => {
     try {
       const { token } = req.params;
+      console.log("Received token:", token);
       const { password } = req.body;
+      console.log("Received password:", password);
 
-      // Hash the token and compare it to the stored token
-      const hashedToken = crypto
-        .createHash("sha256")
-        .update(token)
-        .digest("hex");
+      const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+      console.log("Hashed token:", hashedToken);
 
       // Find user by the reset token and check expiration
       const user = await authService.findUserByResetToken(hashedToken);
-      if (
-        !user ||
-        !user.resetPasswordExpires ||
-        user.resetPasswordExpires < Date.now()
-      ) {
-        return res
-          .status(StatusCodes.BAD_REQUEST)
-          .json({ message: "Invalid or expired token" });
+      console.log("USER: ", user);
+      if (!user || !user.resetPasswordExpires || user.resetPasswordExpires < Date.now()) {
+        console.log("Token invalid or expired.");
+        return res.status(StatusCodes.BAD_REQUEST).json({ message: "Invalid or expired token" });
       }
+
+      console.log("User found:", user);
 
       // Update the password and clear the reset token
       user.password = user.hashPassword(password);
       user.resetPasswordToken = undefined;
       user.resetPasswordExpires = undefined;
       await user.save();
-      return res
-        .status(StatusCodes.OK)
-        .json({ message: "Password updated successfully" });
+      return res.status(StatusCodes.OK).json({ message: "Password updated successfully" });
     } catch (error) {
       console.error("Error in resetPassword:", error);
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ message: "Error processing request" });
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing request" });
     }
   },
-
 };
 
 //   googleAuth: async (req: Request, res: Response, next: NextFunction) => {
