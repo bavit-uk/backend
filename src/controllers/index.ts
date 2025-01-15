@@ -15,3 +15,4 @@ export { cartController } from "./cart.controller";
 export { paymentPolicyController } from "./payment-policy.controller";
 export { postagePolicyController } from "./postage-policy.controller";
 export { variationController } from "./variation.controller";
+export { faqsPolicyController } from "./faqs.controller";
