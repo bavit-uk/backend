@@ -9,3 +9,4 @@ export { productValidation } from "./product.validation";
 export { orderValidation } from "./order.validation";
 export { cartValidation } from "./cart.validation";
 export { variationValidation } from "./variation.validation";
+export { faqsValidation } from "./faqs.validation"

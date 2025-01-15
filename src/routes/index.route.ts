@@ -19,6 +19,7 @@ import { cartRoutes } from "./cart.route";
 import { variations } from "./variations.route";
 import { paymentPolicy } from "./payment-policy.route";
 import { descriminatorRouter } from "./descriminator.route";
+import { faqsPolicy } from "./faqs-policy.route";
 
 // Create a new router to handle all routes
 const router: Router = Router();
@@ -45,6 +46,7 @@ const routes: {
   orderRoutes,
   cartRoutes,
   paymentPolicy,
+  faqsPolicy,
   // descriminator,
 };
 
