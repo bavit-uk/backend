@@ -18,7 +18,7 @@ export const faqsValidation = {
     const schema: ZodSchema = z.object({
       faqsQuestion: z.string().trim().min(3, "Question is required and should be at least 3 characters long"),
       faqsAnswer: z.string().trim().min(5, "Answer is required and should be at least 5 characters long"),
-      faqsCateogry: z.string().trim().min(1, "Category is required"),
+      faqsCategory: z.string().trim().min(1, "Category is required"),
     });
     try {
       const validatedData = schema.parse(req.body);
