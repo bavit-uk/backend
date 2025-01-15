@@ -57,7 +57,7 @@ export const faqsValidation = {
       faqCategory: z
       .string()
       .trim()
-      .min(5, "Cateogry is required")
+      .min(1, "Cateogry is required")
       .optional(),
     });
     try {
