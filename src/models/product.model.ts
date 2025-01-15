@@ -17,7 +17,12 @@ const prodInfoSchema = {
   title: { type: String, required: true },
   productDescription: { type: String },
   brand: { type: String, required: true },
-  images: [{ type: String, required: true }],
+  images: [
+    {
+      url: { type: String, required: true }, // URL of the image
+      type: { type: String, required: true }, // MIME type (e.g., "image/jpeg", "video/mp4")
+    },
+  ],
 };
 
 const prodPricingSchema = {
