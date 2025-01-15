@@ -4,6 +4,12 @@ import { faqsPolicyController } from "@/controllers"
 
 export const faqsPolicy = (router: Router) => {
 
-    router.post('/addFaqs', faqsPolicyController.createFaqsPolicy);
+    router.post('/', faqsPolicyController.createFaqsPolicy);
+
+    router.get('/', faqsPolicyController.getAllFaqsPolicy);
+
+    router.delete('/:id', faqsPolicyController.deleteFaqs);
+
+    router.patch('/:id', faqsPolicyController.editFaqs)
 
 }
