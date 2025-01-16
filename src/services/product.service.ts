@@ -231,7 +231,7 @@ export const productService = {
         .populate("platformDetails.amazon.productInfo.productCategory")
         .populate("platformDetails.ebay.productInfo.productCategory")
         .populate("platformDetails.website.productInfo.productCategory")
-        .lean();
+        // .lean();
 
       if (!product) throw new Error("Product not found");
       return product;
