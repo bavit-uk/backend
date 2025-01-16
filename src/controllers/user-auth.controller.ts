@@ -6,6 +6,7 @@ import { jwtSign, jwtVerify } from "@/utils/jwt.util";
 import crypto from "crypto";
 import sendEmail from "@/utils/nodeMailer";
 import { OAuth2Client } from "google-auth-library";
+import { userCategory } from "@/routes/user-category.route";
 
 // Initialize Google OAuth client
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -17,7 +18,9 @@ export const authController = {
       // Check if user already exists
       const existingUser = await authService.findExistingEmail(email);
       if (existingUser) {
-        return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
+        return res
+          .status(StatusCodes.CONFLICT)
+          .json({ message: "User with this email already exists" });
       }
       // Create new user
       const newUser = await authService.createUser(req.body);
@@ -36,27 +39,47 @@ export const authController = {
         html,
       });
       res.status(StatusCodes.CREATED).json({
-        message: "User registered successfully, Please check your email to verify your account.",
+        message:
+          "User registered successfully, Please check your email to verify your account.",
         user: newUser,
         verificationToken: verificationToken.accessToken, // Include token for testing purposes
       });
     } catch (error) {
       console.error("Error registering user:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error registering user" });
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "Error registering user" });
     }
   },
 
   loginUser: async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
+
+      // Get the userType from the request header
+      const userTypeFromHeader = req.headers["X-User-Type"]; // "Admin" or undefined
+      console.log(
+        "user Type from header getting from frontend",
+        userTypeFromHeader
+      );
       // Find user by email first
-      const user = await authService.findExistingEmail(email, "+password");
+      const user: any = await authService.findExistingEmail(email, "+password");
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({
           message: "Email not found!",
           status: StatusCodes.NOT_FOUND,
         });
       }
+
+      // If userType is in the header and is "Admin", check if the user's role is Admin
+      if (userTypeFromHeader === "Admin" && user.userType.role !== "Admin") {
+        return res.status(StatusCodes.FORBIDDEN).json({
+          message:
+            "You are not authorized to login as an Admin. Please use the user login form.",
+          status: StatusCodes.FORBIDDEN,
+        });
+      }
+
       // Check password using the model method
       const isPasswordValid = user.comparePassword(password);
       if (!isPasswordValid) {
@@ -65,10 +88,11 @@ export const authController = {
           status: StatusCodes.UNAUTHORIZED,
         });
       }
-      // const accessToken = jwtSign
+
+      // Generate JWT Tokens
       const { accessToken, refreshToken } = jwtSign(user.id);
 
-      // TODO: Send Tokens in Cookies instead of response
+      // Optional: Set tokens in cookies for secure HTTP requests (commented out)
       // res.cookie("accessToken", accessToken, {
       //   httpOnly: true,
       //   maxAge: 15 * 60 * 1000, // Access Token lifespan (15 minutes in ms)
@@ -77,6 +101,8 @@ export const authController = {
       //   httpOnly: true,
       //   maxAge: 7 * 24 * 60 * 60 * 1000, // Refresh Token lifespan (7 days in ms)
       // });
+
+      // Respond with user data and tokens
       return res.status(StatusCodes.OK).json({
         data: {
           user: user.toJSON(),
@@ -97,8 +123,24 @@ export const authController = {
 
   googleLogin: async (req: Request, res: Response) => {
     try {
-      const { email, firstName, lastName, profileImage, userType, isEmailVerified, signUpThrough } = req.body;
-      console.log("details : ", userType, email, firstName, lastName, profileImage, signUpThrough);
+      const {
+        email,
+        firstName,
+        lastName,
+        profileImage,
+        userType,
+        isEmailVerified,
+        signUpThrough,
+      } = req.body;
+      console.log(
+        "details : ",
+        userType,
+        email,
+        firstName,
+        lastName,
+        profileImage,
+        signUpThrough
+      );
       let user = await authService.findExistingEmail(email);
       if (!user) {
         user = await new User({
@@ -128,14 +170,31 @@ export const authController = {
       });
     } catch (error) {
       console.error("Google login error:", error);
-      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error during Google login" });
+      return res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "Error during Google login" });
     }
   },
 
   facebookLogin: async (req: Request, res: Response) => {
     try {
-      const { email, firstName, lastName, profileImage, userType, signUpThrough } = req.body;
-      console.log("details : ", userType, email, firstName, lastName, profileImage, signUpThrough);
+      const {
+        email,
+        firstName,
+        lastName,
+        profileImage,
+        userType,
+        signUpThrough,
+      } = req.body;
+      console.log(
+        "details : ",
+        userType,
+        email,
+        firstName,
+        lastName,
+        profileImage,
+        signUpThrough
+      );
       let user = await authService.findExistingEmail(email);
       if (!user) {
         user = await new User({
@@ -165,7 +224,9 @@ export const authController = {
       });
     } catch (error) {
       console.error("Google login error:", error);
-      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error during Google login" });
+      return res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "Error during Google login" });
     }
   },
 
@@ -173,27 +234,37 @@ export const authController = {
     try {
       const { token } = req.params;
       if (!token || typeof token !== "string") {
-        return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: "Invalid verification token." });
+        return res
+          .status(StatusCodes.BAD_REQUEST)
+          .json({ success: false, message: "Invalid verification token." });
       }
       const decoded = jwtVerify(token);
       const userId = decoded.id.toString();
       const user = await authService.findUserById(userId);
       if (!user) {
-        return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: "User not found." });
+        return res
+          .status(StatusCodes.NOT_FOUND)
+          .json({ success: false, message: "User not found." });
       }
       // Check if already verified
       if (user.isEmailVerified) {
-        return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: "Email is already verified." });
+        return res
+          .status(StatusCodes.BAD_REQUEST)
+          .json({ success: false, message: "Email is already verified." });
       }
 
       // Update user's verification status
       user.isEmailVerified = true;
       user.EmailVerifiedAt = new Date();
       await user.save();
-      res.status(StatusCodes.OK).json({ success: true, message: "Email verified successfully." });
+      res
+        .status(StatusCodes.OK)
+        .json({ success: true, message: "Email verified successfully." });
     } catch (error) {
       console.error("Error verifying email:", error);
-      res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: "Invalid or expired token." });
+      res
+        .status(StatusCodes.UNAUTHORIZED)
+        .json({ success: false, message: "Invalid or expired token." });
     }
   },
 
@@ -202,7 +273,9 @@ export const authController = {
       const user = req.context.user;
 
       if (!user) {
-        return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
+        return res
+          .status(StatusCodes.NOT_FOUND)
+          .json({ message: "User not found" });
       }
 
       // Fetch all addresses associated with the user
@@ -211,18 +284,31 @@ export const authController = {
       return res.status(StatusCodes.OK).json({ user, address: userAddresses });
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error fetching user profile" });
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "Error fetching user profile" });
     }
   },
 
   updateProfile: async (req: Request, res: Response) => {
     try {
-      const { firstName, lastName, phoneNumber, dob, address, profileImage, oldPassword, newPassword } = req.body;
+      const {
+        firstName,
+        lastName,
+        phoneNumber,
+        dob,
+        address,
+        profileImage,
+        oldPassword,
+        newPassword,
+      } = req.body;
       console.log("data in auth controller : ", address);
 
       const user = req.context.user;
       if (!user) {
-        return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
+        return res
+          .status(StatusCodes.NOT_FOUND)
+          .json({ message: "User not found" });
       }
 
       if (firstName) {
@@ -312,7 +398,10 @@ export const authController = {
 
       // Generate a reset token
       const resetToken = crypto.randomBytes(32).toString("hex");
-      const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+      const resetTokenHash = crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
       console.log("Reset token (plain):", resetToken);
       console.log("Reset token (hashed):", resetTokenHash);
       const resetTokenExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes expiration
@@ -351,7 +440,9 @@ export const authController = {
       }
     } catch (error) {
       console.error("Error in forgotPassword:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing request" });
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "Error processing request" });
     }
   },
 
@@ -362,15 +453,24 @@ export const authController = {
       const { password } = req.body;
       console.log("Received password:", password);
 
-      const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
       console.log("Hashed token:", hashedToken);
 
       // Find user by the reset token and check expiration
       const user = await authService.findUserByResetToken(hashedToken);
       console.log("USER: ", user);
-      if (!user || !user.resetPasswordExpires || user.resetPasswordExpires < Date.now()) {
+      if (
+        !user ||
+        !user.resetPasswordExpires ||
+        user.resetPasswordExpires < Date.now()
+      ) {
         console.log("Token invalid or expired.");
-        return res.status(StatusCodes.BAD_REQUEST).json({ message: "Invalid or expired token" });
+        return res
+          .status(StatusCodes.BAD_REQUEST)
+          .json({ message: "Invalid or expired token" });
       }
 
       console.log("User found:", user);
@@ -380,10 +480,14 @@ export const authController = {
       user.resetPasswordToken = undefined;
       user.resetPasswordExpires = undefined;
       await user.save();
-      return res.status(StatusCodes.OK).json({ message: "Password updated successfully" });
+      return res
+        .status(StatusCodes.OK)
+        .json({ message: "Password updated successfully" });
     } catch (error) {
       console.error("Error in resetPassword:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error processing request" });
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "Error processing request" });
     }
   },
 };
