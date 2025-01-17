@@ -1,6 +1,11 @@
 import mongoose, { Schema, model, Document } from "mongoose";
 import { REGEX } from "@/constants/regex";
-import { IFile, IUser, IUserMethods, UserModel } from "@/contracts/user.contract";
+import {
+  IFile,
+  IUser,
+  IUserMethods,
+  UserModel,
+} from "@/contracts/user.contract";
 import { compareSync, hashSync } from "bcrypt";
 import { ENUMS } from "@/constants/enum";
 
@@ -22,6 +27,7 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     email: {
       type: String,
       required: true,
+      lowercase: true,
       validate: {
         validator: validateEmail,
         message: "Invalid email format",
@@ -31,7 +37,12 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     phoneNumber: { type: String },
     dob: { type: String },
     // address: [{ type: Schema.Types.ObjectId, ref: "Address" }],
-    signUpThrough: { type: String, enum: ENUMS.SIGNUP_THROUGH, required: true, default: "Web" },
+    signUpThrough: {
+      type: String,
+      enum: ENUMS.SIGNUP_THROUGH,
+      required: true,
+      default: "Web",
+    },
     profileImage: { type: String },
     // EmailVerifiedOTP: { type: String },
     // EmailVerifiedOTPExpiredAt: { type: Date },
@@ -44,7 +55,7 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Number },
     documents: [{ type: fileSchema }], // Store supplier-related files
-    isBlocked: {type: Boolean , default: false}
+    isBlocked: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
