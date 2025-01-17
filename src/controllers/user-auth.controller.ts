@@ -80,8 +80,7 @@ export const authController = {
         userTypeFromHeader !== "Admin"
       ) {
         return res.status(StatusCodes.FORBIDDEN).json({
-          message:
-            "Admin must use their respective login page.",
+          message: "Admin must use their respective login page.",
           status: StatusCodes.FORBIDDEN,
         });
       }
