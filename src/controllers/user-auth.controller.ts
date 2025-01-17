@@ -55,13 +55,12 @@ export const authController = {
   loginUser: async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
-
-      // Get the userType from the request header
+  
+      // Get the userType from the request header (case-insensitive)
       const userTypeFromHeader = req.headers["x-user-type"] || req.headers["X-User-Type"];
-      console.log(
-        "user Type from header getting from frontend",
-userTypeFromHeader
-      );
+      console.log("Headers received:", req.headers);
+      console.log("userTypeFromHeader:", userTypeFromHeader);
+  
       // Find user by email first
       const user: any = await authService.findExistingEmail(email, "+password");
       if (!user) {
@@ -70,20 +69,20 @@ userTypeFromHeader
           status: StatusCodes.NOT_FOUND,
         });
       }
-      console.log(
-        "user Type from backend getting from role is:::",
-        user.userType.role
-      );
-      // If userType is in the header and is "Admin", check if the user's role is Admin
-      if (userTypeFromHeader === "Admin" && user.userType.role !== "Admin") {
-        
-        return res.status(StatusCodes.FORBIDDEN).json({
-          message:
-            "You are not authorized to login as an Admin. Please use the user login form.",
-          status: StatusCodes.FORBIDDEN,
-        });
+  
+      console.log("User role from database:", user.userType.role);
+  
+      // Check if the user is authorized to log in based on the userTypeFromHeader
+      if (userTypeFromHeader === "Admin") {
+        // Allow both Admin and SuperAdmin roles
+        if (user.userType.role !== "Admin" && user.userType.role !== "Super Admin") {
+          return res.status(StatusCodes.FORBIDDEN).json({
+            message: "You are not authorized to login as an Admin. Please use the user login form.",
+            status: StatusCodes.FORBIDDEN,
+          });
+        }
       }
-
+  
       // Check password using the model method
       const isPasswordValid = user.comparePassword(password);
       if (!isPasswordValid) {
@@ -92,38 +91,29 @@ userTypeFromHeader
           status: StatusCodes.UNAUTHORIZED,
         });
       }
-
+  
       // Generate JWT Tokens
       const { accessToken, refreshToken } = jwtSign(user.id);
-
-      // Optional: Set tokens in cookies for secure HTTP requests (commented out)
-      // res.cookie("accessToken", accessToken, {
-      //   httpOnly: true,
-      //   maxAge: 15 * 60 * 1000, // Access Token lifespan (15 minutes in ms)
-      // });
-      // res.cookie("refreshToken", refreshToken, {
-      //   httpOnly: true,
-      //   maxAge: 7 * 24 * 60 * 60 * 1000, // Refresh Token lifespan (7 days in ms)
-      // });
-
+  
       // Respond with user data and tokens
       return res.status(StatusCodes.OK).json({
         data: {
           user: user.toJSON(),
-          accessToken, // Include 'Bearer' prefix
+          accessToken,
           refreshToken,
         },
         message: ReasonPhrases.OK,
         status: StatusCodes.OK,
       });
-    } catch (err) {
-      console.log(err);
+    } catch (error: any) {
+      console.error("Error in loginUser:", error.message || error);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         message: ReasonPhrases.INTERNAL_SERVER_ERROR,
         status: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     }
   },
+  
 
   googleLogin: async (req: Request, res: Response) => {
     try {
