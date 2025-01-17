@@ -34,6 +34,7 @@ const orderSchema = new Schema(
     },
     email: {
       type: String,
+      lowercase: true,
       required: true, // Customer email for order confirmation & updates
     },
     shippingAddress: {
