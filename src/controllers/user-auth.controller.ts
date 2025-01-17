@@ -16,7 +16,7 @@ export const authController = {
   registerUser: async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
-      // Check if user already exists
+      // Check if user already exist
       const existingUser = await authService.findExistingEmail(email);
       if (existingUser) {
         return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists! Try Login" });
