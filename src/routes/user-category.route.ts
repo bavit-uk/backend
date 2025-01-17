@@ -2,6 +2,7 @@ import { Router } from "express";
 import { userCategoryController } from "@/controllers";
 import { userCategoryValidation } from "@/validations";
 
+
 export const userCategory = (router: Router) => {
 
     router.post("/", userCategoryValidation.createUserCategory , userCategoryController.createUserCategory); 
