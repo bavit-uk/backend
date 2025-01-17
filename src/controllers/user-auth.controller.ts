@@ -57,10 +57,10 @@ export const authController = {
       const { email, password } = req.body;
 
       // Get the userType from the request header
-      const userTypeFromHeader = req.headers["X-User-Type"]; // "Admin" or undefined
+      const userTypeFromHeader = req.headers["x-user-type"] || req.headers["X-User-Type"];
       console.log(
         "user Type from header getting from frontend",
-        userTypeFromHeader
+userTypeFromHeader
       );
       // Find user by email first
       const user: any = await authService.findExistingEmail(email, "+password");
@@ -70,9 +70,13 @@ export const authController = {
           status: StatusCodes.NOT_FOUND,
         });
       }
-
+      console.log(
+        "user Type from backend getting from role is:::",
+        user.userType.role
+      );
       // If userType is in the header and is "Admin", check if the user's role is Admin
       if (userTypeFromHeader === "Admin" && user.userType.role !== "Admin") {
+        
         return res.status(StatusCodes.FORBIDDEN).json({
           message:
             "You are not authorized to login as an Admin. Please use the user login form.",
