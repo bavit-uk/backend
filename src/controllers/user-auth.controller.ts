@@ -55,12 +55,13 @@ export const authController = {
   loginUser: async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
-  
+
       // Get the userType from the request header (case-insensitive)
-      const userTypeFromHeader = req.headers["x-user-type"] || req.headers["X-User-Type"];
+      const userTypeFromHeader =
+        req.headers["x-user-type"] || req.headers["X-User-Type"];
       console.log("Headers received:", req.headers);
       console.log("userTypeFromHeader:", userTypeFromHeader);
-  
+
       // Find user by email first
       const user: any = await authService.findExistingEmail(email, "+password");
       if (!user) {
@@ -69,20 +70,34 @@ export const authController = {
           status: StatusCodes.NOT_FOUND,
         });
       }
-  
+
       console.log("User role from database:", user.userType.role);
-  
-      // Check if the user is authorized to log in based on the userTypeFromHeader
-      if (userTypeFromHeader === "Admin") {
-        // Allow both Admin and SuperAdmin roles
-        if (user.userType.role !== "Admin" && user.userType.role !== "Super Admin") {
-          return res.status(StatusCodes.FORBIDDEN).json({
-            message: "You are not authorized to login as an Admin. Please use the user login form.",
-            status: StatusCodes.FORBIDDEN,
-          });
-        }
+
+      // Restrict Admin and SuperAdmin to login only with 'X-User-Type: Admin'
+      if (
+        (user.userType.role === "Admin" ||
+          user.userType.role === "Super Admin") &&
+        userTypeFromHeader !== "Admin"
+      ) {
+        return res.status(StatusCodes.FORBIDDEN).json({
+          message:
+            "Admin must use their respective login page.",
+          status: StatusCodes.FORBIDDEN,
+        });
       }
-  
+
+      // Restrict other roles to login only without 'X-User-Type: Admin'
+      if (
+        userTypeFromHeader === "Admin" &&
+        user.userType.role !== "Admin" &&
+        user.userType.role !== "Super Admin"
+      ) {
+        return res.status(StatusCodes.FORBIDDEN).json({
+          message: "You are not authorized to use the Admin login page.",
+          status: StatusCodes.FORBIDDEN,
+        });
+      }
+
       // Check password using the model method
       const isPasswordValid = user.comparePassword(password);
       if (!isPasswordValid) {
@@ -91,10 +106,10 @@ export const authController = {
           status: StatusCodes.UNAUTHORIZED,
         });
       }
-  
+
       // Generate JWT Tokens
       const { accessToken, refreshToken } = jwtSign(user.id);
-  
+
       // Respond with user data and tokens
       return res.status(StatusCodes.OK).json({
         data: {
@@ -105,15 +120,14 @@ export const authController = {
         message: ReasonPhrases.OK,
         status: StatusCodes.OK,
       });
-    } catch (error: any) {
-      console.error("Error in loginUser:", error.message || error);
+    } catch (err: any) {
+      console.error("Error in loginUser:", err.message || err);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         message: ReasonPhrases.INTERNAL_SERVER_ERROR,
         status: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     }
   },
-  
 
   googleLogin: async (req: Request, res: Response) => {
     try {
