@@ -6,6 +6,7 @@ import { jwtSign, jwtVerify } from "@/utils/jwt.util";
 import crypto from "crypto";
 import sendEmail from "@/utils/nodeMailer";
 import { OAuth2Client } from "google-auth-library";
+import mongoose from "mongoose";
 
 // Initialize Google OAuth client
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -237,9 +238,9 @@ export const authController = {
       if (profileImage) {
         user.profileImage = profileImage;
       }
-      if (dob) {
-        user.dob = dob;
-      }
+      // if (dob) {
+      //   user.dob = dob;
+      // }
       if (newPassword) {
         if (!oldPassword) {
           // Old password must be provided if new password is being updated
@@ -262,15 +263,22 @@ export const authController = {
 
       // Handle address update/addition if provided
       if (address && Array.isArray(address)) {
-        // console.log( "address inside IFF :" , address)
+        console.log("address inside IFF :", address);
+
         for (const addr of address) {
-          if (addr._id) {
+          console.log("inside for addr: ", addr);
+
+          if (addr._id && mongoose.Types.ObjectId.isValid(addr._id)) {
+            console.log("id of address exist : ", addr._id);
             // If address ID exists, update the existing address
             // await Address.findByIdAndUpdate(addr._id, addr);
             await authService.findAddressandUpdate(addr._id, addr);
           } else {
-            // If no ID, create a new address for the user
-            await Address.create({ ...addr, userId: user._id });
+            console.log("Creating new address for user ID:", user._id);
+            // Remove _id if it's an empty string before creating a new address
+            const newAddress = { ...addr, userId: user._id };
+            delete newAddress._id; // Ensure _id is not included for new address creation
+            await Address.create(newAddress); // Create new address
           }
         }
       }
