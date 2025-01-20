@@ -155,7 +155,7 @@ export const productService = {
                 if (isEbay) platformDetails.ebay.prodTechInfo[currentKey] = value;
                 if (isWeb) platformDetails.website.prodTechInfo[currentKey] = value;
               } else if (step === "productInfo") {
-                
+
                 console.log("in productInfo if section ");
                 console.log("platformDetails.amazon.productInfo before: ", platformDetails.amazon.productInfo);
                 console.log("platformDetails.ebay.productInfo before: ", platformDetails.ebay.productInfo);
@@ -173,7 +173,7 @@ export const productService = {
                 }
 
                 console.log("    ")
-                
+
                 // Assign values to the correct platform
                 if (isAmz) platformDetails.amazon.productInfo[currentKey] = value;
                 if (isEbay) platformDetails.ebay.productInfo[currentKey] = value;
@@ -231,7 +231,7 @@ export const productService = {
         .populate("platformDetails.amazon.productInfo.productCategory")
         .populate("platformDetails.ebay.productInfo.productCategory")
         .populate("platformDetails.website.productInfo.productCategory")
-        .lean();
+        // .lean();
 
       if (!product) throw new Error("Product not found");
       return product;

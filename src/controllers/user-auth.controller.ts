@@ -6,6 +6,8 @@ import { jwtSign, jwtVerify } from "@/utils/jwt.util";
 import crypto from "crypto";
 import sendEmail from "@/utils/nodeMailer";
 import { OAuth2Client } from "google-auth-library";
+import { userCategory } from "@/routes/user-category.route";
+import mongoose from "mongoose";
 
 // Initialize Google OAuth client
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -14,10 +16,10 @@ export const authController = {
   registerUser: async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
-      // Check if user already exists
+      // Check if user already exist
       const existingUser = await authService.findExistingEmail(email);
       if (existingUser) {
-        return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
+        return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists! Try Login" });
       }
       // Create new user
       const newUser = await authService.createUser(req.body);
@@ -27,8 +29,22 @@ export const authController = {
       // const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
       const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken.accessToken}`;
 
-      const html = `<p>Please verify your email by clicking the link below:</p>
-                    <a href="${verificationUrl}">Verify Email</a>`;
+      const html = `
+  <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+    <h2 style="color: #4CAF50;">Welcome to Our Platform!</h2>
+    <p>Hi ${newUser.firstName},</p>
+    <p>Thank you for signing up with us! To complete your registration and start using your account, please verify your email address by clicking the link below:</p>
+    <p>
+      <a 
+        href="${verificationUrl}" 
+        style="display: inline-block; padding: 10px 20px; margin: 10px 0; color: white; background-color: #4CAF50; text-decoration: none; border-radius: 5px;"
+      >
+        Verify Email
+      </a>
+    </p>
+  </div>
+`;
+
       // Use sendEmail to send the verification email
       await sendEmail({
         to: newUser.email,
@@ -49,14 +65,70 @@ export const authController = {
   loginUser: async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
+
+      // Get the userType from the request header (case-insensitive)
+      const userTypeFromHeader = req.headers["x-user-type"] || req.headers["X-User-Type"];
+      console.log("Headers received:", req.headers);
+      console.log("userTypeFromHeader:", userTypeFromHeader);
+
       // Find user by email first
-      const user = await authService.findExistingEmail(email, "+password");
+      const user: any = await authService.findExistingEmail(email, "+password");
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({
-          message: "Email not found!",
+          message: "User does not exist!",
           status: StatusCodes.NOT_FOUND,
         });
       }
+
+      console.log("User role from database:", user.userType.role);
+
+      // Check if email is verified
+      if (!user.isEmailVerified) {
+        // send verification email again
+        const verificationToken = jwtSign(user.id);
+        const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken.accessToken}`;
+        const html = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+          <h2 style="color: #4CAF50;">Welcome to Our Platform!</h2>
+          <p>Hi ${user.firstName},</p>
+          <p>Thank you for signing up with us! To complete your registration and start using your account, please verify your email address by clicking the link below:</p>
+          <p>
+            <a 
+              href="${verificationUrl}" 
+              style="display: inline-block; padding: 10px 20px; margin: 10px 0; color: white; background-color: #4CAF50; text-decoration: none; border-radius: 5px;"
+            >
+              Verify Email
+            </a>
+          </p>
+        </div>
+      `;
+        await sendEmail({
+          to: user.email,
+          subject: "Verify your email address",
+          html,
+        });
+        return res.status(StatusCodes.FORBIDDEN).json({
+          message: "Please verify your email before logging in. Verification email has been sent!",
+          status: StatusCodes.FORBIDDEN,
+        });
+      }
+
+      // Restrict Admin and SuperAdmin to login only with 'X-User-Type: Admin'
+      if ((user.userType.role === "Admin" || user.userType.role === "Super Admin") && userTypeFromHeader !== "Admin") {
+        return res.status(StatusCodes.FORBIDDEN).json({
+          message: "Admin must use their respective login page.",
+          status: StatusCodes.FORBIDDEN,
+        });
+      }
+
+      // Restrict other roles to login only without 'X-User-Type: Admin'
+      if (userTypeFromHeader === "Admin" && user.userType.role !== "Admin" && user.userType.role !== "Super Admin") {
+        return res.status(StatusCodes.FORBIDDEN).json({
+          message: "You are not authorized to use the Admin login page.",
+          status: StatusCodes.FORBIDDEN,
+        });
+      }
+
       // Check password using the model method
       const isPasswordValid = user.comparePassword(password);
       if (!isPasswordValid) {
@@ -65,29 +137,22 @@ export const authController = {
           status: StatusCodes.UNAUTHORIZED,
         });
       }
-      // const accessToken = jwtSign
+
+      // Generate JWT Tokens
       const { accessToken, refreshToken } = jwtSign(user.id);
 
-      // TODO: Send Tokens in Cookies instead of response
-      // res.cookie("accessToken", accessToken, {
-      //   httpOnly: true,
-      //   maxAge: 15 * 60 * 1000, // Access Token lifespan (15 minutes in ms)
-      // });
-      // res.cookie("refreshToken", refreshToken, {
-      //   httpOnly: true,
-      //   maxAge: 7 * 24 * 60 * 60 * 1000, // Refresh Token lifespan (7 days in ms)
-      // });
+      // Respond with user data and tokens
       return res.status(StatusCodes.OK).json({
         data: {
           user: user.toJSON(),
-          accessToken, // Include 'Bearer' prefix
+          accessToken,
           refreshToken,
         },
         message: ReasonPhrases.OK,
         status: StatusCodes.OK,
       });
-    } catch (err) {
-      console.log(err);
+    } catch (err: any) {
+      console.error("Error in loginUser:", err.message || err);
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         message: ReasonPhrases.INTERNAL_SERVER_ERROR,
         status: StatusCodes.INTERNAL_SERVER_ERROR,
@@ -144,7 +209,7 @@ export const authController = {
           email,
           signUpThrough,
           userType,
-          // isEmailVerified,
+          isEmailVerified: true,
           profileImage,
         });
       }
@@ -190,6 +255,19 @@ export const authController = {
       user.isEmailVerified = true;
       user.EmailVerifiedAt = new Date();
       await user.save();
+
+      // Send success email
+      const html = `
+    <p>Your email has been successfully verified. You can now log in and access your account.</p>
+    <p>Thank you for verifying your email!</p>
+  `;
+
+      await sendEmail({
+        to: user.email,
+        subject: "Email Verified Successfully",
+        html,
+      });
+
       res.status(StatusCodes.OK).json({ success: true, message: "Email verified successfully." });
     } catch (error) {
       console.error("Error verifying email:", error);
@@ -237,9 +315,9 @@ export const authController = {
       if (profileImage) {
         user.profileImage = profileImage;
       }
-      if (dob) {
-        user.dob = dob;
-      }
+      // if (dob) {
+      //   user.dob = dob;
+      // }
       if (newPassword) {
         if (!oldPassword) {
           // Old password must be provided if new password is being updated
@@ -262,15 +340,22 @@ export const authController = {
 
       // Handle address update/addition if provided
       if (address && Array.isArray(address)) {
-        // console.log( "address inside IFF :" , address)
+        console.log("address inside IFF :", address);
+
         for (const addr of address) {
-          if (addr._id) {
+          console.log("inside for addr: ", addr);
+
+          if (addr._id && mongoose.Types.ObjectId.isValid(addr._id)) {
+            console.log("id of address exist : ", addr._id);
             // If address ID exists, update the existing address
             // await Address.findByIdAndUpdate(addr._id, addr);
             await authService.findAddressandUpdate(addr._id, addr);
           } else {
-            // If no ID, create a new address for the user
-            await Address.create({ ...addr, userId: user._id });
+            console.log("Creating new address for user ID:", user._id);
+            // Remove _id if it's an empty string before creating a new address
+            const newAddress = { ...addr, userId: user._id };
+            delete newAddress._id; // Ensure _id is not included for new address creation
+            await Address.create(newAddress); // Create new address
           }
         }
       }
@@ -305,7 +390,7 @@ export const authController = {
       const user = await authService.findExistingEmail(email);
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({
-          message: "user is not in auth",
+          message: "User does not exist! Try another email",
           status: StatusCodes.NOT_FOUND,
         });
       }
@@ -313,8 +398,8 @@ export const authController = {
       // Generate a reset token
       const resetToken = crypto.randomBytes(32).toString("hex");
       const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
-      console.log("Reset token (plain):", resetToken);
-      console.log("Reset token (hashed):", resetTokenHash);
+      // console.log("Reset token (plain):", resetToken);
+      // console.log("Reset token (hashed):", resetTokenHash);
       const resetTokenExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes expiration
 
       // Save the token and expiry to the user record
@@ -358,9 +443,9 @@ export const authController = {
   resetPassword: async (req: Request, res: Response) => {
     try {
       const { token } = req.params;
-      console.log("Received token:", token);
+      // console.log("Received token:", token);
       const { password } = req.body;
-      console.log("Received password:", password);
+      // console.log("Received password:", password);
 
       const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
       console.log("Hashed token:", hashedToken);
@@ -387,33 +472,3 @@ export const authController = {
     }
   },
 };
-
-//   googleAuth: async (req: Request, res: Response, next: NextFunction) => {
-//     try {
-//       const user = req.user as any;
-//       const { accessToken, refreshToken } = jwtSign(user.id);
-//       // Set tokens in cookies
-//       res.cookie("accessToken", accessToken, {
-//         httpOnly: true,
-//         secure: process.env.NODE_ENV === "production",
-//         sameSite: "strict",
-//         maxAge: 15 * 60 * 1000, // 15 minutes
-//       });
-//       res.cookie("refreshToken", refreshToken, {
-//         httpOnly: true,
-//         secure: process.env.NODE_ENV === "production",
-//         sameSite: "strict",
-//         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-//       });
-//       // Redirect to your front-end or a dashboard
-//       res.redirect("/dashboard");
-//     } catch (error) {
-//       console.log(error);
-//       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-//         message: ReasonPhrases.INTERNAL_SERVER_ERROR,
-//         status: StatusCodes.INTERNAL_SERVER_ERROR,
-//       });
-//     }
-//   },
-
-// };
