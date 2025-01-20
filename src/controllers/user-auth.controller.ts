@@ -29,8 +29,22 @@ export const authController = {
       // const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
       const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken.accessToken}`;
 
-      const html = `<p>Please verify your email by clicking the link below:</p>
-                    <a href="${verificationUrl}">Verify Email</a>`;
+      const html = `
+  <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+    <h2 style="color: #4CAF50;">Welcome to Our Platform!</h2>
+    <p>Hi ${newUser.firstName},</p>
+    <p>Thank you for signing up with us! To complete your registration and start using your account, please verify your email address by clicking the link below:</p>
+    <p>
+      <a 
+        href="${verificationUrl}" 
+        style="display: inline-block; padding: 10px 20px; margin: 10px 0; color: white; background-color: #4CAF50; text-decoration: none; border-radius: 5px;"
+      >
+        Verify Email
+      </a>
+    </p>
+  </div>
+`;
+
       // Use sendEmail to send the verification email
       await sendEmail({
         to: newUser.email,
@@ -73,15 +87,28 @@ export const authController = {
         // send verification email again
         const verificationToken = jwtSign(user.id);
         const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken.accessToken}`;
-        const html = `<p>Please verify your email by clicking the link below:</p>
-                    <a href="${verificationUrl}">Verify Email</a>`;
+        const html = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+          <h2 style="color: #4CAF50;">Welcome to Our Platform!</h2>
+          <p>Hi ${user.firstName},</p>
+          <p>Thank you for signing up with us! To complete your registration and start using your account, please verify your email address by clicking the link below:</p>
+          <p>
+            <a 
+              href="${verificationUrl}" 
+              style="display: inline-block; padding: 10px 20px; margin: 10px 0; color: white; background-color: #4CAF50; text-decoration: none; border-radius: 5px;"
+            >
+              Verify Email
+            </a>
+          </p>
+        </div>
+      `;
         await sendEmail({
           to: user.email,
           subject: "Verify your email address",
           html,
         });
         return res.status(StatusCodes.FORBIDDEN).json({
-          message: "Please verify your email before logging in. Verification email has been sent again!",
+          message: "Please verify your email before logging in. Verification email has been sent!",
           status: StatusCodes.FORBIDDEN,
         });
       }
