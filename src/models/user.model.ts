@@ -17,6 +17,7 @@ export const fileSchema = {
   mimetype: { type: String },
   size: { type: Number },
   url: { type: String },
+  type: { type: String },
   filename: { type: String },
 };
 
@@ -54,7 +55,7 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     restrictedAccessRights: { type: [String], default: [] }, // Remove specific rights
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Number },
-    documents: [{ type: fileSchema }], // Store supplier-related files
+    additionalDocuments: { type: [fileSchema] , _id: false}, // Store supplier-related files
     isBlocked: { type: Boolean, default: false },
   },
   { timestamps: true }

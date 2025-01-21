@@ -7,6 +7,7 @@ export interface IFile {
   mimetype: string;
   size: number;
   url: string;
+  type: string;
   filename: string;
 }
 
@@ -31,7 +32,7 @@ export interface IUser extends Document {
   resetPasswordToken?: string;
   resetPasswordExpires?: number;
   isBlocked: boolean;
-  documents: IFile;
+  additionalDocuments: [IFile];
   // isSupplier: boolean;
 }
 

@@ -11,7 +11,7 @@ export const supplierController = {
     try {
       const { email, address, password } = req.body;
 
-      console.log(req.body);
+      console.log("add supplier : " , req.body);
 
       const userExists = await supplierService.findExistingEmail(email);
       if (userExists) {
@@ -124,7 +124,7 @@ export const supplierController = {
     try {
       // const categories = await UserCategory.findOne({})
       const allSuppliers = await supplierService.getAllSuppliers();
-      console.log(allSuppliers);
+      // console.log(allSuppliers);
       res.status(StatusCodes.OK).json({ data: allSuppliers });
     } catch (error) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error });
