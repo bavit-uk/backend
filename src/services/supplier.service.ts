@@ -14,11 +14,13 @@ export const supplierService = {
 
   createSupplier: async (data: supplierAddPayload) => {
     // console.log("data in service : " , data)
-    const { firstName, lastName, email, password, phoneNumber, userType , supplierCategory, documents } = data;
+    const { firstName, lastName, email, password, phoneNumber, userType , additionalDocuments , supplierCategory } = data;
 
     // Here this id refers to the supplier in user category
     // TODO: find other solutiuon for this
     const hashedPassword = await createHash(password);
+
+    // console.log("additionalDocuments : " , additionalDocuments)
 
     const user = new User({
       firstName,
@@ -28,7 +30,8 @@ export const supplierService = {
       phoneNumber,
       supplierCategory,
       userType,
-      documents,
+      additionalDocuments
+      // documents,
     });
 
     return user.save();
