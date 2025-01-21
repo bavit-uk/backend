@@ -68,7 +68,6 @@ export const authController = {
 
       // Get the userType from the request header (case-insensitive)
       const userTypeFromHeader = req.headers["x-user-type"] || req.headers["X-User-Type"];
-      console.log("Headers received:", req.headers);
       console.log("userTypeFromHeader:", userTypeFromHeader);
 
       // Find user by email first
@@ -135,6 +134,17 @@ export const authController = {
         return res.status(StatusCodes.UNAUTHORIZED).json({
           message: "Incorrect Password!",
           status: StatusCodes.UNAUTHORIZED,
+        });
+      }
+
+      // Only unblock users can sign in
+      const isUserBlocked = user.isBlocked;
+      console.log("is blocked before login : " , isUserBlocked)
+      if (isUserBlocked) {
+        console.log("user is blocked, can't login")
+        return res.status(StatusCodes.FORBIDDEN).json({
+          message: "User is blocked by Admin. Please contact support.",
+          status: StatusCodes.FORBIDDEN,
         });
       }
 
@@ -295,14 +305,24 @@ export const authController = {
 
   updateProfile: async (req: Request, res: Response) => {
     try {
-      const { firstName, lastName, phoneNumber, dob, address, profileImage, oldPassword, newPassword } = req.body;
-      console.log("data in auth controller : ", address);
+      const { firstName, lastName, phoneNumber, email , dob, address, profileImage, oldPassword, newPassword } = req.body;
+      // console.log("data in auth controller : ", address);
 
       const user = req.context.user;
       if (!user) {
         return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
       }
 
+      if(email){
+        console.log("user.isEmailVerified : " , user.isEmailVerified)
+        console.log("user.email : " , email , user.email)
+        if(email !== user.email){
+          user.isEmailVerified = false;
+        }
+        user.email = email
+        console.log("user.isEmailVerified : " , user.isEmailVerified)
+        
+      }
       if (firstName) {
         user.firstName = firstName;
       }
@@ -340,13 +360,13 @@ export const authController = {
 
       // Handle address update/addition if provided
       if (address && Array.isArray(address)) {
-        console.log("address inside IFF :", address);
+        // console.log("address inside IFF :", address);
 
         for (const addr of address) {
-          console.log("inside for addr: ", addr);
+          // console.log("inside for addr: ", addr);
 
           if (addr._id && mongoose.Types.ObjectId.isValid(addr._id)) {
-            console.log("id of address exist : ", addr._id);
+            // console.log("id of address exist : ", addr._id);
             // If address ID exists, update the existing address
             // await Address.findByIdAndUpdate(addr._id, addr);
             await authService.findAddressandUpdate(addr._id, addr);
