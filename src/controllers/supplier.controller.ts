@@ -76,6 +76,9 @@ export const supplierController = {
         if (userExists) {
           return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
         }
+        else {
+          updateData.isEmailVerified = false
+        }
       }
 
       if (updateData.password) {

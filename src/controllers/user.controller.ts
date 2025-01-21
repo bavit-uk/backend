@@ -75,11 +75,17 @@ export const userController = {
 
       if (updateData.email) {
         const email = updateData.email;
+        console.log("email in update user : " , email)
         const userExists = await userService.findExistingEmail(email);
         if (userExists) {
           return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
         }
+        else {
+          updateData.isEmailVerified = false
+        }
       }
+
+      // console.log("updateData : " , updateData)
 
       if (updateData.password) {
         updateData.password = await createHash(updateData.password);
@@ -89,6 +95,10 @@ export const userController = {
       if (!updatedUser) {
         return res.status(StatusCodes.NOT_FOUND).json({ message: "User not found" });
       }
+      // console.log("user.email : " , updateData.email , updatedUser.email)
+      // if(updateData.email !== updatedUser.email){
+      //   updatedUser.isEmailVerified = false;
+      // }
 
       // Handle address updates if provided
       if (address && Array.isArray(address)) {
