@@ -37,7 +37,7 @@ export const supplierController = {
       // Send email to the new supplier
       try {
         const emailContent = `
-        <p>Dear ${supplier.firstName || "Supplier"},</p>
+        <p>Dear ${supplier.firstName || "supplier"},</p>
         <p>Your account has been created by the Bav-IT admin. Below are your login credentials:</p>
         <p><strong>Email:</strong> ${supplier.email}</p>
         <p><strong>Password:</strong> ${password}</p>

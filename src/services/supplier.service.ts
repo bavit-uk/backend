@@ -79,7 +79,7 @@ export const supplierService = {
       {
         // Match only users where the userType role is "Supplier"
         $match: {
-          "userType.role": "Supplier",
+          "userType.role": "supplier",
         },
       },
       {
