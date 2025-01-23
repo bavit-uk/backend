@@ -47,9 +47,21 @@ export const userCategoryController = {
       const { role, description, permissions } = req.body;
       const category = await userCategoryService.editCategory(id, { role, description, permissions });
       res.status(StatusCodes.OK).json({ success: true, message: "Category updated successfully", data: category });
-    } catch (error) {
-      console.error("Edit Category Error:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: "Error updating category" });
+    } catch (error: any) {
+      // console.error("Edit Category Error:", error);
+      if (error.name === "MongoServerError" && error.code === 11000) {
+        // console.log("insode if  error : ")
+        // Handle duplicate key error (unique constraint violation)
+        const field = Object.keys(error.keyPattern)[0]; // Find the duplicate field
+        // console.log("field : " , field)
+        res.status(StatusCodes.BAD_REQUEST).json({
+          message: `The ${field} must be unique. "${req.body[field]}" is already in use.`,
+        });
+      } else {
+        res
+          .status(StatusCodes.INTERNAL_SERVER_ERROR)
+          .json({ success: false, message: "Error updating user category" });
+      }
     }
   },
 
