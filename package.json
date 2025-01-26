@@ -17,7 +17,7 @@
     "release": "semantic-release",
     "prepare": "husky",
     "create:api": "node scripts/create-api.js",
-    "delete:users": "node scripts/delete-users-30-days.ts",
+    "delete:users": "tsc scripts/delete-users-30-days.ts",
     "create:model": "node scripts/create-api.js model",
     "create:service": "node scripts/create-api.js service",
     "create:controller": "node scripts/create-api.js controller",
@@ -84,6 +84,7 @@
     "pino-pretty": "^13.0.0",
     "prettier": "^3.3.2",
     "rimraf": "^5.0.7",
+    "ts-node": "^10.9.2",
     "tsup": "^8.1.0",
     "tsx": "^4.16.2",
     "typescript": "^5.5.3"
