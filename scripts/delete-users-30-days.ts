@@ -2,6 +2,7 @@ const User = require("../src/models/user.model.ts");
 const mongoose = require("mongoose");
 
 async function deleteUnverifiedUsers() {
+  console.log("hello in script : ")
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
