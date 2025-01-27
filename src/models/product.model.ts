@@ -77,7 +77,7 @@ const prodSeoSchema = {
     type: [String],
   },
 };
-
+// mock
 const laptopTechnicalSchema = {
   processor: { type: String },
   model: { type: String },
