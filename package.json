@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "cross-env NODE_ENV=dev tsx watch --clear-screen=false src/index.ts | pino-pretty",
+    "dev": "nodemon ./node_modules/.bin/cross-env NODE_ENV=dev tsx watch --clear-screen=false src/index.ts | pino-pretty",
     "build": "rimraf dist && tsup",
     "start": "NODE_ENV=prod node dist/index.js",
     "clean": "rimraf dist coverage",
