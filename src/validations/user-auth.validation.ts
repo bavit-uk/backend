@@ -19,7 +19,7 @@ export const authValidation = {
       lastName: z.string().trim().min(3, "Last name is required"),
       email: z.string().trim().min(3, "Email is required").regex(REGEX.EMAIL, "Invalid email format"),
       phoneNumber: z.string().trim().min(3, "Phone number is required"),
-      password: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one charcter) (between 8-20)"),
+      password: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one charcter) (between 8-20)").optional(),
       signUpThrough: z.enum(["Google", "Apple", "Web"]).default("Web"),
     });
     try {
