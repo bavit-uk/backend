@@ -77,7 +77,7 @@ const prodSeoSchema = {
     type: [String],
   },
 };
-
+// mock
 const laptopTechnicalSchema = {
   processor: { type: String },
   model: { type: String },
@@ -412,7 +412,7 @@ Product.discriminator(
   )
 );
 
-// descriminator for Gaming PC
+// discriminator for Gaming PC
 Product.discriminator(
   "Gaming PC",
   new mongoose.Schema(

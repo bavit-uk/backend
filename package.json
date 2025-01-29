@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "cross-env NODE_ENV=dev tsx watch --clear-screen=false src/index.ts | pino-pretty",
+    "dev": "nodemon ./node_modules/.bin/cross-env NODE_ENV=dev tsx watch --clear-screen=false src/index.ts | pino-pretty",
     "build": "rimraf dist && tsup",
     "start": "NODE_ENV=prod node dist/index.js",
     "clean": "rimraf dist coverage",
@@ -38,6 +38,7 @@
     "crypto": "^1.0.1",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "nodemon": "3.1.9",
     "express-rate-limit": "^7.4.0",
     "firebase-admin": "^12.6.0",
     "form-data": "^4.0.0",
