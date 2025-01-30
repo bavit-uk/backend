@@ -22,13 +22,15 @@ export const authController = {
         return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists! Try Login" });
       }
 
-      // if (req.body.phoneNumber) {
-      //   console.log("req.body.phoneNumber : " , req.body.phoneNumber)
-      //   const existingphoneNumber = await authService.findExistingPhoneNumber(req.body.phoneNumber);
-      //   if (existingphoneNumber) {
-      //     return res.status(StatusCodes.CONFLICT).json({ message: "User with this phone number already exists! Try another" });
-      //   }
-      // }
+      if (req.body.phoneNumber) {
+        console.log("req.body.phoneNumber : ", req.body.phoneNumber);
+        const existingphoneNumber = await authService.findExistingPhoneNumber(req.body.phoneNumber);
+        if (existingphoneNumber) {
+          return res
+            .status(StatusCodes.CONFLICT)
+            .json({ message: "User with this phone number already exists! Try another" });
+        }
+      }
 
       // Create new user
       const newUser = await authService.createUser(req.body);
@@ -339,7 +341,18 @@ export const authController = {
         user.lastName = lastName;
       }
       if (phoneNumber) {
-        user.phoneNumber = phoneNumber;
+        console.log("phoneNumber : " , phoneNumber)
+        const existingphoneNumber = await authService.findExistingPhoneNumber(phoneNumber);
+        console.log("existingphoneNumber : " , existingphoneNumber)
+        if (existingphoneNumber) {
+          console.log("returning reposne : ")
+          return res
+            .status(StatusCodes.CONFLICT)
+            .json({ message: "User with this phone number already exists! Try another" });
+        } else {
+          console.log("else running of phone")
+          user.phoneNumber = phoneNumber;
+        }
       }
       if (profileImage) {
         user.profileImage = profileImage;
