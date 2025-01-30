@@ -378,4 +378,14 @@ export const productController = {
       });
     }
   },
+  getProductStats: async (req: Request, res: Response) => {
+    try {
+      const stats = await productService.getProductStats();
+      return res.status(StatusCodes.OK).json(stats);
+    } catch (error) {
+      return res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "Error fetching products statistics" });
+    }
+  },
 };

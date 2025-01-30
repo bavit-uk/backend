@@ -281,39 +281,28 @@ export const userController = {
         restrictedAccessRights,
         id
       );
-      res
-        .status(StatusCodes.OK)
-        .json({
-          message: "User access rights updated successfully",
-          updatedUser: updatedUser,
-        });
+      res.status(StatusCodes.OK).json({
+        message: "User access rights updated successfully",
+        updatedUser: updatedUser,
+      });
     } catch (error) {
       console.error("Error in updating access rights:", error);
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({
-          success: false,
-          message: "Error updating user  updating access rights",
-        });
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Error updating user  updating access rights",
+      });
     }
   },
   // New API for user stats Widgets
+  
   getUserStats: async (req: Request, res: Response) => {
     try {
-      const totalUsers = await User.countDocuments();
-      const activeUsers = await User.countDocuments({ isBlocked: false });
-      const blockedUsers = await User.countDocuments({ isBlocked: true });
-
-      return res.status(StatusCodes.OK).json({
-        totalUsers,
-        activeUsers,
-        blockedUsers,
-      });
+      const stats = await userService.getUserStats();
+      return res.status(StatusCodes.OK).json(stats);
     } catch (error) {
-      console.error("Error fetching user stats:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-        message: "Error fetching user statistics",
-      });
+      return res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "Error fetching user statistics" });
     }
   },
 };

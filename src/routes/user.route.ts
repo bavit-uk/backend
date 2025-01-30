@@ -10,6 +10,9 @@ export const user = (router: Router) => {
   // route for get all users
   router.get("/", authGuard.isAuth, userController.allUsers);
 
+  // New route for fetching user stats/ Widgets
+  router.get("/stats", userController.getUserStats);
+
   // route for get details (include permissions) of specific user by id
   router.get("/:id", userValidation.validateId, userController.getUserDetails);
 
@@ -25,7 +28,4 @@ export const user = (router: Router) => {
   router.patch("/block/:id", userController.toggleBlock);
 
   router.patch("/permissions/:id", userController.updatePermissions);
-
-  // New route for fetching user stats/ Widgets
-  router.get("/stats",  userController.getUserStats);
 };
