@@ -16,7 +16,6 @@ export const user = (router: Router) => {
   router.get("/address/:id", userController.getUserAddress);
 
   // route for update user
-  // TODO: , userValidation.updateUser  add validation
   router.patch("/:id", userValidation.updateUser, userController.updateUser);
 
   // route for delete user using id
@@ -26,4 +25,7 @@ export const user = (router: Router) => {
   router.patch("/block/:id", userController.toggleBlock);
 
   router.patch("/permissions/:id", userController.updatePermissions);
+
+  // New route for fetching user stats/ Widgets
+  router.get("/stats",  userController.getUserStats);
 };
