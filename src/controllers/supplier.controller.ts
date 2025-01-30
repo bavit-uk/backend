@@ -4,11 +4,14 @@ import { supplierService } from "@/services";
 import { IUserAddress } from "@/contracts/user-address.contracts";
 import { createHash } from "@/utils/hash.util";
 import { UserCategory } from "@/models";
+import sendEmail from "@/utils/nodeMailer";
 
 export const supplierController = {
   addSupplier: async (req: Request, res: Response) => {
     try {
-      const { email, address } = req.body;
+      const { email, address, password } = req.body;
+
+      console.log("add supplier : " , req.body);
 
       const userExists = await supplierService.findExistingEmail(email);
       if (userExists) {
@@ -21,14 +24,40 @@ export const supplierController = {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating supplier" });
       }
 
-      for (const addr of address) {
-        const createdAddress = await supplierService.createAddress({ ...addr, userId: supplier._id });
-        if (!createdAddress) {
-          return res.json({ message: "Error creating address" });
+      // Handle address update/addition if provided
+      if (address && Array.isArray(address)) {
+        for (const addr of address) {
+          const createdAddress = await supplierService.createAddress({ ...addr, userId: supplier._id });
+          if (!createdAddress) {
+            return res.json({ message: "Error creating address" });
+          }
         }
       }
 
-      res.status(StatusCodes.CREATED).json({ message: "Supplier created successfully", supplier: supplier });
+      // Send email to the new supplier
+      try {
+        const emailContent = `
+        <p>Dear ${supplier.firstName || "supplier"},</p>
+        <p>Your account has been created by the Bav-IT admin. Below are your login credentials:</p>
+        <p><strong>Email:</strong> ${supplier.email}</p>
+        <p><strong>Password:</strong> ${password}</p>
+      `;
+
+        await sendEmail({
+          to: supplier.email,
+          subject: "Your Bav-IT Supplier Account Has Been Created",
+          html: emailContent,
+        });
+      } catch (emailError) {
+        console.error("Error sending email:", emailError);
+        // Log the email failure but continue to return a success response
+      }
+
+      // Send a response back to the client
+      res.status(StatusCodes.CREATED).json({
+        message: "Supplier created successfully, and email notification sent.",
+        supplier: supplier,
+      });
     } catch (error) {
       console.error(error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating user" });
@@ -40,6 +69,17 @@ export const supplierController = {
       const userId = req.params.id;
       const updateData = req.body;
       const { address } = updateData;
+
+      if (updateData.email) {
+        const email = updateData.email;
+        const userExists = await supplierService.findExistingEmail(email);
+        if (userExists) {
+          return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
+        }
+        else {
+          updateData.isEmailVerified = false
+        }
+      }
 
       if (updateData.password) {
         updateData.password = await createHash(updateData.password);
@@ -84,6 +124,7 @@ export const supplierController = {
     try {
       // const categories = await UserCategory.findOne({})
       const allSuppliers = await supplierService.getAllSuppliers();
+      // console.log(allSuppliers);
       res.status(StatusCodes.OK).json({ data: allSuppliers });
     } catch (error) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error });
@@ -95,8 +136,11 @@ export const supplierController = {
       const id = req.params.id;
       const supplier = await supplierService.findSupplierById(id, "+password");
       if (!supplier) return res.status(404).json({ message: "Supplier not found" });
-      const userAddresses = await supplierService.findAddressByUserId(id);
-      res.status(StatusCodes.OK).json({ supplier, adresses: userAddresses });
+      const address = await supplierService.findAddressByUserId(id);
+
+      const supplierWithAddresses = { ...supplier.toObject(), address };
+
+      res.status(200).json({ data: supplierWithAddresses });
     } catch (error) {
       console.error(error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error fetching supplier details" });
@@ -119,18 +163,44 @@ export const supplierController = {
       const userId = req.params.id;
       const { isBlocked } = req.body;
       const result = await supplierService.toggleBlock(userId, isBlocked);
+      const userEmailAddress = result?.email;
+      const userName = result?.firstName || "User";
+
+      const emailContent = `
+      <p>Dear ${userName},</p>
+      <p>Your account has been ${isBlocked ? "blocked" : "activated"} by the Bav-IT admin.</p>
+      <p>If you have any questions, please contact support.</p>
+    `;
+
+      // Send the email
+      if (userEmailAddress) {
+        await sendEmail({
+          to: userEmailAddress,
+          subject: `Your Bav-IT Account Has Been ${isBlocked ? "Blocked" : "Activated"}`,
+          html: emailContent,
+        });
+      }
+
       res.status(StatusCodes.OK).json({
         success: true,
-        message: `Supplier Category ${isBlocked ? "blocked" : "unblocked"} successfully`,
+        message: `Supplier ${isBlocked ? "blocked" : "unblocked"} successfully`,
         data: result,
       });
     } catch (error) {
-      console.error("Toggle Block Category Error:", error);
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ success: false, message: "Error updating supplier category status" });
+      console.error("Toggle Block Error:", error);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: "Error updating supplier status" });
     }
   },
-
-
+  // New API for user stats Widgets
+    
+    getSupplierStats: async (req: Request, res: Response) => {
+      try {
+        const stats = await supplierService.getSupplierStats();
+        return res.status(StatusCodes.OK).json(stats);
+      } catch (error) {
+        return res
+          .status(StatusCodes.INTERNAL_SERVER_ERROR)
+          .json({ message: "Error fetching supplier statistics" });
+      }
+    },
 };

@@ -1,32 +1,48 @@
 import { Document, Types } from "mongoose";
 
-// Common product details shared across platforms
-interface ICommonProductDetails {
-  images: string[]; // Array of image URLs
-}
-
 // Technical specifications shared between platforms
 interface ITechnicalSpecifications {
   processorType?: string;
+  motherboard?: string;
+  cpuFan?: string;
+  case?: string;
+  accessories?: string;
+  expansionsNetworking?: string;
   ramSize?: string;
   storageDetails?: string;
+  graphicsCard?: string;
   operatingSystem?: string;
   additionalSpecifications?: string;
-  modelNumber?: string; // Specific to eBay and Website
+}
+interface IPart extends Document {
+  type: string;
+  name: string;
+  specifications: string;
+  price: number;
 }
 
+interface IVariation extends Document {
+  product: string;
+  cpu: IPart;
+  ram: IPart;
+  storage: IPart;
+  graphics: IPart;
+  price: number;
+  description?: string;
+}
 // Pricing details shared between platforms
 interface IPricing {
   pricePerUnit: number;
   discountPrice?: number;
+  purchasePrice?: number;
   buyItNowPrice?: number; // Specific to eBay
   auctionStartingPrice?: number; // Specific to eBay
 }
 
-// Product condition
+// Product condition details
 interface ICondition {
-  status: string; // New, Used, etc.
-  details?: string; // Details for non-new condition
+  status: string; // e.g., "New", "Used"
+  details?: string; // Additional details for non-new condition
 }
 
 // Shipping details shared between platforms
@@ -35,6 +51,7 @@ interface IShipping {
   options: string[]; // Array of shipping options
   estimatedDeliveryTime: string;
   handlingTime?: string; // Specific to eBay
+  weightUnit?: string; // Specific to Website
 }
 
 // Keywords for SEO or product metadata
@@ -47,72 +64,167 @@ interface IKeywords {
 interface IAmazonPlatformDetails {
   title: string;
   brand: string;
-  category: string;
-  technicalSpecifications: ITechnicalSpecifications;
-  quantity: number; // Specific to Amazon
-  pricing: Omit<IPricing, "buyItNowPrice" | "auctionStartingPrice">;
-  condition: ICondition;
-  shipping: IShipping;
-  description: string;
-  keywords: IKeywords;
-  fulfillmentMethod: "FBA" | "FBM";
-  identifier: string; // UPC, EAN, ISBN, etc.
+  productCategory: Types.ObjectId;
+  images: string[];
+  productDescription: string;
+
+  quantity: string;
+  price: string;
+  condition: string;
+  conditionDescription?: string;
+  pricingFormat: string;
+  vat: string;
+  paymentPolicy: Types.ObjectId;
+
+  postagePolicy: string;
+  packageWeight: {
+    weightKg: string;
+    weightG: string;
+  };
+  packageDimensions: {
+    dimensionLength: string;
+    dimensionWidth: string;
+    dimensionHeight: string;
+  };
+  irregularPackage: boolean;
+
+  seoTags: string[];
+  relevantTags: string[];
+  suggestedTags: string[];
 }
 
 // Platform-specific product details for eBay
 interface IEbayPlatformDetails {
   title: string;
   brand: string;
-  category: string;
-  technicalSpecifications: ITechnicalSpecifications;
-  quantity: number;
-  pricing: IPricing;
-  condition: ICondition;
-  shipping: IShipping;
-  description: string;
-  keywords: IKeywords;
-  fulfillmentMethod: "eBay Fulfillment" | "Self-Fulfilled";
-  identifier: string; // UPC, EAN, ISBN, etc.
+  productCategory: Types.ObjectId;
+  images: string[];
+  productDescription: string;
+
+  quantity: string;
+  price: string;
+  condition: string;
+  conditionDescription?: string;
+  pricingFormat: string;
+  vat: string;
+  paymentPolicy: Types.ObjectId;
+
+  postagePolicy: string;
+  packageWeight: {
+    weightKg: string;
+    weightG: string;
+  };
+  packageDimensions: {
+    dimensionLength: string;
+    dimensionWidth: string;
+    dimensionHeight: string;
+  };
+  irregularPackage: boolean;
+
+  seoTags: string[];
+  relevantTags: string[];
+  suggestedTags: string[];
 }
 
 // Platform-specific product details for Website
 interface IWebsitePlatformDetails {
   title: string;
-  brand: Types.ObjectId | string;
-  category: Types.ObjectId | string;
-  technicalSpecifications: ITechnicalSpecifications;
-  quantity: number;
-  pricing: Omit<IPricing, "buyItNowPrice" | "auctionStartingPrice">;
-  condition: ICondition;
-  shipping: IShipping;
-  description: string;
-  keywords: IKeywords;
-  fulfillmentMethod: "Dropshipping" | "In-House Fulfillment";
-  identifier: string; // UPC, EAN, ISBN, etc.
+  brand: string;
+  productCategory: Types.ObjectId;
+  images: string[];
+  productDescription: string;
+
+  quantity: string;
+  price: string;
+  condition: string;
+  conditionDescription?: string;
+  pricingFormat: string;
+  vat: string;
+  model?: string;
+
+  paymentPolicy: Types.ObjectId;
+
+  postagePolicy: string;
+  packageWeight: {
+    weightKg: string;
+    weightG: string;
+  };
+  packageDimensions: {
+    dimensionLength: string;
+    dimensionWidth: string;
+    dimensionHeight: string;
+  };
+  irregularPackage: boolean;
+
+  seoTags: string[];
+  relevantTags: string[];
+  suggestedTags: string[];
+  prodTechInfo?: {
+    processor?: string;
+
+    model?: string;
+
+    ssdCapacity?: string;
+
+    hardDriveCapacity?: string;
+
+    manufacturerWarranty?: string;
+
+    type?: string;
+
+    memory?: string;
+
+    screenSize?: string;
+
+    maxResolution?: string;
+
+    gpu?: string;
+
+    networkType?: string;
+
+    processorType?: string;
+  };
+}
+
+interface IPlatformProductInfo {
+  productCategory: Types.ObjectId; // Populated with category details
+  title: string;
+  brand: string;
+  productDescription: string;
+  images: string[];
+  model?: string;
+  srno?: string;
 }
 
 // Full Product Interface
 interface IProduct {
-  common: ICommonProductDetails; // Common details for all platforms
+  isBlocked: boolean; // Common details for all platforms
   platformDetails: {
-    amazon: IAmazonPlatformDetails; // Amazon-specific details
-    ebay: IEbayPlatformDetails; // eBay-specific details
-    website: IWebsitePlatformDetails; // Website-specific details
+    amazon?: IAmazonPlatformDetails; // Amazon-specific details
+    ebay?: IEbayPlatformDetails; // eBay-specific details
+    website?: IWebsitePlatformDetails;
+    // Website-specific details
   };
   status: "draft" | "published"; // Product status
+  isTemplate: boolean;
+  kind?: string;
 }
 
-export type IProductUpdatePayload = Partial<IProduct>
+// Update payload for product
+export type IProductUpdatePayload = Partial<IProduct>;
 
+// Exports
 export {
   IProduct,
-  ICommonProductDetails,
   ITechnicalSpecifications,
   IPricing,
   ICondition,
   IShipping,
+  IVariation,
+  IPart,
   IKeywords,
   IAmazonPlatformDetails,
   IEbayPlatformDetails,
   IWebsitePlatformDetails,
+  IPlatformProductInfo,
 };
