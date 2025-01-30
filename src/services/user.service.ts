@@ -135,4 +135,51 @@ export const userService = {
       throw new Error("Error fetching user statistics");
     }
   },
+
+  searchAndFilterUsers: async (filters: any) => {
+    try {
+      const {
+        searchQuery = "",
+        isBlocked,
+        startDate,
+        endDate,
+        additionalAccessRights,
+      } = filters;
+
+      // Build the query dynamically based on filters
+      const query: any = {};
+
+      if (searchQuery) {
+        query.$or = [
+          { firstName: { $regex: searchQuery, $options: "i" } },
+          { lastName: { $regex: searchQuery, $options: "i" } },
+          { email: { $regex: searchQuery, $options: "i" } },
+        ];
+      }
+
+    
+
+      if (isBlocked !== undefined) {
+        query.isBlocked = isBlocked;
+      }
+
+      if (startDate && endDate) {
+        query.createdAt = {
+          $gte: new Date(startDate),
+          $lte: new Date(endDate),
+        };
+      }
+
+      if (additionalAccessRights) {
+        query.additionalAccessRights = { $in: additionalAccessRights };
+      }
+
+      // Perform the search with dynamic filtering
+      const users = await User.find(query).populate("userType");
+      return users;
+    } catch (error) {
+      console.error("Error during search and filter:", error);
+      throw new Error("Error during search and filter");
+    }
+  },
 };

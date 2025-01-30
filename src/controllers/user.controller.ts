@@ -28,7 +28,7 @@ export const userController = {
       }
 
       const newUser = await userService.createUser(req.body);
-      console.log("newUser : " , newUser)
+      console.log("newUser : ", newUser);
       if (!newUser) {
         return res
           .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -295,7 +295,7 @@ export const userController = {
     }
   },
   // New API for user stats Widgets
-  
+
   getUserStats: async (req: Request, res: Response) => {
     try {
       const stats = await userService.getUserStats();
@@ -304,6 +304,50 @@ export const userController = {
       return res
         .status(StatusCodes.INTERNAL_SERVER_ERROR)
         .json({ message: "Error fetching user statistics" });
+    }
+  },
+
+  searchAndFilterUsers: async (req: Request, res: Response) => {
+    try {
+      // Extract filters from query params
+      const {
+        searchQuery,
+        userType,
+        isBlocked,
+        startDate,
+        endDate,
+        additionalAccessRights,
+      } = req.query;
+
+      // Prepare the filters object
+      const filters = {
+        searchQuery,
+        userType,
+        isBlocked: isBlocked ? JSON.parse(isBlocked as string) : undefined, // Convert string to boolean
+        startDate,
+        endDate,
+        additionalAccessRights: additionalAccessRights
+          ? typeof additionalAccessRights === "string"
+            ? additionalAccessRights.split(",")
+            : undefined
+          : undefined,
+      };
+
+      // Call the service to search and filter the users
+      const users = await userService.searchAndFilterUsers(filters);
+
+      // Return the results
+      res.status(200).json({
+        success: true,
+        message: "Search and filter completed successfully",
+        data: users,
+      });
+    } catch (error) {
+      console.error("Error in search and filter:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error in search and filter users",
+      });
     }
   },
 };
