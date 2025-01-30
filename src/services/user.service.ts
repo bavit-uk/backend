@@ -59,6 +59,10 @@ export const userService = {
     return userExists;
   },
 
+  findExistingPhoneNumber: (phoneNumber: number) => {
+    return User.findOne({phoneNumber})
+  },
+
   updateById: async (userId: string, updateData: UserUpdatePayload) => {
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
       new: true,

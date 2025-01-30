@@ -18,6 +18,15 @@ export const supplierController = {
         return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
       }
 
+      if (req.body.phoneNumber) {
+        const existingphoneNumber = await supplierService.findExistingPhoneNumber(req.body.phoneNumber);
+        if (existingphoneNumber) {
+          return res
+            .status(StatusCodes.CONFLICT)
+            .json({ message: "User with this phone number already exists! Try another" });
+        }
+      }
+
       // Create the user (supplier)
       const supplier = await supplierService.createSupplier(req.body);
       if (!supplier) {
@@ -78,6 +87,15 @@ export const supplierController = {
         }
         else {
           updateData.isEmailVerified = false
+        }
+      }
+
+      if (updateData.phoneNumber) {
+        const existingphoneNumber = await supplierService.findExistingPhoneNumber(updateData.phoneNumber);
+        if (existingphoneNumber) {
+          return res
+            .status(StatusCodes.CONFLICT)
+            .json({ message: "User with this phone number already exists! Try another" });
         }
       }
 
