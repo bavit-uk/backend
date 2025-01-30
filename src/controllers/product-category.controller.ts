@@ -5,17 +5,24 @@ import { StatusCodes, ReasonPhrases } from "http-status-codes";
 export const productCategoryController = {
   addCategory: async (req: Request, res: Response) => {
     try {
-      const { name, description, image, isBlocked } = req.body;
+      const { name, description, image, tags , isBlocked } = req.body;
       //   console.log(name, description, image);
-      const newProductCategory = await productCategoryService.createCategory(name, description, image, isBlocked);
+      const newProductCategory = await productCategoryService.createCategory(name, description, image, tags , isBlocked);
       res
         .status(StatusCodes.CREATED)
         .json({ success: true, message: "Product category created successfully", data: newProductCategory });
-    } catch (error) {
-      console.error(error);
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ success: false, message: "Error creating product category" });
+    } catch (error: any) {
+      if (error.name === "MongoServerError" && error.code === 11000) {
+        console.error(error);
+        // Handle duplicate key error (unique constraint violation)
+        const field = Object.keys(error.keyPattern)[0]; // Find the duplicate field
+        res.status(StatusCodes.BAD_REQUEST).json({
+          message: `The ${field} must be unique. "${req.body[field]}" is already in use.`,
+        });
+      } else {
+        // console.error(error);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Error creating product category" });
+      }
     }
   },
 
@@ -49,8 +56,8 @@ export const productCategoryController = {
   editCategory: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { name, description, image, isBlocked } = req.body;
-      const category = await productCategoryService.editCategory(id, { name, description, image, isBlocked });
+      const { name, description, image, tags , isBlocked } = req.body;
+      const category = await productCategoryService.editCategory(id, { name, description, image, tags , isBlocked });
       res.status(StatusCodes.OK).json({ success: true, message: "Category updated successfully", data: category });
     } catch (error) {
       console.error("Edit Category Error:", error);

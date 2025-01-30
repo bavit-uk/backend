@@ -18,7 +18,8 @@ export const authValidation = {
       firstName: z.string().trim().min(3, "First name is required"),
       lastName: z.string().trim().min(3, "Last name is required"),
       email: z.string().trim().min(3, "Email is required").regex(REGEX.EMAIL, "Invalid email format"),
-      password: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one charcter) (between 8-20)"),
+      phoneNumber: z.string().trim().min(3, "Phone number is required").optional(),
+      password: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one charcter) (between 8-20)").optional(),
       signUpThrough: z.enum(["Google", "Apple", "Web"]).default("Web"),
       phoneNumber: z.number().optional()
     });
@@ -157,7 +158,7 @@ export const authValidation = {
     next: NextFunction
   ) => {
     const schema: ZodSchema = z.object({
-      newPassword: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one character) (between 8-20)"),
+      password: z.string().regex(REGEX.PASSWORD, "(A-Z) (a-z) (0-9) (one character) (between 8-20)"),
     });
     try {
       const validatedData = schema.parse(req.body);

@@ -4,26 +4,28 @@ import { userValidation } from "@/validations";
 import { authGuard } from "@/guards";
 
 export const user = (router: Router) => {
+  // route for create new user
+  router.post("/", userValidation.createUser, userController.createUser);
 
-    // route for create new user 
-    // TODO: , userValidation.createUser add validations
-    router.post("/" , userController.createUser);
+  // route for get all users
+  router.get("/", authGuard.isAuth, userController.allUsers);
 
-    // route for get all users 
-    router.get("/" , userController.allUsers)
+  // New route for fetching user stats/ Widgets
+  router.get("/stats", userController.getUserStats);
 
-    // route for get details (include permissions) of specific user by id
-    router.get("/:id" ,  userValidation.validateId ,userController.getUserDetails)
+  // route for get details (include permissions) of specific user by id
+  router.get("/:id", userValidation.validateId, userController.getUserDetails);
 
-    // route for update user 
-    // TODO: , userValidation.updateUser  add validation
-    router.patch("/:id"  ,userController.updateUser)
+  router.get("/address/:id", userController.getUserAddress);
 
-    // route for delete user using id
-    router.delete("/:id" , userValidation.validateId , userController.deleteUser )
+  // route for update user
+  router.patch("/:id", userValidation.updateUser, userController.updateUser);
 
-    // route for toggle block status
-    router.patch("/block/:id" , userController.toggleBlock)
-}
+  // route for delete user using id
+  router.delete("/:id", userValidation.validateId, userController.deleteUser);
 
+  // route for toggle block status
+  router.patch("/block/:id", userController.toggleBlock);
 
+  router.patch("/permissions/:id", userController.updatePermissions);
+};

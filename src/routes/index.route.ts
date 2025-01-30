@@ -11,15 +11,44 @@ import { supplierCategory } from "./supplier-category.routes";
 import { productCategory } from "./product-category.route";
 import { productBrand } from "./product-brand.route";
 import { product } from "./product.route";
-import {permissions} from "./permissions.route"
+import { bundle } from "./bundle.route";
+import { permissions } from "./permissions.route";
+import { me } from "./me.route";
+import { orderRoutes } from "./order.route";
+import { cartRoutes } from "./cart.route";
+import { variations } from "./variations.route";
+import { paymentPolicy } from "./payment-policy.route";
+import { descriminatorRouter } from "./descriminator.route";
+import { faqsPolicy } from "./faqs-policy.route";
 
 // Create a new router to handle all routes
 const router: Router = Router();
 
+router.use("/descriminator", descriminatorRouter);
+
 // Define all routes
 const routes: {
   [key: string]: (router: Router) => void;
-} = { files , permissions , user, auth, userCategory, supplier, supplierCategory, product , productCategory , productBrand };
+} = {
+  me,
+  files,
+  permissions,
+  user,
+  auth,
+  userCategory,
+  variations,
+  supplier,
+  supplierCategory,
+  product,
+  productCategory,
+  productBrand,
+  bundle,
+  orderRoutes,
+  cartRoutes,
+  paymentPolicy,
+  faqsPolicy,
+  // descriminator,
+};
 
 // Loop through all routes and pass the router to each route
 for (const route in routes) {

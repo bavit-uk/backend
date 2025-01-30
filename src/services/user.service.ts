@@ -1,19 +1,23 @@
 import { Address, User, UserCategory } from "@/models";
-import { IUser, UserCreatePayload } from "@/contracts/user.contract";
+import {
+  IUser,
+  UserCreatePayload,
+  UserUpdatePayload,
+} from "@/contracts/user.contract";
 import { createHash } from "@/utils/hash.util";
 import { IUserAddress } from "@/contracts/user-address.contracts";
+import { Types } from "mongoose";
 
 export const userService = {
   getAllUsers: async () => {
-    return await User.find();
+    return await User.find().populate("userType");
   },
 
-  findUserById: async (id: string , select?: string) => {
-    if(select){
-        return await User.findById(id).populate("userType").select(select);
-    }
-    else {
-        return await User.findById(id).populate("userType")
+  findUserById: async (id: string, select?: string) => {
+    if (select) {
+      return await User.findById(id).populate("userType").select(select);
+    } else {
+      return await User.findById(id).populate("userType");
     }
   },
 
@@ -32,8 +36,9 @@ export const userService = {
       restrictedAccessRights,
       phoneNumber,
       dob,
-    //   address,
+      //   address,
     } = data;
+    // console.log(data);
     const hasedPassword = await createHash(password);
     const newUser = await new User({
       firstName,
@@ -44,7 +49,7 @@ export const userService = {
       additionalAccessRights,
       restrictedAccessRights,
       phoneNumber,
-      dob
+      dob,
     });
     return await newUser.save();
   },
@@ -54,8 +59,10 @@ export const userService = {
     return userExists;
   },
 
-  updateById: async (userId: string, updateData: IUser) => {
-    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
+  updateById: async (userId: string, updateData: UserUpdatePayload) => {
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+    });
     return updatedUser;
   },
 
@@ -64,24 +71,68 @@ export const userService = {
   },
 
   toggleBlock: (id: string, isBlocked: boolean) => {
-    const updateUser = User.findByIdAndUpdate(id, { isBlocked: isBlocked }, { new: true });
+    const updateUser = User.findByIdAndUpdate(
+      id,
+      { isBlocked: isBlocked },
+      { new: true }
+    );
     if (!updateUser) {
       throw new Error("User not found");
     }
     return updateUser;
   },
 
-  createAddress: (address: IUserAddress) => {
-    const newAddress = new Address(address);
+  createAddress: (addresss: IUserAddress, userId: string) => {
+    const { country, address, label, appartment, city, postalCode, isDefault } =
+      addresss;
+    const newAddress = new Address({
+      userId,
+      label,
+      address,
+      city,
+      appartment,
+      postalCode,
+      country,
+      isDefault,
+    });
     return newAddress.save();
   },
 
-  findAddressandUpdate: (id: string , address: IUserAddress) => {
-    return Address.findByIdAndUpdate(id , address , {new: true})
+  findAddressandUpdate: (id: string, address: IUserAddress) => {
+    return Address.findByIdAndUpdate(id, address, { new: true });
   },
 
   findAddressByUserId: (userId: string) => {
     return Address.find({ userId: userId });
   },
 
+  updatePermission: (
+    additionalAccessRights: string[],
+    restrictedAccessRights: string[],
+    id: string
+  ) => {
+    console.log("id : ", id);
+    console.log("additionalAccessRights : ", additionalAccessRights);
+    console.log("restrictedAccessRights : ", restrictedAccessRights);
+
+    return User.findByIdAndUpdate(id, {
+      additionalAccessRights: additionalAccessRights,
+      restrictedAccessRights: restrictedAccessRights,
+    });
+  },
+  // New API for fetching user stats (separate service logic)
+  getUserStats: async () => {
+    try {
+      const totalUsers = await User.countDocuments();
+      const totalCustomers = await User.countDocuments({
+        userType: new Types.ObjectId("675843e9e2c601266bed8319"),
+      });
+      const activeUsers = await User.countDocuments({ isBlocked: false });
+      const blockedUsers = await User.countDocuments({ isBlocked: true });
+      return { totalUsers, activeUsers, blockedUsers, totalCustomers };
+    } catch (error) {
+      console.error("Error fetching user stats:", error);
+      throw new Error("Error fetching user statistics");
+    }
+  },
 };
