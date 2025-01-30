@@ -12,6 +12,10 @@ export const supplierService = {
     return userExists;
   },
 
+  findExistingPhoneNumber: (phoneNumber: number) => {
+    return User.findOne({phoneNumber})
+  },
+
   createSupplier: async (data: supplierAddPayload) => {
     // console.log("data in service : " , data)
     const {
