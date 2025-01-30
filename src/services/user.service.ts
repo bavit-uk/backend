@@ -1,7 +1,12 @@
 import { Address, User, UserCategory } from "@/models";
-import { IUser, UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract";
+import {
+  IUser,
+  UserCreatePayload,
+  UserUpdatePayload,
+} from "@/contracts/user.contract";
 import { createHash } from "@/utils/hash.util";
 import { IUserAddress } from "@/contracts/user-address.contracts";
+import { Types } from "mongoose";
 
 export const userService = {
   getAllUsers: async () => {
@@ -55,7 +60,9 @@ export const userService = {
   },
 
   updateById: async (userId: string, updateData: UserUpdatePayload) => {
-    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+    });
     return updatedUser;
   },
 
@@ -64,7 +71,11 @@ export const userService = {
   },
 
   toggleBlock: (id: string, isBlocked: boolean) => {
-    const updateUser = User.findByIdAndUpdate(id, { isBlocked: isBlocked }, { new: true });
+    const updateUser = User.findByIdAndUpdate(
+      id,
+      { isBlocked: isBlocked },
+      { new: true }
+    );
     if (!updateUser) {
       throw new Error("User not found");
     }
@@ -72,7 +83,8 @@ export const userService = {
   },
 
   createAddress: (addresss: IUserAddress, userId: string) => {
-    const { country, address, label, appartment, city, postalCode, isDefault } = addresss;
+    const { country, address, label, appartment, city, postalCode, isDefault } =
+      addresss;
     const newAddress = new Address({
       userId,
       label,
@@ -94,11 +106,33 @@ export const userService = {
     return Address.find({ userId: userId });
   },
 
-  updatePermission: (additionalAccessRights: string[], restrictedAccessRights: string[], id: string) => {
+  updatePermission: (
+    additionalAccessRights: string[],
+    restrictedAccessRights: string[],
+    id: string
+  ) => {
     console.log("id : ", id);
     console.log("additionalAccessRights : ", additionalAccessRights);
     console.log("restrictedAccessRights : ", restrictedAccessRights);
 
-    return User.findByIdAndUpdate(id, { additionalAccessRights:additionalAccessRights , restrictedAccessRights: restrictedAccessRights });
+    return User.findByIdAndUpdate(id, {
+      additionalAccessRights: additionalAccessRights,
+      restrictedAccessRights: restrictedAccessRights,
+    });
+  },
+  // New API for fetching user stats (separate service logic)
+  getUserStats: async () => {
+    try {
+      const totalUsers = await User.countDocuments();
+      const totalCustomers = await User.countDocuments({
+        userType: new Types.ObjectId("675843e9e2c601266bed8319"),
+      });
+      const activeUsers = await User.countDocuments({ isBlocked: false });
+      const blockedUsers = await User.countDocuments({ isBlocked: true });
+      return { totalUsers, activeUsers, blockedUsers, totalCustomers };
+    } catch (error) {
+      console.error("Error fetching user stats:", error);
+      throw new Error("Error fetching user statistics");
+    }
   },
 };

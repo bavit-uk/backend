@@ -4,7 +4,7 @@ import { IFile } from "@/contracts/user.contract";
 import { User } from "@/models";
 import { Address } from "@/models";
 import { createHash } from "@/utils/hash.util";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 
 export const supplierService = {
   findExistingEmail: async (email: string) => {
@@ -14,7 +14,16 @@ export const supplierService = {
 
   createSupplier: async (data: supplierAddPayload) => {
     // console.log("data in service : " , data)
-    const { firstName, lastName, email, password, phoneNumber, userType , additionalDocuments , supplierCategory } = data;
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      phoneNumber,
+      userType,
+      additionalDocuments,
+      supplierCategory,
+    } = data;
 
     // Here this id refers to the supplier in user category
     // TODO: find other solutiuon for this
@@ -30,7 +39,7 @@ export const supplierService = {
       phoneNumber,
       supplierCategory,
       userType,
-      additionalDocuments
+      additionalDocuments,
       // documents,
     });
 
@@ -93,14 +102,17 @@ export const supplierService = {
       },
     ]);
   },
-  
 
-  findSupplierById: async (id: string , select? : string) => {
-    if(select){
-      return await User.findById(id).populate("supplierCategory").populate("userType").select(select);
-    }
-    else{
-      return await User.findById(id).populate("supplierCategory").populate("userType");
+  findSupplierById: async (id: string, select?: string) => {
+    if (select) {
+      return await User.findById(id)
+        .populate("supplierCategory")
+        .populate("userType")
+        .select(select);
+    } else {
+      return await User.findById(id)
+        .populate("supplierCategory")
+        .populate("userType");
     }
   },
 
@@ -113,8 +125,8 @@ export const supplierService = {
     return Address.find({ userId: userId });
   },
 
-  findAddressandUpdate: (id: string , address: IUserAddress) => {
-    return Address.findByIdAndUpdate(id , address , {new: true})
+  findAddressandUpdate: (id: string, address: IUserAddress) => {
+    return Address.findByIdAndUpdate(id, address, { new: true });
   },
 
   deleteById: async (id: string) => {
@@ -122,12 +134,35 @@ export const supplierService = {
   },
 
   toggleBlock: (id: string, isBlocked: boolean) => {
-    const updateSupplier = User.findByIdAndUpdate(id, { isBlocked: isBlocked }, { new: true });
+    const updateSupplier = User.findByIdAndUpdate(
+      id,
+      { isBlocked: isBlocked },
+      { new: true }
+    );
     if (!updateSupplier) {
       throw new Error("User not found");
     }
     return updateSupplier;
   },
+  // New API for fetching user stats (separate service logic)
+  getSupplierStats: async () => {
+    try {
+      const totalSuppliers = await User.countDocuments({
+        userType: new Types.ObjectId("6749ad51ee2cd751095fb5f3"),
+      });
+      const activeSuppliers = await User.countDocuments({
+        isBlocked: false,
+        userType: new Types.ObjectId("6749ad51ee2cd751095fb5f3"),
+      });
+      const blockedSuppliers = await User.countDocuments({
+        isBlocked: true,
+        userType: new Types.ObjectId("6749ad51ee2cd751095fb5f3"),
+      });
 
+      return { totalSuppliers, activeSuppliers, blockedSuppliers };
+    } catch (error) {
+      console.error("Error fetching user stats:", error);
+      throw new Error("Error fetching user statistics");
+    }
+  },
 };
-

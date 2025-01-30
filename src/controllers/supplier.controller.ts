@@ -191,4 +191,16 @@ export const supplierController = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: "Error updating supplier status" });
     }
   },
+  // New API for user stats Widgets
+    
+    getSupplierStats: async (req: Request, res: Response) => {
+      try {
+        const stats = await supplierService.getSupplierStats();
+        return res.status(StatusCodes.OK).json(stats);
+      } catch (error) {
+        return res
+          .status(StatusCodes.INTERNAL_SERVER_ERROR)
+          .json({ message: "Error fetching supplier statistics" });
+      }
+    },
 };
