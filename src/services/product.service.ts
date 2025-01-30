@@ -1,12 +1,13 @@
 import { Product } from "@/models";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { transformProductData } from "@/utils/transformProductData.util";
 export const productService = {
   // Create a new draft product
   createDraftProduct: async (stepData: any) => {
     try {
       const productCategory =
-        stepData.productCategory && mongoose.isValidObjectId(stepData.productCategory)
+        stepData.productCategory &&
+        mongoose.isValidObjectId(stepData.productCategory)
           ? new mongoose.Types.ObjectId(stepData.productCategory)
           : null;
 
@@ -53,13 +54,17 @@ export const productService = {
 
       Object.entries(stepData).forEach(([key, value]: [string, any]) => {
         const { value: fieldValue, isAmz, isEbay, isWeb } = value || {};
-        if (isAmz) draftProduct.platformDetails.amazon.productInfo[key] = fieldValue;
-        if (isEbay) draftProduct.platformDetails.ebay.productInfo[key] = fieldValue;
-        if (isWeb) draftProduct.platformDetails.website.productInfo[key] = fieldValue;
+        if (isAmz)
+          draftProduct.platformDetails.amazon.productInfo[key] = fieldValue;
+        if (isEbay)
+          draftProduct.platformDetails.ebay.productInfo[key] = fieldValue;
+        if (isWeb)
+          draftProduct.platformDetails.website.productInfo[key] = fieldValue;
       });
 
       ["amazon", "ebay", "website"].forEach((platform) => {
-        draftProduct.platformDetails[platform].productInfo.productCategory = productCategory;
+        draftProduct.platformDetails[platform].productInfo.productCategory =
+          productCategory;
         draftProduct.kind = stepData.kind;
       });
 
@@ -117,7 +122,12 @@ export const productService = {
             isWeb = inheritedFlags.isWeb,
           } = entry || {};
 
-          if (entry && typeof entry === "object" && !Array.isArray(entry) && entry.value === undefined) {
+          if (
+            entry &&
+            typeof entry === "object" &&
+            !Array.isArray(entry) &&
+            entry.value === undefined
+          ) {
             // Recurse for nested objects, passing inherited flags
             processStepData(entry, platformDetails, currentKey, {
               isAmz,
@@ -134,32 +144,54 @@ export const productService = {
             const fieldSegments = currentKey.split(".");
             const fieldRoot = fieldSegments[0]; // e.g., "packageWeight"
 
-            if (fieldRoot === "packageWeight" || fieldRoot === "packageDimensions") {
+            if (
+              fieldRoot === "packageWeight" ||
+              fieldRoot === "packageDimensions"
+            ) {
               // Handle nested objects like packageWeight
               const subField = fieldSegments.slice(1).join("."); // e.g., "weightKg" or "dimensionLength"
               if (isAmz)
-                platformDetails.amazon.prodDelivery[fieldRoot] = platformDetails.amazon.prodDelivery[fieldRoot] || {};
+                platformDetails.amazon.prodDelivery[fieldRoot] =
+                  platformDetails.amazon.prodDelivery[fieldRoot] || {};
               if (isEbay)
-                platformDetails.ebay.prodDelivery[fieldRoot] = platformDetails.ebay.prodDelivery[fieldRoot] || {};
+                platformDetails.ebay.prodDelivery[fieldRoot] =
+                  platformDetails.ebay.prodDelivery[fieldRoot] || {};
               if (isWeb)
-                platformDetails.website.prodDelivery[fieldRoot] = platformDetails.website.prodDelivery[fieldRoot] || {};
+                platformDetails.website.prodDelivery[fieldRoot] =
+                  platformDetails.website.prodDelivery[fieldRoot] || {};
 
-              if (isAmz && subField) platformDetails.amazon.prodDelivery[fieldRoot][subField] = value;
-              if (isEbay && subField) platformDetails.ebay.prodDelivery[fieldRoot][subField] = value;
-              if (isWeb && subField) platformDetails.website.prodDelivery[fieldRoot][subField] = value;
+              if (isAmz && subField)
+                platformDetails.amazon.prodDelivery[fieldRoot][subField] =
+                  value;
+              if (isEbay && subField)
+                platformDetails.ebay.prodDelivery[fieldRoot][subField] = value;
+              if (isWeb && subField)
+                platformDetails.website.prodDelivery[fieldRoot][subField] =
+                  value;
             } else {
               const step = stepData.step;
               console.log("step :", step);
               if (step === "prodTechInfo") {
-                if (isAmz) platformDetails.amazon.prodTechInfo[currentKey] = value;
-                if (isEbay) platformDetails.ebay.prodTechInfo[currentKey] = value;
-                if (isWeb) platformDetails.website.prodTechInfo[currentKey] = value;
+                if (isAmz)
+                  platformDetails.amazon.prodTechInfo[currentKey] = value;
+                if (isEbay)
+                  platformDetails.ebay.prodTechInfo[currentKey] = value;
+                if (isWeb)
+                  platformDetails.website.prodTechInfo[currentKey] = value;
               } else if (step === "productInfo") {
-
                 console.log("in productInfo if section ");
-                console.log("platformDetails.amazon.productInfo before: ", platformDetails.amazon.productInfo);
-                console.log("platformDetails.ebay.productInfo before: ", platformDetails.ebay.productInfo);
-                console.log("platformDetails.website.productInfo before: ", platformDetails.website.productInfo);
+                console.log(
+                  "platformDetails.amazon.productInfo before: ",
+                  platformDetails.amazon.productInfo
+                );
+                console.log(
+                  "platformDetails.ebay.productInfo before: ",
+                  platformDetails.ebay.productInfo
+                );
+                console.log(
+                  "platformDetails.website.productInfo before: ",
+                  platformDetails.website.productInfo
+                );
 
                 // Initialize productInfo for all platforms as needed
                 if (isAmz && !platformDetails.amazon.productInfo) {
@@ -172,25 +204,42 @@ export const productService = {
                   platformDetails.website.productInfo = {};
                 }
 
-                console.log("    ")
+                console.log("    ");
 
                 // Assign values to the correct platform
-                if (isAmz) platformDetails.amazon.productInfo[currentKey] = value;
-                if (isEbay) platformDetails.ebay.productInfo[currentKey] = value;
-                if (isWeb) platformDetails.website.productInfo[currentKey] = value;
+                if (isAmz)
+                  platformDetails.amazon.productInfo[currentKey] = value;
+                if (isEbay)
+                  platformDetails.ebay.productInfo[currentKey] = value;
+                if (isWeb)
+                  platformDetails.website.productInfo[currentKey] = value;
 
-                console.log("platformDetails.amazon.productInfo after: ", platformDetails.amazon.productInfo);
-                console.log("platformDetails.ebay.productInfo after: ", platformDetails.ebay.productInfo);
-                console.log("platformDetails.website.productInfo after: ", platformDetails.website.productInfo);
-
+                console.log(
+                  "platformDetails.amazon.productInfo after: ",
+                  platformDetails.amazon.productInfo
+                );
+                console.log(
+                  "platformDetails.ebay.productInfo after: ",
+                  platformDetails.ebay.productInfo
+                );
+                console.log(
+                  "platformDetails.website.productInfo after: ",
+                  platformDetails.website.productInfo
+                );
               } else if (step === "prodPricing") {
-                if (isAmz) platformDetails.amazon.prodPricing[currentKey] = value;
-                if (isEbay) platformDetails.ebay.prodPricing[currentKey] = value;
-                if (isWeb) platformDetails.website.prodPricing[currentKey] = value;
+                if (isAmz)
+                  platformDetails.amazon.prodPricing[currentKey] = value;
+                if (isEbay)
+                  platformDetails.ebay.prodPricing[currentKey] = value;
+                if (isWeb)
+                  platformDetails.website.prodPricing[currentKey] = value;
               } else if (step === "prodDelivery") {
-                if (isAmz) platformDetails.amazon.prodDelivery[currentKey] = value;
-                if (isEbay) platformDetails.ebay.prodDelivery[currentKey] = value;
-                if (isWeb) platformDetails.website.prodDelivery[currentKey] = value;
+                if (isAmz)
+                  platformDetails.amazon.prodDelivery[currentKey] = value;
+                if (isEbay)
+                  platformDetails.ebay.prodDelivery[currentKey] = value;
+                if (isWeb)
+                  platformDetails.website.prodDelivery[currentKey] = value;
               } else {
                 if (isAmz) platformDetails.amazon.prodSeo[currentKey] = value;
                 if (isEbay) platformDetails.ebay.prodSeo[currentKey] = value;
@@ -230,8 +279,8 @@ export const productService = {
       const product = await Product.findById(id)
         .populate("platformDetails.amazon.productInfo.productCategory")
         .populate("platformDetails.ebay.productInfo.productCategory")
-        .populate("platformDetails.website.productInfo.productCategory")
-        // .lean();
+        .populate("platformDetails.website.productInfo.productCategory");
+      // .lean();
 
       if (!product) throw new Error("Product not found");
       return product;
@@ -289,7 +338,9 @@ export const productService = {
         .populate("platformDetails.website.productInfo.productCategory")
         .populate("platformDetails.amazon.productInfo.productCategory")
         .populate("platformDetails.ebay.productInfo.productCategory")
-        .select("_id platformDetails website.productInfo productCategory brand model srno kind");
+        .select(
+          "_id platformDetails website.productInfo productCategory brand model srno kind"
+        );
     } catch (error) {
       console.error("Error fetching products by condition:", error);
       throw new Error("Failed to fetch products by condition");
@@ -304,7 +355,7 @@ export const productService = {
         .populate("platformDetails.website.prodPricing.paymentPolicy")
         .populate("platformDetails.amazon.prodPricing.paymentPolicy")
         .populate("platformDetails.ebay.prodPricing.paymentPolicy");
-      if (!product) throw new Error("Product not foundf");
+      if (!product) throw new Error("Product not found");
       // if (product.platformDetails[platform]) {
       //   return product.platformDetails[platform];
       // }
@@ -317,7 +368,11 @@ export const productService = {
     }
   },
 
-  updateProduct: async (id: string, platform: "amazon" | "ebay" | "website", data: any) => {
+  updateProduct: async (
+    id: string,
+    platform: "amazon" | "ebay" | "website",
+    data: any
+  ) => {
     try {
       const updateQuery = { [`platformDetails.${platform}`]: data };
       const updatedProduct = await Product.findByIdAndUpdate(id, updateQuery, {
@@ -341,12 +396,49 @@ export const productService = {
 
   toggleBlock: async (id: string, isBlocked: boolean) => {
     try {
-      const updatedProduct = await Product.findByIdAndUpdate(id, { isBlocked }, { new: true });
+      const updatedProduct = await Product.findByIdAndUpdate(
+        id,
+        { isBlocked },
+        { new: true }
+      );
       if (!updatedProduct) throw new Error("Product not found");
       return updatedProduct;
     } catch (error) {
       console.error("Error toggling block status:", error);
       throw new Error("Failed to toggle block status");
+    }
+  },
+  // New API for fetching user stats (separate service logic)
+  getProductStats: async () => {
+    try {
+      const totalProducts = await Product.countDocuments({});
+      const activeProducts = await Product.countDocuments({
+        isBlocked: false,
+      });
+      const blockedProducts = await Product.countDocuments({
+        isBlocked: true,
+      });
+      const PublishedProducts = await Product.countDocuments({
+        status: "published",
+      });
+      const DraftProducts = await Product.countDocuments({
+        status: "draft",
+      });
+      const TemplateProducts = await Product.countDocuments({
+        isTemplate: true,
+      });
+
+      return {
+        totalProducts,
+        activeProducts,
+        blockedProducts,
+        PublishedProducts,
+        DraftProducts,
+        TemplateProducts,
+      };
+    } catch (error) {
+      console.error("Error fetching Products stats:", error);
+      throw new Error("Error fetching products statistics");
     }
   },
 };
