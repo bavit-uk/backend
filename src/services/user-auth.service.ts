@@ -12,8 +12,12 @@ export const authService = {
     return User.findOne({ email });
   },
 
+  findExistingPhoneNumber: (phoneNumber: number) => {
+    return User.findOne({phoneNumber})
+  },
+
   createUser: async (data: UserRegisterPayload) => {
-    const { firstName, lastName, email, password, signUpThrough , userType } = data;
+    const { firstName, lastName, email, phoneNumber , password, signUpThrough , userType } = data;
     console.log("usertype : " , userType)
     // const hasedPassword = await createHash(password);
 
@@ -21,6 +25,7 @@ export const authService = {
       firstName,
       lastName,
       email,
+      phoneNumber,
       password: User.prototype.hashPassword(password),
       signUpThrough,
       userType,

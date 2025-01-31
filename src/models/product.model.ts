@@ -5,6 +5,7 @@ import {
   IWebsitePlatformDetails,
   IProduct,
 } from "@/contracts/product.contract";
+import { fileSchema } from "./user.model";
 
 const options = { timestamps: true, discriminatorKey: "kind" };
 
@@ -17,7 +18,8 @@ const prodInfoSchema = {
   title: { type: String, required: true },
   productDescription: { type: String },
   brand: { type: String, required: true },
-  images: [{ type: String, required: true }],
+  images: {type: [fileSchema] , _id: false},
+  videos: { type: [fileSchema] , _id: false }
 };
 
 const prodPricingSchema = {
@@ -72,9 +74,9 @@ const prodSeoSchema = {
     type: [String],
   },
 };
-
+// mock
 const laptopTechnicalSchema = {
-  processor: { type: String },
+  processor: { type: String, required: true },
   model: { type: String },
   // productCondition: { type: String },
   // nonNewConditionDetails: { type: String },
@@ -89,7 +91,7 @@ const laptopTechnicalSchema = {
   color: { type: String },
   maxResolution: { type: String },
   mostSuitableFor: { type: String },
-  screenSize: { type: String },
+  screenSize: { type: String, required: true },
   graphicsProcessingType: { type: String },
   connectivity: { type: String },
   manufacturerWarranty: { type: String },
@@ -407,7 +409,7 @@ Product.discriminator(
   )
 );
 
-// descriminator for Gaming PC
+// discriminator for Gaming PC
 Product.discriminator(
   "Gaming PC",
   new mongoose.Schema(

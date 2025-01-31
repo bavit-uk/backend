@@ -7,17 +7,12 @@ export const product = (router: Router) => {
   // Create or update a draft product
   router.post("/", productController.createDraftProduct);
 
-  router.get(
-    "/transform/:id",
-    productValidation.validateId,
-    productController.transformAndSendProduct
-  );
+  router.get("/stats", productController.getProductStats);
+
+  router.get("/transform/:id", productValidation.validateId, productController.transformAndSendProduct);
+
   // Fetch transformed template product by ID
-  router.get(
-    "/templates/:id",
-    productValidation.validateId,
-    productController.transformAndSendTemplateProduct
-  );
+  router.get("/templates/:id", productValidation.validateId, productController.transformAndSendTemplateProduct);
 
   // Fetch all template products
   router.get("/templates", productController.getAllTemplateProducts);
@@ -31,23 +26,11 @@ export const product = (router: Router) => {
 
   router.get("/", productController.getAllProduct);
 
-  router.get(
-    "/:id",
-    productValidation.validateId,
-    productController.getProductById
-  );
+  router.get("/:id", productValidation.validateId, productController.getProductById);
 
-  router.delete(
-    "/:id",
-    productValidation.validateId,
-    productController.deleteProduct
-  );
+  router.delete("/:id", productValidation.validateId, productController.deleteProduct);
 
-  router.patch(
-    "/:id",
-    productValidation.updateProduct,
-    productController.updateProductById
-  );
+  router.patch("/:id", productValidation.updateProduct, productController.updateProductById);
 
   // route for toggle block status
   router.patch("/block/:id", productController.toggleBlock);
