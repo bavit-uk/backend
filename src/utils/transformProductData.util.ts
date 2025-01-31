@@ -52,6 +52,7 @@ export function transformProductData(data: any) {
       "productDescription",
       "productCategory",
       "images",
+      "videos",
       "kind",
     ],
     prodTechInfo: [
