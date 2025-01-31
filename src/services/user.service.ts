@@ -149,7 +149,7 @@ export const userService = {
         endDate,
         additionalAccessRights,
         page = 1, // Default to page 1 if not provided
-        limit = 10, // Default to 10 records per page
+        limit = 3, // Default to 10 records per page
       } = filters;
 
       // Build the query dynamically based on filters
@@ -167,11 +167,12 @@ export const userService = {
         query.isBlocked = isBlocked;
       }
 
-      if (startDate && endDate) {
-        query.createdAt = {
-          $gte: new Date(startDate),
-          $lte: new Date(endDate),
-        };
+      if (startDate || endDate) {
+        // Ensure the filter works when either startDate or endDate is provided
+        const dateFilter: any = {};
+        if (startDate) dateFilter.$gte = new Date(startDate); // If startDate is provided, filter for >=
+        if (endDate) dateFilter.$lte = new Date(endDate); // If endDate is provided, filter for <=
+        query.createdAt = dateFilter;
       }
 
       if (additionalAccessRights) {
