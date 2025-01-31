@@ -19,6 +19,14 @@ const prodInfoSchema = {
   brand: { type: String, required: true },
   images: [
     {
+      size: {type: Number },
+      url: { type: String, required: true }, // URL of the image
+      type: { type: String, required: true }, // MIME type (e.g., "image/jpeg", "video/mp4")
+    },
+  ],
+  videos: [
+    {
+      size: {type: Number },
       url: { type: String, required: true }, // URL of the image
       type: { type: String, required: true }, // MIME type (e.g., "image/jpeg", "video/mp4")
     },
@@ -79,7 +87,7 @@ const prodSeoSchema = {
 };
 // mock
 const laptopTechnicalSchema = {
-  processor: { type: String },
+  processor: { type: String , required: true},
   model: { type: String },
   // productCondition: { type: String },
   // nonNewConditionDetails: { type: String },
@@ -94,7 +102,7 @@ const laptopTechnicalSchema = {
   color: { type: String },
   maxResolution: { type: String },
   mostSuitableFor: { type: String },
-  screenSize: { type: String },
+  screenSize: { type: String , required: true},
   graphicsProcessingType: { type: String },
   connectivity: { type: String },
   manufacturerWarranty: { type: String },
