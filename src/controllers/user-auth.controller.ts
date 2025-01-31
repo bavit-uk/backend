@@ -90,6 +90,13 @@ export const authController = {
         });
       }
 
+      if (user.signUpThrough !== "Web") {
+        return res.status(StatusCodes.FORBIDDEN).json({
+          message: "Access denied. User did not sign up through Web.",
+          status: StatusCodes.FORBIDDEN,
+        });
+      }
+
       console.log("User role from database:", user.userType.role);
 
       // Check if email is verified
@@ -184,9 +191,10 @@ export const authController = {
   googleLogin: async (req: Request, res: Response) => {
     try {
       const { email, firstName, lastName, profileImage, userType, isEmailVerified, signUpThrough } = req.body;
-      console.log("details : ", userType, email, firstName, lastName, profileImage, signUpThrough);
+      // console.log("details : ", userType, email, firstName, lastName, profileImage, signUpThrough);
       let user = await authService.findExistingEmail(email);
       if (!user) {
+        console.log("new user added");
         user = await new User({
           firstName,
           lastName,
@@ -197,10 +205,20 @@ export const authController = {
           profileImage,
         });
       }
+      console.log("user already exist");
+
+      if (user.isBlocked) {
+        console.log("user is blocked, can't login");
+        return res.status(StatusCodes.FORBIDDEN).json({
+          message: "User is blocked by Admin. Please contact support.",
+          status: StatusCodes.FORBIDDEN,
+        });
+      }
+
       await user.save();
 
       const userTypee = await UserCategory.findById(userType);
-      console.log("usertype : ", userTypee);
+      // console.log("usertype : ", userTypee);
 
       // Generate tokens
       const { accessToken, refreshToken } = jwtSign(user?.id);
@@ -341,16 +359,16 @@ export const authController = {
         user.lastName = lastName;
       }
       if (phoneNumber) {
-        console.log("phoneNumber : " , phoneNumber)
+        console.log("phoneNumber : ", phoneNumber);
         const existingphoneNumber = await authService.findExistingPhoneNumber(phoneNumber);
-        console.log("existingphoneNumber : " , existingphoneNumber)
+        console.log("existingphoneNumber : ", existingphoneNumber);
         if (existingphoneNumber) {
-          console.log("returning reposne : ")
+          console.log("returning reposne : ");
           return res
             .status(StatusCodes.CONFLICT)
             .json({ message: "User with this phone number already exists! Try another" });
         } else {
-          console.log("else running of phone")
+          console.log("else running of phone");
           user.phoneNumber = phoneNumber;
         }
       }
