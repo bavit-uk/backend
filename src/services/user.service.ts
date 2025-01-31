@@ -149,8 +149,13 @@ export const userService = {
         endDate,
         additionalAccessRights,
         page = 1, // Default to page 1 if not provided
-        limit = 3, // Default to 10 records per page
+        limit = 10, // Default to 10 records per page
       } = filters;
+
+      // Convert page and limit to numbers
+      const pageNumber = parseInt(page, 10);
+      const limitNumber = parseInt(limit, 10) || 10;
+      const skip = (pageNumber - 1) * limitNumber;
 
       // Build the query dynamically based on filters
       const query: any = {};
@@ -168,10 +173,9 @@ export const userService = {
       }
 
       if (startDate || endDate) {
-        // Ensure the filter works when either startDate or endDate is provided
         const dateFilter: any = {};
-        if (startDate) dateFilter.$gte = new Date(startDate); // If startDate is provided, filter for >=
-        if (endDate) dateFilter.$lte = new Date(endDate); // If endDate is provided, filter for <=
+        if (startDate) dateFilter.$gte = new Date(startDate);
+        if (endDate) dateFilter.$lte = new Date(endDate);
         query.createdAt = dateFilter;
       }
 
@@ -179,23 +183,22 @@ export const userService = {
         query.additionalAccessRights = { $in: additionalAccessRights };
       }
 
-      // Pagination logic: calculate skip and limit
-      const skip = (page - 1) * limit;
+      // Pagination logic: apply skip and limit
       const users = await User.find(query)
         .populate("userType")
-        .skip(skip)
-        .limit(limit);
+        .skip(skip) // Correct application of skip
+        .limit(limitNumber); // Correct application of limit
 
-      // Count the total number of documents for pagination info
+      // Count total users
       const totalUsers = await User.countDocuments(query);
 
       return {
         users,
         pagination: {
           totalUsers,
-          currentPage: page,
-          totalPages: Math.ceil(totalUsers / limit),
-          perPage: limit,
+          currentPage: pageNumber,
+          totalPages: Math.ceil(totalUsers / limitNumber),
+          perPage: limitNumber,
         },
       };
     } catch (error) {

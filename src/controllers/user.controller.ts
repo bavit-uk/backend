@@ -24,12 +24,9 @@ export const userController = {
           req.body.phoneNumber
         );
         if (existingphoneNumber) {
-          return res
-            .status(StatusCodes.CONFLICT)
-            .json({
-              message:
-                "User with this phone number already exists! Try another",
-            });
+          return res.status(StatusCodes.CONFLICT).json({
+            message: "User with this phone number already exists! Try another",
+          });
         }
       }
 
@@ -120,12 +117,9 @@ export const userController = {
           updateData.phoneNumber
         );
         if (existingphoneNumber) {
-          return res
-            .status(StatusCodes.CONFLICT)
-            .json({
-              message:
-                "User with this phone number already exists! Try another",
-            });
+          return res.status(StatusCodes.CONFLICT).json({
+            message: "User with this phone number already exists! Try another",
+          });
         }
       }
 
@@ -340,26 +334,29 @@ export const userController = {
     try {
       // Extract filters from query params
       const {
-        searchQuery,
+        searchQuery = "",
         userType,
         isBlocked,
         startDate,
         endDate,
         additionalAccessRights,
+        page = "1",
+        limit = "10",
       } = req.query;
 
       // Prepare the filters object
       const filters = {
-        searchQuery,
-        userType,
+        searchQuery: searchQuery as string,
+        userType: userType ? userType.toString() : undefined,
         isBlocked: isBlocked ? JSON.parse(isBlocked as string) : undefined, // Convert string to boolean
-        startDate,
-        endDate,
-        additionalAccessRights: additionalAccessRights
-          ? typeof additionalAccessRights === "string"
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        additionalAccessRights:
+          additionalAccessRights && typeof additionalAccessRights === "string"
             ? additionalAccessRights.split(",")
-            : undefined
-          : undefined,
+            : undefined,
+        page: parseInt(page as string, 10), // Convert page to number
+        limit: parseInt(limit as string, 10), // Convert limit to number
       };
 
       // Call the service to search and filter the users
