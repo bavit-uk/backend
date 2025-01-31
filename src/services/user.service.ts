@@ -148,6 +148,8 @@ export const userService = {
         startDate,
         endDate,
         additionalAccessRights,
+        page = 1, // Default to page 1 if not provided
+        limit = 10, // Default to 10 records per page
       } = filters;
 
       // Build the query dynamically based on filters
@@ -176,9 +178,25 @@ export const userService = {
         query.additionalAccessRights = { $in: additionalAccessRights };
       }
 
-      // Perform the search with dynamic filtering
-      const users = await User.find(query).populate("userType");
-      return users;
+      // Pagination logic: calculate skip and limit
+      const skip = (page - 1) * limit;
+      const users = await User.find(query)
+        .populate("userType")
+        .skip(skip)
+        .limit(limit);
+
+      // Count the total number of documents for pagination info
+      const totalUsers = await User.countDocuments(query);
+
+      return {
+        users,
+        pagination: {
+          totalUsers,
+          currentPage: page,
+          totalPages: Math.ceil(totalUsers / limit),
+          perPage: limit,
+        },
+      };
     } catch (error) {
       console.error("Error during search and filter:", error);
       throw new Error("Error during search and filter");
