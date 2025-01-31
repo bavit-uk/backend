@@ -5,6 +5,7 @@ import {
   IWebsitePlatformDetails,
   IProduct,
 } from "@/contracts/product.contract";
+import { fileSchema } from "./user.model";
 
 const options = { timestamps: true, discriminatorKey: "kind" };
 
@@ -17,20 +18,8 @@ const prodInfoSchema = {
   title: { type: String, required: true },
   productDescription: { type: String },
   brand: { type: String, required: true },
-  images: [
-    {
-      size: {type: Number },
-      url: { type: String, required: true }, // URL of the image
-      type: { type: String, required: true }, // MIME type (e.g., "image/jpeg", "video/mp4")
-    },
-  ],
-  videos: [
-    {
-      size: {type: Number },
-      url: { type: String, required: true }, // URL of the image
-      type: { type: String, required: true }, // MIME type (e.g., "image/jpeg", "video/mp4")
-    },
-  ],
+  images: {type: [fileSchema] , _id: false},
+  videos: { type: [fileSchema] , _id: false }
 };
 
 const prodPricingSchema = {
@@ -87,7 +76,7 @@ const prodSeoSchema = {
 };
 // mock
 const laptopTechnicalSchema = {
-  processor: { type: String , required: true},
+  processor: { type: String, required: true },
   model: { type: String },
   // productCondition: { type: String },
   // nonNewConditionDetails: { type: String },
@@ -102,7 +91,7 @@ const laptopTechnicalSchema = {
   color: { type: String },
   maxResolution: { type: String },
   mostSuitableFor: { type: String },
-  screenSize: { type: String , required: true},
+  screenSize: { type: String, required: true },
   graphicsProcessingType: { type: String },
   connectivity: { type: String },
   manufacturerWarranty: { type: String },
