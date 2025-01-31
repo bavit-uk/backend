@@ -60,7 +60,7 @@ export const userService = {
   },
 
   findExistingPhoneNumber: (phoneNumber: number) => {
-    return User.findOne({phoneNumber})
+    return User.findOne({ phoneNumber });
   },
 
   updateById: async (userId: string, updateData: UserUpdatePayload) => {
@@ -160,8 +160,6 @@ export const userService = {
           { email: { $regex: searchQuery, $options: "i" } },
         ];
       }
-
-    
 
       if (isBlocked !== undefined) {
         query.isBlocked = isBlocked;
