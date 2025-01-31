@@ -11,11 +11,20 @@ export const supplierController = {
     try {
       const { email, address, password } = req.body;
 
-      console.log(req.body);
+      console.log("add supplier : " , req.body);
 
       const userExists = await supplierService.findExistingEmail(email);
       if (userExists) {
         return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
+      }
+
+      if (req.body.phoneNumber) {
+        const existingphoneNumber = await supplierService.findExistingPhoneNumber(req.body.phoneNumber);
+        if (existingphoneNumber) {
+          return res
+            .status(StatusCodes.CONFLICT)
+            .json({ message: "User with this phone number already exists! Try another" });
+        }
       }
 
       // Create the user (supplier)
@@ -37,7 +46,7 @@ export const supplierController = {
       // Send email to the new supplier
       try {
         const emailContent = `
-        <p>Dear ${supplier.firstName || "Supplier"},</p>
+        <p>Dear ${supplier.firstName || "supplier"},</p>
         <p>Your account has been created by the Bav-IT admin. Below are your login credentials:</p>
         <p><strong>Email:</strong> ${supplier.email}</p>
         <p><strong>Password:</strong> ${password}</p>
@@ -75,6 +84,18 @@ export const supplierController = {
         const userExists = await supplierService.findExistingEmail(email);
         if (userExists) {
           return res.status(StatusCodes.CONFLICT).json({ message: "User with this email already exists" });
+        }
+        else {
+          updateData.isEmailVerified = false
+        }
+      }
+
+      if (updateData.phoneNumber) {
+        const existingphoneNumber = await supplierService.findExistingPhoneNumber(updateData.phoneNumber);
+        if (existingphoneNumber) {
+          return res
+            .status(StatusCodes.CONFLICT)
+            .json({ message: "User with this phone number already exists! Try another" });
         }
       }
 
@@ -121,7 +142,7 @@ export const supplierController = {
     try {
       // const categories = await UserCategory.findOne({})
       const allSuppliers = await supplierService.getAllSuppliers();
-      console.log(allSuppliers);
+      // console.log(allSuppliers);
       res.status(StatusCodes.OK).json({ data: allSuppliers });
     } catch (error) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error });
@@ -188,4 +209,16 @@ export const supplierController = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: "Error updating supplier status" });
     }
   },
+  // New API for user stats Widgets
+    
+    getSupplierStats: async (req: Request, res: Response) => {
+      try {
+        const stats = await supplierService.getSupplierStats();
+        return res.status(StatusCodes.OK).json(stats);
+      } catch (error) {
+        return res
+          .status(StatusCodes.INTERNAL_SERVER_ERROR)
+          .json({ message: "Error fetching supplier statistics" });
+      }
+    },
 };

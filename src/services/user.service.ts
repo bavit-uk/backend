@@ -1,7 +1,12 @@
 import { Address, User, UserCategory } from "@/models";
-import { IUser, UserCreatePayload, UserUpdatePayload } from "@/contracts/user.contract";
+import {
+  IUser,
+  UserCreatePayload,
+  UserUpdatePayload,
+} from "@/contracts/user.contract";
 import { createHash } from "@/utils/hash.util";
 import { IUserAddress } from "@/contracts/user-address.contracts";
+import { Types } from "mongoose";
 
 export const userService = {
   getAllUsers: async () => {
@@ -54,8 +59,14 @@ export const userService = {
     return userExists;
   },
 
+  findExistingPhoneNumber: (phoneNumber: number) => {
+    return User.findOne({ phoneNumber });
+  },
+
   updateById: async (userId: string, updateData: UserUpdatePayload) => {
-    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+    });
     return updatedUser;
   },
 
@@ -64,7 +75,11 @@ export const userService = {
   },
 
   toggleBlock: (id: string, isBlocked: boolean) => {
-    const updateUser = User.findByIdAndUpdate(id, { isBlocked: isBlocked }, { new: true });
+    const updateUser = User.findByIdAndUpdate(
+      id,
+      { isBlocked: isBlocked },
+      { new: true }
+    );
     if (!updateUser) {
       throw new Error("User not found");
     }
@@ -72,7 +87,8 @@ export const userService = {
   },
 
   createAddress: (addresss: IUserAddress, userId: string) => {
-    const { country, address, label, appartment, city, postalCode, isDefault } = addresss;
+    const { country, address, label, appartment, city, postalCode, isDefault } =
+      addresss;
     const newAddress = new Address({
       userId,
       label,
@@ -94,11 +110,100 @@ export const userService = {
     return Address.find({ userId: userId });
   },
 
-  updatePermission: (additionalAccessRights: string[], restrictedAccessRights: string[], id: string) => {
+  updatePermission: (
+    additionalAccessRights: string[],
+    restrictedAccessRights: string[],
+    id: string
+  ) => {
     console.log("id : ", id);
     console.log("additionalAccessRights : ", additionalAccessRights);
     console.log("restrictedAccessRights : ", restrictedAccessRights);
 
-    return User.findByIdAndUpdate(id, { additionalAccessRights:additionalAccessRights , restrictedAccessRights: restrictedAccessRights });
+    return User.findByIdAndUpdate(id, {
+      additionalAccessRights: additionalAccessRights,
+      restrictedAccessRights: restrictedAccessRights,
+    });
+  },
+  // New API for fetching user stats (separate service logic)
+  getUserStats: async () => {
+    try {
+      const totalUsers = await User.countDocuments();
+      const totalCustomers = await User.countDocuments({
+        userType: new Types.ObjectId("675843e9e2c601266bed8319"),
+      });
+      const activeUsers = await User.countDocuments({ isBlocked: false });
+      const blockedUsers = await User.countDocuments({ isBlocked: true });
+      return { totalUsers, activeUsers, blockedUsers, totalCustomers };
+    } catch (error) {
+      console.error("Error fetching user stats:", error);
+      throw new Error("Error fetching user statistics");
+    }
+  },
+
+  searchAndFilterUsers: async (filters: any) => {
+    try {
+      const {
+        searchQuery = "",
+        isBlocked,
+        startDate,
+        endDate,
+        additionalAccessRights,
+        page = 1, // Default to page 1 if not provided
+        limit = 10, // Default to 10 records per page
+      } = filters;
+
+      // Convert page and limit to numbers
+      const pageNumber = parseInt(page, 10);
+      const limitNumber = parseInt(limit, 10) || 10;
+      const skip = (pageNumber - 1) * limitNumber;
+
+      // Build the query dynamically based on filters
+      const query: any = {};
+
+      if (searchQuery) {
+        query.$or = [
+          { firstName: { $regex: searchQuery, $options: "i" } },
+          { lastName: { $regex: searchQuery, $options: "i" } },
+          { email: { $regex: searchQuery, $options: "i" } },
+        ];
+      }
+
+      if (isBlocked !== undefined) {
+        query.isBlocked = isBlocked;
+      }
+
+      if (startDate || endDate) {
+        const dateFilter: any = {};
+        if (startDate) dateFilter.$gte = new Date(startDate);
+        if (endDate) dateFilter.$lte = new Date(endDate);
+        query.createdAt = dateFilter;
+      }
+
+      if (additionalAccessRights) {
+        query.additionalAccessRights = { $in: additionalAccessRights };
+      }
+
+      // Pagination logic: apply skip and limit
+      const users = await User.find(query)
+        .populate("userType")
+        .skip(skip) // Correct application of skip
+        .limit(limitNumber); // Correct application of limit
+
+      // Count total users
+      const totalUsers = await User.countDocuments(query);
+
+      return {
+        users,
+        pagination: {
+          totalUsers,
+          currentPage: pageNumber,
+          totalPages: Math.ceil(totalUsers / limitNumber),
+          perPage: limitNumber,
+        },
+      };
+    } catch (error) {
+      console.error("Error during search and filter:", error);
+      throw new Error("Error during search and filter");
+    }
   },
 };

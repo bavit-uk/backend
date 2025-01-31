@@ -16,9 +16,10 @@ dotenv.config({
 
 const app: Express = express();
 
+
 // Connect to MongoDB
 mongoose.run();
-
+app.options("*", corsMiddleware); 
 // const accessLogStream = fs.createWriteStream(__dirname + "/access.log", { flags: "a" });
 
 // This route is specifically handled before the express.json() middleware to allow raw JSON requests
