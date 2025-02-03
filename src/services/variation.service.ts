@@ -1,5 +1,6 @@
 import { Product } from "@/models/product.model";
 import { Variation } from "@/models/variation.model";
+
 export const variationService = {
   getPartsByPlatform: async (platform: string) => {
     try {
@@ -65,23 +66,35 @@ export const variationService = {
       throw new Error("Unable to fetch parts");
     }
   },
-  createVariation: async (
-    platform: string,
+
+  createOrUpdateVariation: async (
     productId: string,
+    platform: "amazon" | "ebay" | "website",
     variationData: any
   ) => {
-    return new Variation({ ...variationData, productId, platform }).save();
+    return Variation.findOneAndUpdate(
+      { productId },
+      { [platform]: variationData }, // Updates only the platform-specific variation
+      { new: true, upsert: true }
+    );
   },
 
   getVariationsByProduct: async (productId: string) => {
-    return Variation.find({ productId });
+    return Variation.findOne({ productId });
   },
 
-  updateVariation: async (variationId: string, updateData: any) => {
-    return Variation.findByIdAndUpdate(variationId, updateData, { new: true });
+  deletePlatformVariation: async (
+    productId: string,
+    platform: "amazon" | "ebay" | "website"
+  ) => {
+    return Variation.findOneAndUpdate(
+      { productId },
+      { $unset: { [platform]: 1 } }, // Removes the specific platform variation
+      { new: true }
+    );
   },
 
-  deleteVariation: async (variationId: string) => {
-    return Variation.findByIdAndDelete(variationId);
+  deleteVariation: async (productId: string) => {
+    return Variation.findOneAndDelete({ productId });
   },
 };
