@@ -9,7 +9,7 @@ export const variations = (router: Router) => {
 
   router.patch("/:variationId", variationController.updateVariation);
 
-  router.delete("/:variationId/:platform", variationController.deleteVariation);
+  router.delete("/:variationId/", variationController.deleteVariation);
 
   router.get("/parts/:platform", variationController.getPartsByPlatform);
 
