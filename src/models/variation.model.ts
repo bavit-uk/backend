@@ -17,9 +17,11 @@ interface IPlatformData {
 
 export interface IVariation extends Document {
   productId: mongoose.Types.ObjectId;
-  amazon?: IPlatformData;
-  ebay?: IPlatformData;
-  website?: IPlatformData;
+  variationData?: {
+    amazon?: IPlatformData;
+    ebay?: IPlatformData;
+    website?: IPlatformData;
+  };
 }
 
 const PlatformDataSchema = new Schema<IPlatformData>({
@@ -40,9 +42,11 @@ const PlatformDataSchema = new Schema<IPlatformData>({
 const VariationSchema = new Schema<IVariation>(
   {
     productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
-    amazon: PlatformDataSchema,
-    ebay: PlatformDataSchema,
-    website: PlatformDataSchema,
+    variationData: {
+      amazon: PlatformDataSchema,
+      ebay: PlatformDataSchema,
+      website: PlatformDataSchema,
+    },
   },
   { timestamps: true }
 );
