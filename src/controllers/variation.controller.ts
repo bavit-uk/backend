@@ -493,32 +493,53 @@ export const variationController = {
     try {
       const { variationId } = req.params;
       const { platform, updateData } = req.body;
-
+  
+      // Validate input
       if (!variationId || !platform || !updateData) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,
           message: "Variation ID, platform, and update data are required",
         });
       }
-
-      const variation = await variationService.updateVariation(
-        variationId,
-        platform,
-        updateData
-      );
-
+  
+      // Ensure platform is valid (either 'amazon', 'ebay', or 'website')
+      if (!["amazon", "ebay", "website"].includes(platform)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid platform. It must be 'amazon', 'ebay', or 'website'.",
+        });
+      }
+  
+      // Prepare the update data in the correct format
+      const updateObject: any = {};
+      updateObject[`variationData.${platform}`] = updateData;
+  
+      // Update the variation in the database
+      const variation = await variationService.updateVariation(variationId, updateObject);
+  
+      // Check if the variation was found and updated
+      if (!variation) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Variation not found",
+        });
+      }
+  
+      // Send the success response
       res.status(StatusCodes.OK).json({
         success: true,
         message: "Variation updated successfully",
         data: variation,
       });
     } catch (error: any) {
+      console.error("Error updating variation:", error.message);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error updating variation",
       });
     }
   },
+  
 
   getVariationsByProduct: async (req: Request, res: Response) => {
     try {
