@@ -444,121 +444,117 @@ export const variationController = {
       });
     }
   },
-  createOrUpdateVariation: async (req: Request, res: Response) => {
+  
+  createVariation: async (req: Request, res: Response) => {
     try {
-      const { productId, platform, variationData } = req.body;
+      const { productId, variationData, isAmz, isEbay, isWeb } = req.body;
 
-      if (!productId || !platform || !variationData) {
+      if (!productId || !variationData) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,
-          message: "Product ID, platform, and variation data are required",
+          message: "Product ID and variation data are required",
         });
       }
 
-      const variation = await variationService.createOrUpdateVariation(
-        productId,
-        platform,
-        variationData
-      );
+      // Initialize the final variation object
+      const finalVariationData: any = { productId };
 
-      res.status(StatusCodes.OK).json({
+      if (isAmz) finalVariationData.amazon = variationData;
+      if (isEbay) finalVariationData.ebay = variationData;
+      if (isWeb) finalVariationData.website = variationData;
+
+      // Create new variation entry
+      const variation = await variationService.createVariation(finalVariationData);
+
+      res.status(StatusCodes.CREATED).json({
         success: true,
-        message: "Variation updated successfully",
+        message: "Variation created successfully",
         data: variation,
       });
     } catch (error: any) {
+      console.error("Error creating variation:", error.message);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: "Error updating variation",
+        message: "Error creating variation",
       });
     }
   },
-
-  getVariationsByProduct: async (req: Request, res: Response) => {
-    try {
-      const { productId } = req.params;
-
-      if (!productId) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
+    updateVariation: async (req: Request, res: Response) => {
+      try {
+        const { variationId } = req.params;
+        const { platform, updateData } = req.body;
+  
+        if (!variationId || !platform || !updateData) {
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            message: "Variation ID, platform, and update data are required",
+          });
+        }
+  
+        const variation = await variationService.updateVariation(variationId, platform, updateData);
+  
+        res.status(StatusCodes.OK).json({
+          success: true,
+          message: "Variation updated successfully",
+          data: variation,
+        });
+      } catch (error: any) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
           success: false,
-          message: "Product ID is required",
+          message: "Error updating variation",
         });
       }
-
-      const variations =
-        await variationService.getVariationsByProduct(productId);
-
-      if (!variations) {
-        return res.status(StatusCodes.NOT_FOUND).json({
+    },
+  
+    getVariationsByProduct: async (req: Request, res: Response) => {
+      try {
+        const { productId } = req.params;
+  
+        if (!productId) {
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            message: "Product ID is required",
+          });
+        }
+  
+        const variations = await variationService.getVariationsByProduct(productId);
+  
+        res.status(StatusCodes.OK).json({
+          success: true,
+          message: "Variations retrieved successfully",
+          data: variations,
+        });
+      } catch (error: any) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
           success: false,
-          message: "No variations found for this product",
+          message: "Error retrieving variations",
         });
       }
-
-      res.status(StatusCodes.OK).json({
-        success: true,
-        message: "Variations retrieved successfully",
-        data: variations,
-      });
-    } catch (error: any) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: "Error retrieving variations",
-      });
-    }
-  },
-
-  deletePlatformVariation: async (req: Request, res: Response) => {
-    try {
-      const { productId, platform }: any = req.params;
-
-      if (!productId || !platform) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
+    },
+  
+    deleteVariation: async (req: Request, res: Response) => {
+      try {
+        const { variationId } = req.params;
+  
+        if (!variationId) {
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            message: "Variation ID is required",
+          });
+        }
+  
+        await variationService.deleteVariation(variationId);
+  
+        res.status(StatusCodes.OK).json({
+          success: true,
+          message: "Variation deleted successfully",
+        });
+      } catch (error: any) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
           success: false,
-          message: "Product ID and platform are required",
+          message: "Error deleting variation",
         });
       }
-
-      const variation = await variationService.deletePlatformVariation(
-        productId,
-        platform
-      );
-
-      res.status(StatusCodes.OK).json({
-        success: true,
-        message: `Variation for ${platform} deleted successfully`,
-        data: variation,
-      });
-    } catch (error: any) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: "Error deleting variation",
-      });
-    }
-  },
-
-  deleteVariation: async (req: Request, res: Response) => {
-    try {
-      const { productId } = req.params;
-
-      if (!productId) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          success: false,
-          message: "Product ID is required",
-        });
-      }
-
-      await variationService.deleteVariation(productId);
-
-      res.status(StatusCodes.OK).json({
-        success: true,
-        message: "Variation deleted successfully",
-      });
-    } catch (error: any) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: "Error deleting variation",
-      });
-    }
-  },
+    },
+  
 };

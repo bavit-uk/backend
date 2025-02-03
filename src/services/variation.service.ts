@@ -67,34 +67,26 @@ export const variationService = {
     }
   },
 
-  createOrUpdateVariation: async (
-    productId: string,
+  createVariation: async (variationData: any) => {
+    return new Variation(variationData).save();
+  },
+  updateVariation: async (
+    variationId: string,
     platform: "amazon" | "ebay" | "website",
-    variationData: any
+    updateData: any
   ) => {
-    return Variation.findOneAndUpdate(
-      { productId },
-      { [platform]: variationData }, // Updates only the platform-specific variation
-      { new: true, upsert: true }
-    );
-  },
-
-  getVariationsByProduct: async (productId: string) => {
-    return Variation.findOne({ productId });
-  },
-
-  deletePlatformVariation: async (
-    productId: string,
-    platform: "amazon" | "ebay" | "website"
-  ) => {
-    return Variation.findOneAndUpdate(
-      { productId },
-      { $unset: { [platform]: 1 } }, // Removes the specific platform variation
+    return Variation.findByIdAndUpdate(
+      variationId,
+      { [platform]: updateData },
       { new: true }
     );
   },
 
-  deleteVariation: async (productId: string) => {
-    return Variation.findOneAndDelete({ productId });
+  getVariationsByProduct: async (productId: string) => {
+    return Variation.find({ productId });
+  },
+
+  deleteVariation: async (variationId: string) => {
+    return Variation.findByIdAndDelete(variationId);
   },
 };
