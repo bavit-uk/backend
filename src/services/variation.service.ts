@@ -1,5 +1,5 @@
 import { Product } from "@/models/product.model";
-
+import { Variation } from "@/models/variation.model";
 export const variationService = {
   getPartsByPlatform: async (platform: string) => {
     try {
@@ -64,5 +64,24 @@ export const variationService = {
       console.error("Error fetching parts by platform:", error.message);
       throw new Error("Unable to fetch parts");
     }
+  },
+  createVariation: async (
+    platform: string,
+    productId: string,
+    variationData: any
+  ) => {
+    return new Variation({ ...variationData, productId, platform }).save();
+  },
+
+  getVariationsByProduct: async (productId: string) => {
+    return Variation.find({ productId });
+  },
+
+  updateVariation: async (variationId: string, updateData: any) => {
+    return Variation.findByIdAndUpdate(variationId, updateData, { new: true });
+  },
+
+  deleteVariation: async (variationId: string) => {
+    return Variation.findByIdAndDelete(variationId);
   },
 };
