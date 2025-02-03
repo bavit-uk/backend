@@ -3,22 +3,13 @@ import { Router } from "express";
 import { variationController } from "@/controllers/variation.controller";
 
 export const variations = (router: Router) => {
-  router.post("/", variationController.createOrUpdateVariation);
+  router.post("/", variationController.createVariation);
 
-  router.get(
-    "/:productId",
-    variationController.getVariationsByProduct
-  );
+  router.get("/:productId", variationController.getVariationsByProduct);
 
-  // router.patch(
-  //   "/:variationId/:platform",
-  //   variationController.createOrUpdateVariation
-  // );
+  router.patch("/:variationId/:platform", variationController.updateVariation);
 
-  router.delete(
-    "/:variationId/:platform",
-    variationController.deleteVariation
-  );
+  router.delete("/:variationId/:platform", variationController.deleteVariation);
 
   router.get("/parts/:platform", variationController.getPartsByPlatform);
 

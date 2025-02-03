@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-interface IPlatformVariation {
+interface IPlatformData {
   stock: number;
   price: number;
   cpu: string;
@@ -17,12 +17,12 @@ interface IPlatformVariation {
 
 export interface IVariation extends Document {
   productId: mongoose.Types.ObjectId;
-  amazon?: IPlatformVariation;
-  ebay?: IPlatformVariation;
-  website?: IPlatformVariation;
+  amazon?: IPlatformData;
+  ebay?: IPlatformData;
+  website?: IPlatformData;
 }
 
-const PlatformVariationSchema = new Schema<IPlatformVariation>({
+const PlatformDataSchema = new Schema<IPlatformData>({
   stock: { type: Number, default: 0 },
   price: { type: Number },
   cpu: { type: String },
@@ -40,9 +40,9 @@ const PlatformVariationSchema = new Schema<IPlatformVariation>({
 const VariationSchema = new Schema<IVariation>(
   {
     productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
-    amazon: PlatformVariationSchema,
-    ebay: PlatformVariationSchema,
-    website: PlatformVariationSchema,
+    amazon: PlatformDataSchema,
+    ebay: PlatformDataSchema,
+    website: PlatformDataSchema,
   },
   { timestamps: true }
 );
