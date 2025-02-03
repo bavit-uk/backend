@@ -3,17 +3,17 @@ import { Router } from "express";
 import { variationController } from "@/controllers/variation.controller";
 
 export const variations = (router: Router) => {
-  router.post("/", variationController.createVariation);
+  router.post("/", variationController.createOrUpdateVariation);
 
   router.get(
     "/:productId",
     variationController.getVariationsByProduct
   );
 
-  router.patch(
-    "/:variationId/:platform",
-    variationController.updateVariation
-  );
+  // router.patch(
+  //   "/:variationId/:platform",
+  //   variationController.createOrUpdateVariation
+  // );
 
   router.delete(
     "/:variationId/:platform",
