@@ -408,7 +408,7 @@ export const productService = {
       throw new Error("Failed to toggle block status");
     }
   },
-  // New API for fetching user stats (separate service logic)
+  // New API for fetching product stats (separate service logic)
   getProductStats: async () => {
     try {
       const totalProducts = await Product.countDocuments({});
@@ -439,6 +439,76 @@ export const productService = {
     } catch (error) {
       console.error("Error fetching Products stats:", error);
       throw new Error("Error fetching products statistics");
+    }
+  },
+
+  searchAndFilterProducts: async (filters: any) => {
+    try {
+      const {
+        searchQuery = "",
+        isBlocked,
+        isTemplate,
+        startDate,
+        endDate,
+        // additionalAccessRights,
+        page = 1, // Default to page 1 if not provided
+        limit = 10, // Default to 10 records per page
+      } = filters;
+
+      // Convert page and limit to numbers
+      const pageNumber = parseInt(page, 10);
+      const limitNumber = parseInt(limit, 10) || 10;
+      const skip = (pageNumber - 1) * limitNumber;
+
+      // Build the query dynamically based on filters
+      const query: any = {};
+
+      if (searchQuery) {
+        query.$or = [
+          { title: { $regex: searchQuery, $options: "i" } },
+          { brand: { $regex: searchQuery, $options: "i" } },
+          { condition: { $regex: searchQuery, $options: "i" } },
+        ];
+      }
+
+      if (isBlocked !== undefined) {
+        query.isBlocked = isBlocked;
+      }
+      if (isTemplate !== undefined) {
+        query.isTemplate = isTemplate;
+      }
+      if (startDate || endDate) {
+        const dateFilter: any = {};
+        if (startDate) dateFilter.$gte = new Date(startDate);
+        if (endDate) dateFilter.$lte = new Date(endDate);
+        query.createdAt = dateFilter;
+      }
+
+      // if (additionalAccessRights) {
+      //   query.additionalAccessRights = { $in: additionalAccessRights };
+      // }
+
+      // Pagination logic: apply skip and limit
+      const products = await Product.find(query)
+        .populate("userType")
+        .skip(skip) // Correct application of skip
+        .limit(limitNumber); // Correct application of limit
+
+      // Count total products
+      const totalProducts = await Product.countDocuments(query);
+
+      return {
+        products,
+        pagination: {
+          totalProducts,
+          currentPage: pageNumber,
+          totalPages: Math.ceil(totalProducts / limitNumber),
+          perPage: limitNumber,
+        },
+      };
+    } catch (error) {
+      console.error("Error during search and filter:", error);
+      throw new Error("Error during search and filter");
     }
   },
 };
