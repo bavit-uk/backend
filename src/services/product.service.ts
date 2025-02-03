@@ -450,7 +450,6 @@ export const productService = {
         isTemplate,
         startDate,
         endDate,
-        // additionalAccessRights,
         page = 1, // Default to page 1 if not provided
         limit = 10, // Default to 10 records per page
       } = filters;
@@ -463,30 +462,81 @@ export const productService = {
       // Build the query dynamically based on filters
       const query: any = {};
 
+      // Search within platformDetails (amazon, ebay, website) for productInfo.title and productInfo.brand
       if (searchQuery) {
         query.$or = [
-          { title: { $regex: searchQuery, $options: "i" } },
-          { brand: { $regex: searchQuery, $options: "i" } },
-          { condition: { $regex: searchQuery, $options: "i" } },
+          {
+            "platformDetails.amazon.productInfo.title": {
+              $regex: searchQuery,
+              $options: "i",
+            },
+          },
+          {
+            "platformDetails.amazon.productInfo.brand": {
+              $regex: searchQuery,
+              $options: "i",
+            },
+          },
+          {
+            "platformDetails.ebay.productInfo.title": {
+              $regex: searchQuery,
+              $options: "i",
+            },
+          },
+          {
+            "platformDetails.ebay.productInfo.brand": {
+              $regex: searchQuery,
+              $options: "i",
+            },
+          },
+          {
+            "platformDetails.website.productInfo.title": {
+              $regex: searchQuery,
+              $options: "i",
+            },
+          },
+          {
+            "platformDetails.website.productInfo.brand": {
+              $regex: searchQuery,
+              $options: "i",
+            },
+          },
+          {
+            "platformDetails.amazon.prodPricing.condition": {
+              $regex: searchQuery,
+              $options: "i",
+            },
+          },
+          {
+            "platformDetails.ebay.prodPricing.condition": {
+              $regex: searchQuery,
+              $options: "i",
+            },
+          },
+          {
+            "platformDetails.website.prodPricing.condition": {
+              $regex: searchQuery,
+              $options: "i",
+            },
+          },
         ];
       }
 
+      // Add filters for isBlocked and isTemplate
       if (isBlocked !== undefined) {
         query.isBlocked = isBlocked;
       }
       if (isTemplate !== undefined) {
         query.isTemplate = isTemplate;
       }
+
+      // Date range filter for createdAt
       if (startDate || endDate) {
         const dateFilter: any = {};
         if (startDate) dateFilter.$gte = new Date(startDate);
         if (endDate) dateFilter.$lte = new Date(endDate);
         query.createdAt = dateFilter;
       }
-
-      // if (additionalAccessRights) {
-      //   query.additionalAccessRights = { $in: additionalAccessRights };
-      // }
 
       // Pagination logic: apply skip and limit
       const products = await Product.find(query)
