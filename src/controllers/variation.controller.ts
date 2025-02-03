@@ -2,11 +2,7 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { variationService } from "@/services/variation.service";
 import { Product } from "@/models/product.model";
-import {
-  AmazonVariation,
-  EbayVariation,
-  WebsiteVariation,
-} from "@/models/variation.model";
+import { Variation } from "@/models/variation.model";
 
 export const variationController = {
   // Get parts by platform
@@ -36,7 +32,6 @@ export const variationController = {
       });
     }
   },
-
   // Get all variations
   getAllVariationsByPlatform: async (_req: Request, res: Response) => {
     try {
@@ -447,6 +442,136 @@ export const variationController = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error fetching unified parts",
+      });
+    }
+  },
+  createVariation: async (req: Request, res: Response) => {
+    try {
+      const { platform, productId, variationData } = req.body;
+
+      if (!platform || !productId || !variationData) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Platform, productId, and variationData are required",
+        });
+      }
+
+      const variation = new Variation({
+        ...variationData,
+        productId,
+        platform,
+      });
+      await variation.save();
+
+      res.status(StatusCodes.CREATED).json({
+        success: true,
+        message: "Variation created successfully",
+        data: variation,
+      });
+    } catch (error: any) {
+      console.error("Error creating variation:", error.message);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Error creating variation",
+      });
+    }
+  },
+
+  getVariationsByProduct: async (req: Request, res: Response) => {
+    try {
+      const { productId } = req.params;
+      if (!productId) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Product ID is required",
+        });
+      }
+
+      const variations = await Variation.find({ productId });
+
+      res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Variations fetched successfully",
+        data: variations,
+      });
+    } catch (error: any) {
+      console.error("Error fetching variations:", error.message);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Error fetching variations",
+      });
+    }
+  },
+
+  updateVariation: async (req: Request, res: Response) => {
+    try {
+      const { variationId } = req.params;
+      const updateData = req.body;
+
+      if (!variationId || !updateData) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Variation ID and update data are required",
+        });
+      }
+
+      const updatedVariation = await Variation.findByIdAndUpdate(
+        variationId,
+        updateData,
+        { new: true }
+      );
+
+      if (!updatedVariation) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Variation not found",
+        });
+      }
+
+      res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Variation updated successfully",
+        data: updatedVariation,
+      });
+    } catch (error: any) {
+      console.error("Error updating variation:", error.message);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Error updating variation",
+      });
+    }
+  },
+
+  deleteVariation: async (req: Request, res: Response) => {
+    try {
+      const { variationId } = req.params;
+
+      if (!variationId) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Variation ID is required",
+        });
+      }
+
+      const deletedVariation = await Variation.findByIdAndDelete(variationId);
+
+      if (!deletedVariation) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Variation not found",
+        });
+      }
+
+      res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Variation deleted successfully",
+        data: deletedVariation,
+      });
+    } catch (error: any) {
+      console.error("Error deleting variation:", error.message);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Error deleting variation",
       });
     }
   },
