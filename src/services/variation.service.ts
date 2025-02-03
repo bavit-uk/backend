@@ -69,19 +69,17 @@ export const variationService = {
 
   createVariation: async (variationData: any) => {
     return new Variation(variationData).save();
-
   },
-  updateVariation: async (
-    variationId: string,
-    platform: "amazon" | "ebay" | "website",
-    updateData: any
-  ) => {
-    return Variation.findByIdAndUpdate(
-      variationId,
-      { [platform]: updateData },
-      { new: true }
-    );
+  updateVariation: async (variationId: string, updateData: any) => {
+    try {
+      return await Variation.findByIdAndUpdate(variationId, updateData, {
+        new: true, // Return the updated document
+      });
+    } catch (error: any) {
+      throw new Error("Error updating variation: " + error.message);
+    }
   },
+  
 
   getVariationsByProduct: async (productId: string) => {
     return Variation.find({ productId });

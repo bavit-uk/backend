@@ -7,7 +7,7 @@ export const variations = (router: Router) => {
 
   router.get("/:productId", variationController.getVariationsByProduct);
 
-  router.patch("/:variationId/:platform", variationController.updateVariation);
+  router.patch("/:variationId", variationController.updateVariation);
 
   router.delete("/:variationId/:platform", variationController.deleteVariation);
 
