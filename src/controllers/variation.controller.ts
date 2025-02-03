@@ -493,7 +493,7 @@ export const variationController = {
     try {
       const { variationId } = req.params;
       const { platform, updateData } = req.body;
-  
+
       // Validate input
       if (!variationId || !platform || !updateData) {
         return res.status(StatusCodes.BAD_REQUEST).json({
@@ -501,22 +501,26 @@ export const variationController = {
           message: "Variation ID, platform, and update data are required",
         });
       }
-  
+
       // Ensure platform is valid (either 'amazon', 'ebay', or 'website')
       if (!["amazon", "ebay", "website"].includes(platform)) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,
-          message: "Invalid platform. It must be 'amazon', 'ebay', or 'website'.",
+          message:
+            "Invalid platform. It must be 'amazon', 'ebay', or 'website'.",
         });
       }
-  
+
       // Prepare the update data in the correct format
       const updateObject: any = {};
       updateObject[`variationData.${platform}`] = updateData;
-  
+
       // Update the variation in the database
-      const variation = await variationService.updateVariation(variationId, updateObject);
-  
+      const variation = await variationService.updateVariation(
+        variationId,
+        updateObject
+      );
+
       // Check if the variation was found and updated
       if (!variation) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -524,7 +528,7 @@ export const variationController = {
           message: "Variation not found",
         });
       }
-  
+
       // Send the success response
       res.status(StatusCodes.OK).json({
         success: true,
@@ -539,7 +543,6 @@ export const variationController = {
       });
     }
   },
-  
 
   getVariationsByProduct: async (req: Request, res: Response) => {
     try {
@@ -570,8 +573,9 @@ export const variationController = {
 
   deleteVariation: async (req: Request, res: Response) => {
     try {
-      const { variationId } = req.params;
+      const { variationId } = req.params; // Extracting variationId from URL parameters
 
+      // Validate input: ensure that variationId is provided
       if (!variationId) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,
@@ -579,13 +583,25 @@ export const variationController = {
         });
       }
 
-      await variationService.deleteVariation(variationId);
+      // Attempt to delete the variation from the database
+      const deletedVariation =
+        await variationService.deleteVariation(variationId);
 
+      // Check if the variation was found and deleted
+      if (!deletedVariation) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Variation not found",
+        });
+      }
+
+      // Respond with success if the deletion was successful
       res.status(StatusCodes.OK).json({
         success: true,
         message: "Variation deleted successfully",
       });
     } catch (error: any) {
+      console.error("Error deleting variation:", error.message);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error deleting variation",

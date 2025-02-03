@@ -86,6 +86,12 @@ export const variationService = {
   },
 
   deleteVariation: async (variationId: string) => {
-    return Variation.findByIdAndDelete(variationId);
+    try {
+      // Use Mongoose's findByIdAndDelete to delete the variation by its ID
+      return await Variation.findByIdAndDelete(variationId);
+    } catch (error: any) {
+      throw new Error("Error deleting variation: " + error.message);
+    }
   },
+  
 };
