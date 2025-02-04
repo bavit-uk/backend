@@ -21,8 +21,6 @@ export const productService = {
         throw new Error("Invalid or missing 'productSupplier'");
       }
 
-
-
       const draftProduct: any = new Product({
         platformDetails: {
           amazon: {
@@ -61,7 +59,6 @@ export const productService = {
         isBlocked: false,
       });
 
-
       Object.entries(stepData).forEach(([key, value]: [string, any]) => {
         const { value: fieldValue, isAmz, isEbay, isWeb } = value || {};
         if (isAmz)
@@ -90,20 +87,44 @@ export const productService = {
   // Update an existing draft product when user move to next stepper
   updateDraftProduct: async (productId: string, stepData: any) => {
     try {
+      console.log("Updating draft product for ID:", productId);
+      console.log("Received stepData:", JSON.stringify(stepData, null, 2));
+
       // Fetch the existing draft product
       const draftProduct: any = await Product.findById(productId);
       if (!draftProduct) {
+        console.error("Error: Draft product not found");
         throw new Error("Draft product not found");
       }
 
+      console.log(
+        "Existing draft product:",
+        JSON.stringify(draftProduct, null, 2)
+      );
 
-      // this code will run only on final call (final stepper)
+      // If it's the final step update
       if (stepData.status) {
-        draftProduct.status = stepData.status; // Corrected to assignment
+        draftProduct.status = stepData.status;
         draftProduct.isTemplate = stepData.isTemplate;
-        await draftProduct.save(); // Assuming save is an async function
+        console.log("Final step detected. Updating status and template flag.");
+        await draftProduct.save();
+        console.log("Draft product updated successfully on final step.");
         return draftProduct;
       }
+
+      // ✅ Explicitly update supplier information
+      if (stepData.supplier) {
+        console.log("Updating supplier:", stepData.supplier);
+        draftProduct.supplier = stepData.supplier;
+      }
+
+      // ✅ Ensure supplier updates inside platformDetails if needed
+      if (stepData.isAmz)
+        draftProduct.platformDetails.amazon.supplier = stepData.supplier;
+      if (stepData.isEbay)
+        draftProduct.platformDetails.ebay.supplier = stepData.supplier;
+      if (stepData.isWeb)
+        draftProduct.platformDetails.website.supplier = stepData.supplier;
 
       // Helper function to process step data recursively
       const processStepData = (
@@ -116,13 +137,10 @@ export const productService = {
           isWeb?: boolean;
         } = {}
       ) => {
-
-
         Object.keys(data).forEach((key) => {
-          const currentKey = keyPrefix ? `${keyPrefix}.${key}` : key; // Maintain context for nested keys
+          const currentKey = keyPrefix ? `${keyPrefix}.${key}` : key;
           const entry = data[key];
 
-          // Inherit platform flags if not explicitly defined
           const {
             isAmz = inheritedFlags.isAmz,
             isEbay = inheritedFlags.isEbay,
@@ -135,7 +153,6 @@ export const productService = {
             !Array.isArray(entry) &&
             entry.value === undefined
           ) {
-            // Recurse for nested objects, passing inherited flags
             processStepData(entry, platformDetails, currentKey, {
               isAmz,
               isEbay,
@@ -143,8 +160,7 @@ export const productService = {
             });
           } else {
             const { value } = entry || {};
-
-
+            console.log(`Processing key: ${currentKey}, Value: ${value}`);
             // Handle nested fields explicitly
             const fieldSegments = currentKey.split(".");
             const fieldRoot = fieldSegments[0]; // e.g., "packageWeight"
@@ -193,7 +209,6 @@ export const productService = {
                 if (isWeb && !platformDetails.website.productInfo) {
                   platformDetails.website.productInfo = {};
                 }
-                // Assign values to the correct platform
                 if (isAmz) {
                   platformDetails.amazon.productInfo[currentKey] = value;
                   if (currentKey === "productSupplier") {
@@ -236,12 +251,19 @@ export const productService = {
             }
           }
         });
-
       };
 
       processStepData(stepData, draftProduct.platformDetails);
+
+      console.log(
+        "Updated draft product before saving:",
+        JSON.stringify(draftProduct, null, 2)
+      );
+
       // Save the updated draft product
       await draftProduct.save();
+      console.log("Draft product updated successfully.");
+
       return draftProduct;
     } catch (error) {
       console.error("Error updating draft product:", error);
