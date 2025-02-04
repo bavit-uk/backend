@@ -10,9 +10,16 @@ export const productService = {
         mongoose.isValidObjectId(stepData.productCategory)
           ? new mongoose.Types.ObjectId(stepData.productCategory)
           : null;
-
+      const productSupplier =
+        stepData.productSupplier &&
+        mongoose.isValidObjectId(stepData.productSupplier)
+          ? new mongoose.Types.ObjectId(stepData.productSupplier)
+          : null;
       if (!productCategory) {
         throw new Error("Invalid or missing 'productCategory'");
+      }
+      if (!productSupplier) {
+        throw new Error("Invalid or missing 'productSupplier'");
       }
 
       console.log("stepData in service for draft create : ", stepData);
@@ -22,6 +29,7 @@ export const productService = {
           amazon: {
             productInfo: {
               productCategory: null,
+              productSupplier: null,
               title: "",
               productDescription: "",
               brand: "",
@@ -31,6 +39,8 @@ export const productService = {
           ebay: {
             productInfo: {
               productCategory: null,
+              productSupplier: null,
+
               title: "",
               productDescription: "",
               brand: "",
@@ -40,6 +50,7 @@ export const productService = {
           website: {
             productInfo: {
               productCategory: null,
+              productSupplier: null,
               title: "",
               productDescription: "",
               brand: "",
@@ -65,6 +76,8 @@ export const productService = {
       ["amazon", "ebay", "website"].forEach((platform) => {
         draftProduct.platformDetails[platform].productInfo.productCategory =
           productCategory;
+        draftProduct.platformDetails[platform].productInfo.productSupplier =
+          productSupplier;
         draftProduct.kind = stepData.kind;
       });
 
@@ -279,7 +292,10 @@ export const productService = {
       const product = await Product.findById(id)
         .populate("platformDetails.amazon.productInfo.productCategory")
         .populate("platformDetails.ebay.productInfo.productCategory")
-        .populate("platformDetails.website.productInfo.productCategory");
+        .populate("platformDetails.website.productInfo.productCategory")
+        .populate("platformDetails.amazon.productInfo.productSupplier")
+        .populate("platformDetails.ebay.productInfo.productSupplier")
+        .populate("platformDetails.website.productInfo.productSupplier");
       // .lean();
 
       if (!product) throw new Error("Product not found");
@@ -321,6 +337,9 @@ export const productService = {
         .populate("platformDetails.website.productInfo.productCategory")
         .populate("platformDetails.amazon.productInfo.productCategory")
         .populate("platformDetails.ebay.productInfo.productCategory")
+        .populate("platformDetails.amazon.productInfo.productSupplier")
+        .populate("platformDetails.ebay.productInfo.productSupplier")
+        .populate("platformDetails.website.productInfo.productSupplier")
         .populate("platformDetails.website.prodPricing.paymentPolicy")
         .populate("platformDetails.amazon.prodPricing.paymentPolicy")
         .populate("platformDetails.ebay.prodPricing.paymentPolicy");
@@ -338,6 +357,9 @@ export const productService = {
         .populate("platformDetails.website.productInfo.productCategory")
         .populate("platformDetails.amazon.productInfo.productCategory")
         .populate("platformDetails.ebay.productInfo.productCategory")
+        .populate("platformDetails.amazon.productInfo.productSupplier")
+        .populate("platformDetails.ebay.productInfo.productSupplier")
+        .populate("platformDetails.website.productInfo.productSupplier")
         .select(
           "_id platformDetails website.productInfo productCategory brand model srno kind"
         );
@@ -352,6 +374,9 @@ export const productService = {
         .populate("platformDetails.website.productInfo.productCategory")
         .populate("platformDetails.amazon.productInfo.productCategory")
         .populate("platformDetails.ebay.productInfo.productCategory")
+        .populate("platformDetails.amazon.productInfo.productSupplier")
+        .populate("platformDetails.ebay.productInfo.productSupplier")
+        .populate("platformDetails.website.productInfo.productSupplier")
         .populate("platformDetails.website.prodPricing.paymentPolicy")
         .populate("platformDetails.amazon.prodPricing.paymentPolicy")
         .populate("platformDetails.ebay.prodPricing.paymentPolicy");
