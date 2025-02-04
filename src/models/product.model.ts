@@ -15,11 +15,16 @@ const prodInfoSchema = {
     ref: "ProductCategory",
     required: true,
   },
+  productSupplier: {
+    type: Schema.Types.ObjectId,
+    ref: "Supplier",
+    required: true,
+  },
   title: { type: String, required: true },
   productDescription: { type: String },
   brand: { type: String, required: true },
-  images: {type: [fileSchema] , _id: false},
-  videos: { type: [fileSchema] , _id: false }
+  images: { type: [fileSchema], _id: false },
+  videos: { type: [fileSchema], _id: false },
 };
 
 const prodPricingSchema = {
