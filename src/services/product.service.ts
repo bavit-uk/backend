@@ -1,6 +1,5 @@
 import { Product } from "@/models";
 import mongoose, { Types } from "mongoose";
-import { transformProductData } from "@/utils/transformProductData.util";
 export const productService = {
   // Create a new draft product
   createDraftProduct: async (stepData: any) => {
@@ -88,7 +87,6 @@ export const productService = {
       throw new Error("Failed to create draft product");
     }
   },
-
   // Update an existing draft product when user move to next stepper
   updateDraftProduct: async (productId: string, stepData: any) => {
     try {
@@ -177,7 +175,6 @@ export const productService = {
                   value;
             } else {
               const step = stepData.step;
-
               if (step === "prodTechInfo") {
                 if (isAmz)
                   platformDetails.amazon.prodTechInfo[currentKey] = value;
@@ -186,9 +183,6 @@ export const productService = {
                 if (isWeb)
                   platformDetails.website.prodTechInfo[currentKey] = value;
               } else if (step === "productInfo") {
-
-               
-
                 // Initialize productInfo for all platforms as needed
                 if (isAmz && !platformDetails.amazon.productInfo) {
                   platformDetails.amazon.productInfo = {};
@@ -202,10 +196,7 @@ export const productService = {
                 // Assign values to the correct platform
                 if (isAmz) {
                   platformDetails.amazon.productInfo[currentKey] = value;
-
                   if (currentKey === "productSupplier") {
-
-
                     if (typeof value === "string") {
                       // Directly assign it as an ObjectId
                       platformDetails.amazon.productInfo.productSupplier = {
@@ -217,7 +208,6 @@ export const productService = {
                         _id: new Types.ObjectId(value._id),
                       };
                     }
-
                   }
                 }
                 if (isEbay)
@@ -250,18 +240,14 @@ export const productService = {
       };
 
       processStepData(stepData, draftProduct.platformDetails);
-
-
       // Save the updated draft product
       await draftProduct.save();
-
       return draftProduct;
     } catch (error) {
       console.error("Error updating draft product:", error);
       throw new Error("Failed to update draft product");
     }
   },
-
   getFullProductById: async (id: string) => {
     try {
       const product = await Product.findById(id)
