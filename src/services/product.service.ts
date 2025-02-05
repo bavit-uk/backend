@@ -94,15 +94,15 @@ export const productService = {
         throw new Error("Draft product not found");
       }
 
-      // this code will run only on final call (final stepper)
-      if (stepData.status) {
-        draftProduct.status = stepData.status; // Corrected to assignment
+      // Final step update (status and isTemplate)
+      if (stepData.status !== undefined) {
+        draftProduct.status = stepData.status;
         draftProduct.isTemplate = stepData.isTemplate;
-        await draftProduct.save(); // Assuming save is an async function
+        await draftProduct.save({ validateBeforeSave: false });
         return draftProduct;
       }
 
-      // Helper function to process step data recursively
+      // Recursive function to update platform details
       const processStepData = (
         data: any,
         platformDetails: any,
@@ -114,10 +114,10 @@ export const productService = {
         } = {}
       ) => {
         Object.keys(data).forEach((key) => {
-          const currentKey = keyPrefix ? `${keyPrefix}.${key}` : key; // Maintain context for nested keys
+          const currentKey = keyPrefix ? `${keyPrefix}.${key}` : key;
           const entry = data[key];
 
-          // Inherit platform flags if not explicitly defined
+          // Inherit platform flags
           const {
             isAmz = inheritedFlags.isAmz,
             isEbay = inheritedFlags.isEbay,
@@ -130,131 +130,45 @@ export const productService = {
             !Array.isArray(entry) &&
             entry.value === undefined
           ) {
-            // Recurse for nested objects, passing inherited flags
+            // Recursive call for nested objects
             processStepData(entry, platformDetails, currentKey, {
               isAmz,
               isEbay,
               isWeb,
             });
           } else {
-            const { value } = entry || {};
+            const value = entry?.value ?? entry; // Support both `{ value }` and direct assignment
+            const step = stepData.step;
 
-            // Handle nested fields explicitly
-            const fieldSegments = currentKey.split(".");
-            const fieldRoot = fieldSegments[0]; // e.g., "packageWeight"
+            // Ensure `productInfo` is initialized
+            if (step === "productInfo") {
+              if (isAmz) platformDetails.amazon.productInfo ||= {};
+              if (isEbay) platformDetails.ebay.productInfo ||= {};
+              if (isWeb) platformDetails.website.productInfo ||= {};
 
-            if (
-              fieldRoot === "packageWeight" ||
-              fieldRoot === "packageDimensions"
-            ) {
-              // Handle nested objects like packageWeight
-              const subField = fieldSegments.slice(1).join("."); // e.g., "weightKg" or "dimensionLength"
-              if (isAmz)
-                platformDetails.amazon.prodDelivery[fieldRoot] =
-                  platformDetails.amazon.prodDelivery[fieldRoot] || {};
-              if (isEbay)
-                platformDetails.ebay.prodDelivery[fieldRoot] =
-                  platformDetails.ebay.prodDelivery[fieldRoot] || {};
+              // Assign the value (handles `productSupplier` ObjectId updates)
+              if (isAmz) platformDetails.amazon.productInfo[currentKey] = value;
+              if (isEbay) platformDetails.ebay.productInfo[currentKey] = value;
               if (isWeb)
-                platformDetails.website.prodDelivery[fieldRoot] =
-                  platformDetails.website.prodDelivery[fieldRoot] || {};
-              if (isAmz && subField)
-                platformDetails.amazon.prodDelivery[fieldRoot][subField] =
-                  value;
-              if (isEbay && subField)
-                platformDetails.ebay.prodDelivery[fieldRoot][subField] = value;
-              if (isWeb && subField)
-                platformDetails.website.prodDelivery[fieldRoot][subField] =
-                  value;
-            } else {
-              const step = stepData.step;
-              if (step === "prodTechInfo") {
-                if (isAmz)
-                  platformDetails.amazon.prodTechInfo[currentKey] = value;
-                if (isEbay)
-                  platformDetails.ebay.prodTechInfo[currentKey] = value;
-                if (isWeb)
-                  platformDetails.website.prodTechInfo[currentKey] = value;
-              } else if (step === "productInfo") {
-                // Initialize productInfo for all platforms as needed
-                if (isAmz && !platformDetails.amazon.productInfo) {
-                  platformDetails.amazon.productInfo = {};
-                }
-                if (isEbay && !platformDetails.ebay.productInfo) {
-                  platformDetails.ebay.productInfo = {};
-                }
-                if (isWeb && !platformDetails.website.productInfo) {
-                  platformDetails.website.productInfo = {};
-                }
-                platformDetails.website.prodTechInfo[currentKey] = value;
-
-                // Assign values to the correct platform
-                if (isAmz) {
-                  platformDetails.amazon.productInfo[currentKey] = value;
-                }
-                if (isEbay)
-                  platformDetails.ebay.productInfo[currentKey] = value;
-                if (isWeb)
-                  platformDetails.website.productInfo[currentKey] = value;
-              } else if (step === "prodMedia") {
-                // Initialize prodMedia for all platforms as needed
-                if (isAmz && !platformDetails.amazon.prodMedia) {
-                  platformDetails.amazon.prodMedia = {};
-                }
-                if (isEbay && !platformDetails.ebay.prodMedia) {
-                  platformDetails.ebay.prodMedia = {};
-                }
-                if (isWeb && !platformDetails.website.prodMedia) {
-                  platformDetails.website.prodMedia = {};
-                }
-                platformDetails.website.prodTechInfo[currentKey] = value;
-
-                // Assign values to the correct platform
-                if (isAmz) {
-                  platformDetails.amazon.prodMedia[currentKey] = value;
-                }
-                if (isEbay)
-                  platformDetails.ebay.prodMedia[currentKey] = value;
-                if (isWeb)
-                  platformDetails.website.prodMedia[currentKey] = value;
-              } else if (step === "prodPricing") {
-                if (isAmz)
-                  platformDetails.amazon.prodPricing[currentKey] = value;
-                if (isEbay)
-                  platformDetails.ebay.prodPricing[currentKey] = value;
-                if (isWeb)
-                  platformDetails.website.prodPricing[currentKey] = value;
-              } else if (step === "prodDelivery") {
-                if (isAmz)
-                  platformDetails.amazon.prodDelivery[currentKey] = value;
-                if (isEbay)
-                  platformDetails.ebay.prodDelivery[currentKey] = value;
-                if (isWeb)
-                  platformDetails.website.prodDelivery[currentKey] = value;
-              } else {
-                ``;
-                if (isAmz) platformDetails.amazon.prodSeo[currentKey] = value;
-                if (isEbay) platformDetails.ebay.prodSeo[currentKey] = value;
-                if (isWeb) platformDetails.website.prodSeo[currentKey] = value;
-              }
+                platformDetails.website.productInfo[currentKey] = value;
             }
           }
         });
       };
 
       processStepData(stepData, draftProduct.platformDetails);
-      // Save the updated draft product
-      // await draftProduct.save();
+
+      // Save the updated draft product without running validations
       await draftProduct.save({ validateBeforeSave: false });
-      // await Product.findByIdAndUpdate(productId, stepData, {
-      //   new: true,
-      //   runValidators: false,
-      // });
 
       return draftProduct;
-    } catch (error) {
-      console.error("Error updating draft product:", error);
-      throw new Error("Failed to update draft product");
+    } catch (error: any) {
+      console.error(
+        "Error updating draft product:",
+        error.message,
+        error.stack
+      );
+      throw new Error(`Failed to update draft product: ${error.message}`);
     }
   },
 
