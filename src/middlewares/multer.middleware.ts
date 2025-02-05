@@ -1,4 +1,5 @@
-import { Request, Response, NextFunction } from "express";
+import { Request as ExpressRequest, Response, NextFunction } from "express";
+import { Request } from "express-serve-static-core";
 import multer, { FileFilterCallback } from "multer";
 import path from "path";
 import fs from "fs";
@@ -17,14 +18,23 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname));
+    cb(
+      null,
+      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
+    );
   },
 });
 
-// Configure file filter
-const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+// File filter function
+const fileFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: FileFilterCallback
+) => {
   const allowedFileTypes = /jpeg|jpg|png|gif/;
-  const extname = allowedFileTypes.test(path.extname(file.originalname).toLowerCase());
+  const extname = allowedFileTypes.test(
+    path.extname(file.originalname).toLowerCase()
+  );
   const mimetype = allowedFileTypes.test(file.mimetype);
 
   if (extname && mimetype) {
@@ -44,8 +54,8 @@ const upload = multer({
 const NUMBER_OF_FILES_LIMIT = 10;
 
 // Middleware function
-export const uploadMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  upload.array("files", NUMBER_OF_FILES_LIMIT)(req, res, (err) => {
+export const uploadMiddleware = (req: any, res: any, next: NextFunction) => {
+  upload.array("files", NUMBER_OF_FILES_LIMIT)(req, res, (err): any => {
     if (err instanceof multer.MulterError) {
       // A Multer error occurred when uploading.
       switch (err.code) {
@@ -106,17 +116,16 @@ export const uploadMiddleware = (req: Request, res: Response, next: NextFunction
     // Everything went fine.
     next();
   });
-
-  // upload.single("file")(req, res, (err) => {
-  //   if (err instanceof multer.MulterError) {
-  //     // A Multer error occurred when uploading.
-  //     console.error(err);
-  //     return res.status(400).json({ error: err.message });
-  //   } else if (err) {
-  //     // An unknown error occurred when uploading.
-  //     return res.status(500).json({ error: err.message });
-  //   }
-  //   // Everything went fine.
-  //   next();
-  // });
+  upload.single("file")(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      // A Multer error occurred when uploading.
+      console.error(err);
+      return res.status(400).json({ error: err.message });
+    } else if (err) {
+      // An unknown error occurred when uploading.
+      return res.status(500).json({ error: err.message });
+    }
+    // Everything went fine.
+    next();
+  });
 };
