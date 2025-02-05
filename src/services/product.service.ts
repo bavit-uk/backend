@@ -150,18 +150,12 @@ export const productService = {
           } else {
             let value = entry?.value ?? entry; // Support both `{ value }` and direct assignment
             const step = stepData.step;
-            // if (currentKey === "productSupplier") {
-            //   value = new mongoose.Schema.Types.ObjectId(value);
-            // }
             console.log(`🔹 Processing: ${currentKey} | Value:`, value);
 
-            // Ensure `productInfo` is initialized
             if (step === "productInfo") {
               if (isAmz) platformDetails.amazon.productInfo ||= {};
               if (isEbay) platformDetails.ebay.productInfo ||= {};
               if (isWeb) platformDetails.website.productInfo ||= {};
-
-              // Assign the value (handles `productSupplier` ObjectId updates)
               if (isAmz) platformDetails.amazon.productInfo[currentKey] = value;
               if (isEbay) platformDetails.ebay.productInfo[currentKey] = value;
               if (isWeb)
@@ -171,9 +165,46 @@ export const productService = {
                 platformDetails.ebay.productInfo.productSupplier = value;
                 platformDetails.website.productInfo.productSupplier = value;
               }
-              console.log(
-                `✅ Updated productInfo for ${currentKey} across platforms`
-              );
+            } else if (step === "prodMedia") {
+              if (isAmz) platformDetails.amazon.prodMedia ||= {};
+              if (isEbay) platformDetails.ebay.prodMedia ||= {};
+              if (isWeb) platformDetails.website.prodMedia ||= {};
+              if (isAmz) platformDetails.amazon.prodMedia[currentKey] = value;
+              if (isEbay) platformDetails.ebay.prodMedia[currentKey] = value;
+              if (isWeb) platformDetails.website.prodMedia[currentKey] = value;
+            } else if (step === "prodTechInfo") {
+              if (isAmz) platformDetails.amazon.prodTechInfo ||= {};
+              if (isEbay) platformDetails.ebay.prodTechInfo ||= {};
+              if (isWeb) platformDetails.website.prodTechInfo ||= {};
+              if (isAmz)
+                platformDetails.amazon.prodTechInfo[currentKey] = value;
+              if (isEbay) platformDetails.ebay.prodTechInfo[currentKey] = value;
+              if (isWeb)
+                platformDetails.website.prodTechInfo[currentKey] = value;
+            } else if (step === "prodPricing") {
+              if (isAmz) platformDetails.amazon.prodPricing ||= {};
+              if (isEbay) platformDetails.ebay.prodPricing ||= {};
+              if (isWeb) platformDetails.website.prodPricing ||= {};
+              if (isAmz) platformDetails.amazon.prodPricing[currentKey] = value;
+              if (isEbay) platformDetails.ebay.prodPricing[currentKey] = value;
+              if (isWeb)
+                platformDetails.website.prodPricing[currentKey] = value;
+            } else if (step === "prodDelivery") {
+              if (isAmz) platformDetails.amazon.prodDelivery ||= {};
+              if (isEbay) platformDetails.ebay.prodDelivery ||= {};
+              if (isWeb) platformDetails.website.prodDelivery ||= {};
+              if (isAmz)
+                platformDetails.amazon.prodDelivery[currentKey] = value;
+              if (isEbay) platformDetails.ebay.prodDelivery[currentKey] = value;
+              if (isWeb)
+                platformDetails.website.prodDelivery[currentKey] = value;
+            } else {
+              if (isAmz) platformDetails.amazon.prodSeo ||= {};
+              if (isEbay) platformDetails.ebay.prodSeo ||= {};
+              if (isWeb) platformDetails.website.prodSeo ||= {};
+              if (isAmz) platformDetails.amazon.prodSeo[currentKey] = value;
+              if (isEbay) platformDetails.ebay.prodSeo[currentKey] = value;
+              if (isWeb) platformDetails.website.prodSeo[currentKey] = value;
             }
           }
         });
@@ -188,6 +219,7 @@ export const productService = {
 
       // Save the updated draft product without running validations
       await draftProduct.save({ validateBeforeSave: false });
+      console.log("✅ Draft product updated successfully.");
 
       return draftProduct;
     } catch (error: any) {
