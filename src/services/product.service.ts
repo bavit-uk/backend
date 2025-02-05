@@ -1,5 +1,8 @@
 import { Product } from "@/models";
+import Papa from "papaparse";
 import mongoose, { Types } from "mongoose";
+import fs from "fs";
+import * as XLSX from "xlsx";
 export const productService = {
   // Create a new draft product
   createDraftProduct: async (stepData: any) => {
@@ -505,4 +508,83 @@ export const productService = {
       throw new Error("Error during search and filter");
     }
   },
+
+ bulkImportProducts : async (filePath: string) => {
+    try {
+      const fileContent = fs.readFileSync(filePath, "utf8");
+      const jsonData = Papa.parse(fileContent, { header: true, skipEmptyLines: true }).data;
+  
+      for (const row of jsonData) {
+        const id = (row as any).ProductID;
+        const product = await Product.findById(id);
+  
+        if (product){
+          // Update existing product
+          product.title = row.Title;
+          product.description = row.Description;
+          product.price = row.Price;
+          product.category = row.Category;
+          product.stock = row.Stock;
+          if (row.SupplierId) {
+            product.supplier = row.SupplierId;
+          }
+          product.platformDetails.amazon.productInfo = JSON.parse(row.AmazonInfo || "{}");
+          product.platformDetails.ebay.productInfo = JSON.parse(row.EbayInfo || "{}");
+          product.platformDetails.website.productInfo = JSON.parse(row.WebsiteInfo || "{}");
+  
+          await product.save();
+        } else {
+          // Create new product
+          await Product.create({
+            title: row.Title,
+            description: row.Description,
+            price: row.Price,
+            category: row.Category,
+            stock: row.Stock,
+            supplier: row.SupplierId ? row.SupplierId : undefined,
+            platformDetails: {
+              amazon: { productInfo: JSON.parse(row.AmazonInfo || "{}") },
+              ebay: { productInfo: JSON.parse(row.EbayInfo || "{}") },
+              website: { productInfo: JSON.parse(row.WebsiteInfo || "{}") },
+            },
+          });
+        }
+      }
+  
+      console.log("✅ Bulk import & update complete.");
+    } catch (error) {
+      console.error("❌ Bulk import failed:", error);
+      throw new Error("Bulk import failed.");
+    }
+  },
+  
+  // Export products to CSV
+exportProducts : async () => {
+    try {
+      const products = await Product.find({});
+  
+      const formattedData = products.map((p) => ({
+        ProductID: p._id,
+        Title: p.title,
+        Description: p.description,
+        Price: p.price,
+        Category: p.category,
+        Stock: p.stock,
+        SupplierId: p.supplier?._id,
+        AmazonInfo: JSON.stringify(p.platformDetails.amazon.productInfo),
+        EbayInfo: JSON.stringify(p.platformDetails.ebay.productInfo),
+        WebsiteInfo: JSON.stringify(p.platformDetails.website.productInfo),
+      }));
+  
+      const csv = Papa.unparse(formattedData);
+      const filePath = `exports/products_${Date.now()}.csv`;
+      fs.writeFileSync(filePath, csv);
+  
+      return filePath;
+    } catch (error) {
+      console.error("❌ Export Failed:", error);
+      throw new Error("Failed to export products.");
+    }
+  },
+  
 };
