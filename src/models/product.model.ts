@@ -23,6 +23,8 @@ const prodInfoSchema = {
   title: { type: String, required: true },
   productDescription: { type: String },
   brand: { type: String, required: true },
+};
+const prodMediaSchema = {
   images: { type: [fileSchema], _id: false },
   videos: { type: [fileSchema], _id: false },
 };
@@ -294,6 +296,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
         ebay: {
           prodTechInfo: laptopTechnicalSchema,
@@ -301,6 +304,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
         website: {
           prodTechInfo: laptopTechnicalSchema,
@@ -308,6 +312,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
       },
     },
@@ -327,6 +332,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
         ebay: {
           prodTechInfo: allInOnePCTechnicalSchema,
@@ -334,6 +340,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
         website: {
           prodTechInfo: allInOnePCTechnicalSchema,
@@ -341,6 +348,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
       },
     },
@@ -360,6 +368,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
         ebay: {
           prodTechInfo: projectTechnicalSchema,
@@ -367,6 +376,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
         website: {
           prodTechInfo: projectTechnicalSchema,
@@ -374,6 +384,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
       },
     },
@@ -393,6 +404,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
         ebay: {
           prodTechInfo: monitorTechnicalSchema,
@@ -400,6 +412,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
         website: {
           prodTechInfo: monitorTechnicalSchema,
@@ -407,6 +420,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
       },
     },
@@ -426,6 +440,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
         ebay: {
           prodTechInfo: gamingPCTechnicalSchema,
@@ -433,6 +448,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
         website: {
           prodTechInfo: gamingPCTechnicalSchema,
@@ -440,6 +456,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
       },
     },
@@ -459,6 +476,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
         ebay: {
           prodTechInfo: networkEquipmentsTechnicalSchema,
@@ -466,6 +484,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
         website: {
           prodTechInfo: networkEquipmentsTechnicalSchema,
@@ -473,6 +492,7 @@ Product.discriminator(
           prodDelivery: prodDeliverySchema,
           prodSeo: prodSeoSchema,
           productInfo: prodInfoSchema,
+          prodMedia: prodMediaSchema,
         },
       },
     },

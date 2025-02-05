@@ -196,6 +196,27 @@ export const productService = {
                   platformDetails.ebay.productInfo[currentKey] = value;
                 if (isWeb)
                   platformDetails.website.productInfo[currentKey] = value;
+              } else if (step === "prodMedia") {
+                // Initialize prodMedia for all platforms as needed
+                if (isAmz && !platformDetails.amazon.prodMedia) {
+                  platformDetails.amazon.prodMedia = {};
+                }
+                if (isEbay && !platformDetails.ebay.prodMedia) {
+                  platformDetails.ebay.prodMedia = {};
+                }
+                if (isWeb && !platformDetails.website.prodMedia) {
+                  platformDetails.website.prodMedia = {};
+                }
+                platformDetails.website.prodTechInfo[currentKey] = value;
+
+                // Assign values to the correct platform
+                if (isAmz) {
+                  platformDetails.amazon.prodMedia[currentKey] = value;
+                }
+                if (isEbay)
+                  platformDetails.ebay.prodMedia[currentKey] = value;
+                if (isWeb)
+                  platformDetails.website.prodMedia[currentKey] = value;
               } else if (step === "prodPricing") {
                 if (isAmz)
                   platformDetails.amazon.prodPricing[currentKey] = value;
@@ -223,7 +244,13 @@ export const productService = {
 
       processStepData(stepData, draftProduct.platformDetails);
       // Save the updated draft product
-      await draftProduct.save();
+      // await draftProduct.save();
+      await draftProduct.save({ validateBeforeSave: false });
+      // await Product.findByIdAndUpdate(productId, stepData, {
+      //   new: true,
+      //   runValidators: false,
+      // });
+
       return draftProduct;
     } catch (error) {
       console.error("Error updating draft product:", error);
