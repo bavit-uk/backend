@@ -148,9 +148,11 @@ export const productService = {
               isWeb,
             });
           } else {
-            const value = entry?.value ?? entry; // Support both `{ value }` and direct assignment
+            let value = entry?.value ?? entry; // Support both `{ value }` and direct assignment
             const step = stepData.step;
-
+            // if (currentKey === "productSupplier") {
+            //   value = new mongoose.Schema.Types.ObjectId(value);
+            // }
             console.log(`🔹 Processing: ${currentKey} | Value:`, value);
 
             // Ensure `productInfo` is initialized
@@ -164,7 +166,11 @@ export const productService = {
               if (isEbay) platformDetails.ebay.productInfo[currentKey] = value;
               if (isWeb)
                 platformDetails.website.productInfo[currentKey] = value;
-
+              if (currentKey === "productSupplier") {
+                platformDetails.amazon.productInfo.productSupplier = value;
+                platformDetails.ebay.productInfo.productSupplier = value;
+                platformDetails.website.productInfo.productSupplier = value;
+              }
               console.log(
                 `✅ Updated productInfo for ${currentKey} across platforms`
               );
