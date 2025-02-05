@@ -232,6 +232,35 @@ const gamingPCTechnicalSchema = {
   height: { type: String },
   length: { type: String },
   width: { type: String },
+  //amazon fields below
+  recommendedBrowseNotes: { type: String, required: true },
+  bulletPoint: { type: String, required: true },
+  powerPlug: { type: String, required: true },
+  graphicsCardInterface: { type: String, required: true },
+  ramMemoryMaximumSize: { type: String, required: true },
+  ramMemoryMaximumSizeUnit: { type: String, required: true },
+  ramMemoryTechnology: { type: String, required: true },
+  humanInterfaceInput: { type: String, required: true },
+  includedComponents: { type: String, required: true },
+  specificUsesForProduct: { type: String, required: true },
+  cacheMemoryInstalledSize: { type: String, required: true },
+  cacheMemoryInstalledSizeUnit: { type: String, required: true },
+  cpuModel: { type: String, required: true },
+  cpuModelManufacturer: { type: String, required: true },
+  cpuModelNumber: { type: String, required: true },
+  cpuSocket: { type: String, required: true },
+  cpuBaseSpeed: { type: String, required: true },
+  cpuBaseSpeedUnit: { type: String, required: true },
+  graphicsRam: { type: String, required: true },
+  hardDiskDescription: { type: String, required: true },
+  hardDiskInterface: { type: String, required: true },
+  hardDiskRotationalSpeed: { type: String, required: true },
+  hardDiskRotationalSpeedUnit: { type: String, required: true },
+  totalUsb2oPorts: { type: String, required: true },
+  totalUsb3oPorts: { type: String, required: true },
+  productWarranty: { type: String, required: true },
+  gdprRisk: { type: String, required: true },
+  opticalStorageDevice: { type: String, required: true },
 };
 
 const networkEquipmentsTechnicalSchema = {
@@ -320,7 +349,7 @@ Product.discriminator(
   )
 );
 
-// descriminator for all in one pc
+// discriminator for all in one pc
 Product.discriminator(
   "All In One PC",
   new mongoose.Schema(
@@ -464,7 +493,7 @@ Product.discriminator(
   )
 );
 
-// descriminator for Network Equipments
+// discriminator for Network Equipments
 Product.discriminator(
   "Network Equipments",
   new mongoose.Schema(
