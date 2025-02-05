@@ -261,6 +261,9 @@ const gamingPCTechnicalSchema = {
   productWarranty: { type: String, required: true },
   gdprRisk: { type: String, required: true },
   opticalStorageDevice: { type: String, required: true },
+  dangerousGoodsRegulation: { type: String, required: true },
+  safetyAndCompliance: { type: String, required: true },
+  manufacturer: { type: String, required: true },
 };
 
 const networkEquipmentsTechnicalSchema = {
