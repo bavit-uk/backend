@@ -1,6 +1,5 @@
 import { Product } from "@/models";
 import mongoose, { Types } from "mongoose";
-import { transformProductData } from "@/utils/transformProductData.util";
 export const productService = {
   // Create a new draft product
   createDraftProduct: async (stepData: any) => {
@@ -10,18 +9,24 @@ export const productService = {
         mongoose.isValidObjectId(stepData.productCategory)
           ? new mongoose.Types.ObjectId(stepData.productCategory)
           : null;
-
+      const productSupplier =
+        stepData.productSupplier &&
+        mongoose.isValidObjectId(stepData.productSupplier)
+          ? new mongoose.Types.ObjectId(stepData.productSupplier)
+          : null;
       if (!productCategory) {
         throw new Error("Invalid or missing 'productCategory'");
       }
-
-      console.log("stepData in service for draft create : ", stepData);
+      if (!productSupplier) {
+        throw new Error("Invalid or missing 'productSupplier'");
+      }
 
       const draftProduct: any = new Product({
         platformDetails: {
           amazon: {
             productInfo: {
               productCategory: null,
+              productSupplier: null,
               title: "",
               productDescription: "",
               brand: "",
@@ -31,6 +36,8 @@ export const productService = {
           ebay: {
             productInfo: {
               productCategory: null,
+              productSupplier: null,
+
               title: "",
               productDescription: "",
               brand: "",
@@ -40,6 +47,7 @@ export const productService = {
           website: {
             productInfo: {
               productCategory: null,
+              productSupplier: null,
               title: "",
               productDescription: "",
               brand: "",
@@ -50,7 +58,6 @@ export const productService = {
         status: "draft",
         isBlocked: false,
       });
-      console.log("draftProduct : ", draftProduct);
 
       Object.entries(stepData).forEach(([key, value]: [string, any]) => {
         const { value: fieldValue, isAmz, isEbay, isWeb } = value || {};
@@ -65,6 +72,8 @@ export const productService = {
       ["amazon", "ebay", "website"].forEach((platform) => {
         draftProduct.platformDetails[platform].productInfo.productCategory =
           productCategory;
+        draftProduct.platformDetails[platform].productInfo.productSupplier =
+          productSupplier;
         draftProduct.kind = stepData.kind;
       });
 
@@ -79,26 +88,32 @@ export const productService = {
   // Update an existing draft product when user move to next stepper
   updateDraftProduct: async (productId: string, stepData: any) => {
     try {
+      console.log("🔹 Incoming stepData:", JSON.stringify(stepData, null, 2));
+
       // Fetch the existing draft product
       const draftProduct: any = await Product.findById(productId);
       if (!draftProduct) {
         throw new Error("Draft product not found");
       }
-      // console.log("draftProduct in updateDraftProduct service : ", draftProduct);
-      console.log("stepDataaa in updateDraftProduct service : ", stepData);
 
-      // this code will run only on final call (final stepper)
-      if (stepData.status) {
-        // console.log("asdadadads");
-        // console.log("draftProduct ka status: ", draftProduct.status);
-        // console.log("draftProduct ka templare: ", draftProduct.isTemplate);
-        draftProduct.status = stepData.status; // Corrected to assignment
+      console.log(
+        "🔹 Draft product before update:",
+        JSON.stringify(draftProduct, null, 2)
+      );
+
+      // Final step update (status and isTemplate)
+      if (stepData.status !== undefined) {
+        draftProduct.status = stepData.status;
         draftProduct.isTemplate = stepData.isTemplate;
-        await draftProduct.save(); // Assuming save is an async function
+        console.log("🔹 Updating status and isTemplate:", {
+          status: stepData.status,
+          isTemplate: stepData.isTemplate,
+        });
+        await draftProduct.save({ validateBeforeSave: false });
         return draftProduct;
       }
 
-      // Helper function to process step data recursively
+      // Recursive function to update platform details
       const processStepData = (
         data: any,
         platformDetails: any,
@@ -109,13 +124,11 @@ export const productService = {
           isWeb?: boolean;
         } = {}
       ) => {
-        // console.log("Before processing platformDetails:", platformDetails);
-
         Object.keys(data).forEach((key) => {
-          const currentKey = keyPrefix ? `${keyPrefix}.${key}` : key; // Maintain context for nested keys
+          const currentKey = keyPrefix ? `${keyPrefix}.${key}` : key;
           const entry = data[key];
 
-          // Inherit platform flags if not explicitly defined
+          // Inherit platform flags
           const {
             isAmz = inheritedFlags.isAmz,
             isEbay = inheritedFlags.isEbay,
@@ -128,158 +141,106 @@ export const productService = {
             !Array.isArray(entry) &&
             entry.value === undefined
           ) {
-            // Recurse for nested objects, passing inherited flags
+            // Recursive call for nested objects
             processStepData(entry, platformDetails, currentKey, {
               isAmz,
               isEbay,
               isWeb,
             });
           } else {
-            const { value } = entry || {};
-            console.log("current key : ", currentKey);
-            console.log("value : ", value);
-            console.log("platforms : ", isEbay, isAmz, isWeb);
-            // console.log("  ");
-            // Handle nested fields explicitly
-            const fieldSegments = currentKey.split(".");
-            const fieldRoot = fieldSegments[0]; // e.g., "packageWeight"
+            let value = entry?.value ?? entry; // Support both `{ value }` and direct assignment
+            const step = stepData.step;
+            console.log(`🔹 Processing: ${currentKey} | Value:`, value);
 
-            if (
-              fieldRoot === "packageWeight" ||
-              fieldRoot === "packageDimensions"
-            ) {
-              // Handle nested objects like packageWeight
-              const subField = fieldSegments.slice(1).join("."); // e.g., "weightKg" or "dimensionLength"
-              if (isAmz)
-                platformDetails.amazon.prodDelivery[fieldRoot] =
-                  platformDetails.amazon.prodDelivery[fieldRoot] || {};
-              if (isEbay)
-                platformDetails.ebay.prodDelivery[fieldRoot] =
-                  platformDetails.ebay.prodDelivery[fieldRoot] || {};
+            if (step === "productInfo") {
+              if (isAmz) platformDetails.amazon.productInfo ||= {};
+              if (isEbay) platformDetails.ebay.productInfo ||= {};
+              if (isWeb) platformDetails.website.productInfo ||= {};
+              if (isAmz) platformDetails.amazon.productInfo[currentKey] = value;
+              if (isEbay) platformDetails.ebay.productInfo[currentKey] = value;
               if (isWeb)
-                platformDetails.website.prodDelivery[fieldRoot] =
-                  platformDetails.website.prodDelivery[fieldRoot] || {};
-
-              if (isAmz && subField)
-                platformDetails.amazon.prodDelivery[fieldRoot][subField] =
-                  value;
-              if (isEbay && subField)
-                platformDetails.ebay.prodDelivery[fieldRoot][subField] = value;
-              if (isWeb && subField)
-                platformDetails.website.prodDelivery[fieldRoot][subField] =
-                  value;
-            } else {
-              const step = stepData.step;
-              console.log("step :", step);
-              if (step === "prodTechInfo") {
-                if (isAmz)
-                  platformDetails.amazon.prodTechInfo[currentKey] = value;
-                if (isEbay)
-                  platformDetails.ebay.prodTechInfo[currentKey] = value;
-                if (isWeb)
-                  platformDetails.website.prodTechInfo[currentKey] = value;
-              } else if (step === "productInfo") {
-                console.log("in productInfo if section ");
-                console.log(
-                  "platformDetails.amazon.productInfo before: ",
-                  platformDetails.amazon.productInfo
-                );
-                console.log(
-                  "platformDetails.ebay.productInfo before: ",
-                  platformDetails.ebay.productInfo
-                );
-                console.log(
-                  "platformDetails.website.productInfo before: ",
-                  platformDetails.website.productInfo
-                );
-
-                // Initialize productInfo for all platforms as needed
-                if (isAmz && !platformDetails.amazon.productInfo) {
-                  platformDetails.amazon.productInfo = {};
-                }
-                if (isEbay && !platformDetails.ebay.productInfo) {
-                  platformDetails.ebay.productInfo = {};
-                }
-                if (isWeb && !platformDetails.website.productInfo) {
-                  platformDetails.website.productInfo = {};
-                }
-
-                console.log("    ");
-
-                // Assign values to the correct platform
-                if (isAmz)
-                  platformDetails.amazon.productInfo[currentKey] = value;
-                if (isEbay)
-                  platformDetails.ebay.productInfo[currentKey] = value;
-                if (isWeb)
-                  platformDetails.website.productInfo[currentKey] = value;
-
-                console.log(
-                  "platformDetails.amazon.productInfo after: ",
-                  platformDetails.amazon.productInfo
-                );
-                console.log(
-                  "platformDetails.ebay.productInfo after: ",
-                  platformDetails.ebay.productInfo
-                );
-                console.log(
-                  "platformDetails.website.productInfo after: ",
-                  platformDetails.website.productInfo
-                );
-              } else if (step === "prodPricing") {
-                if (isAmz)
-                  platformDetails.amazon.prodPricing[currentKey] = value;
-                if (isEbay)
-                  platformDetails.ebay.prodPricing[currentKey] = value;
-                if (isWeb)
-                  platformDetails.website.prodPricing[currentKey] = value;
-              } else if (step === "prodDelivery") {
-                if (isAmz)
-                  platformDetails.amazon.prodDelivery[currentKey] = value;
-                if (isEbay)
-                  platformDetails.ebay.prodDelivery[currentKey] = value;
-                if (isWeb)
-                  platformDetails.website.prodDelivery[currentKey] = value;
-              } else {
-                if (isAmz) platformDetails.amazon.prodSeo[currentKey] = value;
-                if (isEbay) platformDetails.ebay.prodSeo[currentKey] = value;
-                if (isWeb) platformDetails.website.prodSeo[currentKey] = value;
+                platformDetails.website.productInfo[currentKey] = value;
+              if (currentKey === "productSupplier") {
+                platformDetails.amazon.productInfo.productSupplier = value;
+                platformDetails.ebay.productInfo.productSupplier = value;
+                platformDetails.website.productInfo.productSupplier = value;
               }
+            } else if (step === "prodMedia") {
+              if (isAmz) platformDetails.amazon.prodMedia ||= {};
+              if (isEbay) platformDetails.ebay.prodMedia ||= {};
+              if (isWeb) platformDetails.website.prodMedia ||= {};
+              if (isAmz) platformDetails.amazon.prodMedia[currentKey] = value;
+              if (isEbay) platformDetails.ebay.prodMedia[currentKey] = value;
+              if (isWeb) platformDetails.website.prodMedia[currentKey] = value;
+            } else if (step === "prodTechInfo") {
+              if (isAmz) platformDetails.amazon.prodTechInfo ||= {};
+              if (isEbay) platformDetails.ebay.prodTechInfo ||= {};
+              if (isWeb) platformDetails.website.prodTechInfo ||= {};
+              if (isAmz)
+                platformDetails.amazon.prodTechInfo[currentKey] = value;
+              if (isEbay) platformDetails.ebay.prodTechInfo[currentKey] = value;
+              if (isWeb)
+                platformDetails.website.prodTechInfo[currentKey] = value;
+            } else if (step === "prodPricing") {
+              if (isAmz) platformDetails.amazon.prodPricing ||= {};
+              if (isEbay) platformDetails.ebay.prodPricing ||= {};
+              if (isWeb) platformDetails.website.prodPricing ||= {};
+              if (isAmz) platformDetails.amazon.prodPricing[currentKey] = value;
+              if (isEbay) platformDetails.ebay.prodPricing[currentKey] = value;
+              if (isWeb)
+                platformDetails.website.prodPricing[currentKey] = value;
+            } else if (step === "prodDelivery") {
+              if (isAmz) platformDetails.amazon.prodDelivery ||= {};
+              if (isEbay) platformDetails.ebay.prodDelivery ||= {};
+              if (isWeb) platformDetails.website.prodDelivery ||= {};
+              if (isAmz)
+                platformDetails.amazon.prodDelivery[currentKey] = value;
+              if (isEbay) platformDetails.ebay.prodDelivery[currentKey] = value;
+              if (isWeb)
+                platformDetails.website.prodDelivery[currentKey] = value;
+            } else {
+              if (isAmz) platformDetails.amazon.prodSeo ||= {};
+              if (isEbay) platformDetails.ebay.prodSeo ||= {};
+              if (isWeb) platformDetails.website.prodSeo ||= {};
+              if (isAmz) platformDetails.amazon.prodSeo[currentKey] = value;
+              if (isEbay) platformDetails.ebay.prodSeo[currentKey] = value;
+              if (isWeb) platformDetails.website.prodSeo[currentKey] = value;
             }
           }
         });
-        // console.log("After processing platformDetails:", platformDetails);
       };
 
-      // // Process technical details based on the discriminator (Laptops or others)
-      // if (stepData.kind) {
-      //   // Process technical details for Laptops
-      //   processStepData(stepData, draftProduct.platformDetails);
-      // } else {
       processStepData(stepData, draftProduct.platformDetails);
-      // }
 
-      // Save the updated draft product
-      await draftProduct.save();
-      // console.log("Draft product saved:", draftProduct);
+      console.log(
+        "🔹 Draft product after update:",
+        JSON.stringify(draftProduct, null, 2)
+      );
+
+      // Save the updated draft product without running validations
+      await draftProduct.save({ validateBeforeSave: false });
+      console.log("✅ Draft product updated successfully.");
+
       return draftProduct;
-    } catch (error) {
-      console.error("Error updating draft product:", error);
-      throw new Error("Failed to update draft product");
+    } catch (error: any) {
+      console.error(
+        "❌ Error updating draft product:",
+        error.message,
+        error.stack
+      );
+      throw new Error(`Failed to update draft product: ${error.message}`);
     }
   },
 
-  /**
-   * Fetches the product by ID and populates all nested fields.
-   * @param id - Product ID to fetch
-   * @returns Populated product document
-   */
   getFullProductById: async (id: string) => {
     try {
       const product = await Product.findById(id)
         .populate("platformDetails.amazon.productInfo.productCategory")
         .populate("platformDetails.ebay.productInfo.productCategory")
-        .populate("platformDetails.website.productInfo.productCategory");
+        .populate("platformDetails.website.productInfo.productCategory")
+        .populate("platformDetails.amazon.productInfo.productSupplier")
+        .populate("platformDetails.ebay.productInfo.productSupplier")
+        .populate("platformDetails.website.productInfo.productSupplier");
       // .lean();
 
       if (!product) throw new Error("Product not found");
@@ -289,38 +250,15 @@ export const productService = {
       throw new Error("Failed to fetch full product");
     }
   },
-  /**
-   * Transforms and returns the product data.
-   * @param id - Product ID
-   * @returns Transformed product data
-   */
-  // transformAndSendProduct: async (id: string) => {
-  //   try {
-  //     if (!id || !mongoose.isValidObjectId(id)) {
-  //       throw new Error("Invalid product ID");
-  //     }
-
-  //     // Fetch the product from the database
-  //     const product = await productService.getFullProductById(id);
-
-  //     if (!product) {
-  //       throw new Error("Product not found");
-  //     }
-
-  //     // Transform the fetched product data
-  //     const transformedProduct = transformProductData(product);
-  //     return transformedProduct;
-  //   } catch (error: any) {
-  //     console.error("Error transforming product:", error);
-  //     throw new Error(error.message || "Error transforming product");
-  //   }
-  // },
   getAllProducts: async () => {
     try {
       return await Product.find()
         .populate("platformDetails.website.productInfo.productCategory")
         .populate("platformDetails.amazon.productInfo.productCategory")
         .populate("platformDetails.ebay.productInfo.productCategory")
+        .populate("platformDetails.amazon.productInfo.productSupplier")
+        .populate("platformDetails.ebay.productInfo.productSupplier")
+        .populate("platformDetails.website.productInfo.productSupplier")
         .populate("platformDetails.website.prodPricing.paymentPolicy")
         .populate("platformDetails.amazon.prodPricing.paymentPolicy")
         .populate("platformDetails.ebay.prodPricing.paymentPolicy");
@@ -338,6 +276,9 @@ export const productService = {
         .populate("platformDetails.website.productInfo.productCategory")
         .populate("platformDetails.amazon.productInfo.productCategory")
         .populate("platformDetails.ebay.productInfo.productCategory")
+        .populate("platformDetails.amazon.productInfo.productSupplier")
+        .populate("platformDetails.ebay.productInfo.productSupplier")
+        .populate("platformDetails.website.productInfo.productSupplier")
         .select(
           "_id platformDetails website.productInfo productCategory brand model srno kind"
         );
@@ -352,6 +293,9 @@ export const productService = {
         .populate("platformDetails.website.productInfo.productCategory")
         .populate("platformDetails.amazon.productInfo.productCategory")
         .populate("platformDetails.ebay.productInfo.productCategory")
+        .populate("platformDetails.amazon.productInfo.productSupplier")
+        .populate("platformDetails.ebay.productInfo.productSupplier")
+        .populate("platformDetails.website.productInfo.productSupplier")
         .populate("platformDetails.website.prodPricing.paymentPolicy")
         .populate("platformDetails.amazon.prodPricing.paymentPolicy")
         .populate("platformDetails.ebay.prodPricing.paymentPolicy");
