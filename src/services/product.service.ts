@@ -88,16 +88,27 @@ export const productService = {
   // Update an existing draft product when user move to next stepper
   updateDraftProduct: async (productId: string, stepData: any) => {
     try {
+      console.log("🔹 Incoming stepData:", JSON.stringify(stepData, null, 2));
+
       // Fetch the existing draft product
       const draftProduct: any = await Product.findById(productId);
       if (!draftProduct) {
         throw new Error("Draft product not found");
       }
 
+      console.log(
+        "🔹 Draft product before update:",
+        JSON.stringify(draftProduct, null, 2)
+      );
+
       // Final step update (status and isTemplate)
       if (stepData.status !== undefined) {
         draftProduct.status = stepData.status;
         draftProduct.isTemplate = stepData.isTemplate;
+        console.log("🔹 Updating status and isTemplate:", {
+          status: stepData.status,
+          isTemplate: stepData.isTemplate,
+        });
         await draftProduct.save({ validateBeforeSave: false });
         return draftProduct;
       }
@@ -140,6 +151,8 @@ export const productService = {
             const value = entry?.value ?? entry; // Support both `{ value }` and direct assignment
             const step = stepData.step;
 
+            console.log(`🔹 Processing: ${currentKey} | Value:`, value);
+
             // Ensure `productInfo` is initialized
             if (step === "productInfo") {
               if (isAmz) platformDetails.amazon.productInfo ||= {};
@@ -151,6 +164,10 @@ export const productService = {
               if (isEbay) platformDetails.ebay.productInfo[currentKey] = value;
               if (isWeb)
                 platformDetails.website.productInfo[currentKey] = value;
+
+              console.log(
+                `✅ Updated productInfo for ${currentKey} across platforms`
+              );
             }
           }
         });
@@ -158,13 +175,18 @@ export const productService = {
 
       processStepData(stepData, draftProduct.platformDetails);
 
+      console.log(
+        "🔹 Draft product after update:",
+        JSON.stringify(draftProduct, null, 2)
+      );
+
       // Save the updated draft product without running validations
       await draftProduct.save({ validateBeforeSave: false });
 
       return draftProduct;
     } catch (error: any) {
       console.error(
-        "Error updating draft product:",
+        "❌ Error updating draft product:",
         error.message,
         error.stack
       );
