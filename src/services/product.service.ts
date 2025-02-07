@@ -514,43 +514,86 @@ export const productService = {
       const { validRows, invalidRows } = validateCsvData(filePath);
 
       if (invalidRows.length > 0) {
-        // If invalid rows exist, throw an error with detailed info
-        throw new Error(
-          `Some rows are invalid: ${JSON.stringify(invalidRows)}`
+        console.log(
+          "❌ Some rows are invalid. Please fix the following errors:"
         );
+        invalidRows.forEach(({ row, errors }) => {
+          console.log(`Row ${row}: ${errors.join(", ")}`);
+        });
+        return;
       }
 
-      // Prepare bulk operations for valid rows
-      const bulkOperations = validRows.map(({ data }) => ({
-        updateOne: {
-          filter: { title: data.title }, // Match product by title
-          update: {
-            $set: {
+      // ✅ Fetch existing product titles to avoid duplicates
+      const existingTitles = new Set(
+        (await Product.find({}, "title")).map((p: any) => p.title)
+      );
+
+      const bulkOperations = validRows
+        .filter(({ data }) => !existingTitles.has(data.title)) // ✅ Skip existing products
+        .map(({ data }) => ({
+          insertOne: {
+            document: {
               title: data.title,
-              description: data.productDescription,
+              brand: data.brand,
+              productDescription: data.productDescription,
+              productCategory: new mongoose.Types.ObjectId(
+                data.productCategory
+              ),
               price: parseFloat(data.price),
-              stock: parseInt(data.stock, 10),
-              category: new mongoose.Types.ObjectId(data.productCategory),
-              supplier: new mongoose.Types.ObjectId(data.productSupplier),
-              platformDetails: {
-                amazon: { productInfo: { ...data } },
-                ebay: { productInfo: { ...data } },
-                website: { productInfo: { ...data } },
+              media: {
+                images: data.images.map((url: string) => ({
+                  url,
+                  type: "image/jpeg",
+                })),
               },
+              platformDetails: ["amazon", "ebay", "website"].reduce(
+                (acc: { [key: string]: any }, platform) => {
+                  acc[platform] = {
+                    productInfo: {
+                      brand: data.brand,
+                      title: data.title,
+                      productDescription: data.productDescription,
+                      productCategory: new mongoose.Types.ObjectId(
+                        data.productCategory
+                      ),
+                    },
+                    prodPricing: {
+                      price: parseFloat(data.price),
+                      condition: "new",
+                      quantity: 10,
+                      vat: 5,
+                    },
+                    prodMedia: {
+                      images: data.images.map((url: string) => ({
+                        url,
+                        type: "image/jpeg",
+                      })),
+                      videos: [],
+                    },
+                  };
+                  return acc;
+                },
+                {}
+              ),
             },
           },
-          upsert: true, // Insert if product does not exist
-        },
-      }));
+        }));
 
-      // Bulk insert/update operation
+      if (bulkOperations.length === 0) {
+        console.log("✅ No new products to insert.");
+        return;
+      }
+
+      // ✅ Perform Bulk Insert Operation (No updates)
       await Product.bulkWrite(bulkOperations);
-      console.log("✅ Bulk import completed successfully.");
+      console.log(
+        `✅ Bulk import completed. Successfully added ${bulkOperations.length} new products.`
+      );
     } catch (error) {
       console.error("❌ Bulk import failed:", error);
-      throw new Error("Bulk import failed.");
     }
   },
+
   //bulk Export products to CSV
   exportProducts: async (): Promise<string> => {
     try {
