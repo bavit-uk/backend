@@ -1,7 +1,8 @@
 import fs from "fs";
 import Papa from "papaparse";
 import mongoose from "mongoose";
-import { Product } from "@/models"; // Adjust based on the actual file path
+import { Product } from "@/models"; // Adjust file path as needed
+import { parse } from "path";
 
 /**
  * Validate CSV Data based on Product Schema
@@ -10,146 +11,19 @@ import { Product } from "@/models"; // Adjust based on the actual file path
  */
 const validateCsvData = (filePath: string) => {
   const requiredColumns = [
-    //productInfo
-    "title",
     "brand",
+    "title",
     "productDescription",
     "productCategory",
-    "productSupplier",
-    "kind",
-    //prodMedia
-    "images",
-    "videos",
-    //prodTechInfo
-    "processor",
-    "model",
-    "operatingSystem",
-    "storageType",
-    "features",
-    "ssdCapacity",
-    "gpu",
-    "type",
-    "releaseYear",
-    "hardDriveCapacity",
-    "color",
-    "maxResolution",
-    "mostSuitableFor",
-    "screenSize",
-    "graphicsProcessingType",
-    "connectivity",
-    "motherboardModel",
-    "series",
-    "operatingSystemEdition",
-    "memory",
-    "maxRamCapacity",
-    "unitType",
-    "unitQuantity",
-    "mpn",
-    "processorSpeed",
-    "ramSize",
-    "formFactor",
-    "ean",
-    "productType",
-    "manufacturerWarranty",
-    "regionOfManufacture",
-    "height",
-    "length",
-    "width",
-    "weight",
-    "nonNewConditionDetails",
-    "productCondition",
-    "numberOfLANPorts",
-    "maximumWirelessData",
-    "maximumLANDataRate",
-    "ports",
-    "toFit",
-    "displayType",
-    "aspectRatio",
-    "imageBrightness",
-    "throwRatio",
-    "compatibleOperatingSystem",
-    "compatibleFormat",
-    "lensMagnification",
-    "yearManufactured",
-    "nativeResolution",
-    "displayTechnology",
-    "energyEfficiencyRating",
-    "videoInputs",
-    "refreshRate",
-    "responseTime",
-    "brightness",
-    "contrastRatio",
-    "ecRange",
-    "productLine",
-    "customBundle",
-    "interface",
-    "networkConnectivity",
-    "networkManagementType",
-    "networkType",
-    "processorManufacturer",
-    "numberOfProcessors",
-    "numberOfVANPorts",
-    "processorType",
-    "raidLevel",
-    "memoryType",
-    "deviceConnectivity",
-    "connectorType",
-    "supportedWirelessProtocol",
-    // amazon specific fields
-    "recommendedBrowseNotes",
-    "bulletPoint",
-    "powerPlug",
-    "graphicsCardInterface",
-    "ramMemoryMaximumSize",
-    "ramMemoryMaximumSizeUnit",
-    "ramMemoryTechnology",
-    "humanInterfaceInput",
-    "includedComponents",
-    "specificUsesForProduct",
-    "cacheMemoryInstalledSize",
-    "cacheMemoryInstalledSizeUnit",
-    "cpuModel",
-    "cpuModelManufacturer",
-    "cpuModelNumber",
-    "cpuSocket",
-    "cpuBaseSpeed",
-    "cpuBaseSpeedUnit",
-    "graphicsRam",
-    "hardDiskDescription",
-    "hardDiskInterface",
-    "hardDiskRotationalSpeed",
-    "hardDiskRotationalSpeedUnit",
-    "totalUsb2oPorts",
-    "totalUsb3oPorts",
-    "productWarranty",
-    "gdprRisk",
-    "opticalStorageDevice",
-    "dangerousGoodsRegulation",
-    "safetyAndCompliance",
-    "manufacturer",
-    //prodPricing
-    "quantity",
+    // "productSupplier",
     "price",
-    "condition",
-    "conditionDescription",
-    "pricingFormat",
-    "vat",
-    "paymentPolicy",
-    "buy2andSave",
-    "buy3andSave",
-    "buy4andSave",
-    //prodDelivery
-    "postagePolicy",
-    "packageWeight",
-    "packageDimensions",
-    "irregularPackage",
-    //prodSeo
-    "seoTags",
-    "relevantTags",
-    "suggestedTags",
+    // "stock",
+    // "kind",
+    "images",
+    // "videos",
   ];
 
-  // Read CSV file content
+  // Read and parse CSV file
   const fileContent = fs.readFileSync(filePath, "utf8");
   const parsedData = Papa.parse(fileContent, {
     header: true,
@@ -162,42 +36,50 @@ const validateCsvData = (filePath: string) => {
 
   const validRows: { row: number; data: any }[] = [];
   const invalidRows: { row: number; errors: string[] }[] = [];
-
+  console.log("PARSED DATA::: ", parsedData.data);
   parsedData.data.forEach((row: any, index: number) => {
     const errors: string[] = [];
 
-    // ✅ Check for missing required columns
+    // ✅ Required Fields Validation
     requiredColumns.forEach((col) => {
-      if (!row[col]?.trim()) {
-        errors.push(`${col} is missing or empty`);
-      }
+      if (!row[col]?.trim()) errors.push(`${col} is missing or empty`);
     });
 
-    // ✅ Validate 'Price' - should be a number
-    if (row.price && !Number.isFinite(parseFloat(row.price))) {
+    // ✅ ObjectId Validation for Foreign Keys
+    if (row.productCategory && !mongoose.isValidObjectId(row.productCategory)) {
+      errors.push("productCategory must be a valid MongoDB ObjectId");
+    }
+    // if (row.productSupplier && !mongoose.isValidObjectId(row.productSupplier)) {
+    //   errors.push("productSupplier must be a valid MongoDB ObjectId");
+    // }
+
+    // ✅ Price & Stock Validation
+    if (row.price && isNaN(parseFloat(row.price))) {
       errors.push("Price must be a valid number");
     }
+    // if (row.stock && isNaN(parseInt(row.stock, 10))) {
+    //   errors.push("Stock must be a valid integer");
+    // }
 
-    // ✅ Validate 'Stock' - should be an integer
-    if (row.stock && !Number.isInteger(Number(row.stock))) {
-      errors.push("Stock must be a valid integer");
-    }
+    // ✅ Convert CSV String to Array for Images, Videos, and SEO Tags
+    row.images = row.images ? row.images.split(",") : [];
+    // row.videos = row.videos ? row.videos.split(",") : [];
+    // row.seoTags = row.seoTags ? row.seoTags.split(",") : [];
 
-    // ✅ Validate 'SupplierId' - should be a valid MongoDB ObjectId
-    if (row.supplierId && !mongoose.isValidObjectId(row.supplierId)) {
-      errors.push("SupplierId must be a valid MongoDB ObjectId");
-    }
-
-    // ✅ Validate JSON fields
-    ["AmazonInfo", "EbayInfo", "WebsiteInfo"].forEach((field) => {
-      if (row[field]) {
-        try {
-          JSON.parse(row[field]);
-        } catch {
-          errors.push(`${field} must be valid JSON`);
-        }
-      }
-    });
+    // ✅ Validate `kind` matches one of the product discriminators
+    // const validKinds = [
+    //   "Laptops",
+    //   "Monitors",
+    //   "Gaming PC",
+    //   "All In One PC",
+    //   "Projectors",
+    //   "Network Equipments",
+    // ];
+    // if (!validKinds.includes(row.kind)) {
+    //   errors.push(
+    //     `Invalid kind: ${row.kind}. Must be one of ${validKinds.join(", ")}`
+    //   );
+    // }
 
     // ✅ Store results
     if (errors.length > 0) {
@@ -227,40 +109,33 @@ const bulkImportProducts = async (filePath: string): Promise<void> => {
       return;
     }
 
-    // ✅ Optimize by using bulk insert (`insertMany`)
-    const bulkProducts = validRows.map(({ data }) => ({
-      title: data.title,
-      brand: data.brand,
-      description: data.productDescription,
-      category: data.productCategory,
-      price: parseFloat(data.price),
-      stock: parseInt(data.stock, 10),
-      supplier: new mongoose.Types.ObjectId(data.supplierId || undefined),
-      media: {
-        images: data.images?.split(","),
-        videos: data.videos?.split(","),
-      },
-      technicalInfo: {
-        processor: data.processor,
-        model: data.model,
-        os: data.operatingSystem,
-        storage: data.storageType,
-        ramSize: data.ramSize,
-        gpu: data.graphicsProcessingType,
-        screenSize: data.screenSize,
-      },
-      platformDetails: {
-        amazon: {
-          productInfo: data.AmazonInfo ? JSON.parse(data.AmazonInfo) : {},
+    const bulkOperations = validRows.map(({ data }) => ({
+      updateOne: {
+        filter: { title: data.title }, // Check if product already exists
+        update: {
+          $set: {
+            title: data.title,
+            brand: data.brand,
+            productDescription: data.productDescription,
+            productCategory: new mongoose.Types.ObjectId(data.productCategory),
+            productSupplier: new mongoose.Types.ObjectId(data.productSupplier),
+            price: parseFloat(data.price),
+            stock: parseInt(data.stock, 10),
+            kind: data.kind,
+            media: { images: data.images, videos: data.videos },
+            platformDetails: {
+              amazon: { productInfo: { ...data } },
+              ebay: { productInfo: { ...data } },
+              website: { productInfo: { ...data } },
+            },
+          },
         },
-        ebay: { productInfo: data.EbayInfo ? JSON.parse(data.EbayInfo) : {} },
-        website: {
-          productInfo: data.WebsiteInfo ? JSON.parse(data.WebsiteInfo) : {},
-        },
+        upsert: true, // Create new if not found
       },
     }));
 
-    await Product.insertMany(bulkProducts);
+    // ✅ Perform Bulk Update/Insert
+    await Product.bulkWrite(bulkOperations);
     console.log("✅ Bulk import completed successfully.");
   } catch (error) {
     console.error("❌ Bulk import failed:", error);
