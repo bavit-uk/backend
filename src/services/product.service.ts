@@ -388,14 +388,15 @@ export const productService = {
         searchQuery = "",
         isBlocked,
         isTemplate,
+        status, // Extract status from filters
         startDate,
         endDate,
         page = 1, // Default to page 1 if not provided
         limit = 10, // Default to 10 records per page
       } = filters;
 
-      // Convert page and limit to numbers
-      const pageNumber = parseInt(page, 10);
+      // Convert page and limit to numbers safely
+      const pageNumber = Math.max(parseInt(page, 10) || 1, 1); // Ensure minimum page is 1
       const limitNumber = parseInt(limit, 10) || 10;
       const skip = (pageNumber - 1) * limitNumber;
 
@@ -462,7 +463,10 @@ export const productService = {
         ];
       }
 
-      // Add filters for isBlocked and isTemplate
+      // Add filters for status, isBlocked, and isTemplate
+      if (status && ["draft", "published"].includes(status)) {
+        query.status = status;
+      }
       if (isBlocked !== undefined) {
         query.isBlocked = isBlocked;
       }
@@ -473,16 +477,18 @@ export const productService = {
       // Date range filter for createdAt
       if (startDate || endDate) {
         const dateFilter: any = {};
-        if (startDate) dateFilter.$gte = new Date(startDate);
-        if (endDate) dateFilter.$lte = new Date(endDate);
-        query.createdAt = dateFilter;
+        if (startDate && !isNaN(Date.parse(startDate)))
+          dateFilter.$gte = new Date(startDate);
+        if (endDate && !isNaN(Date.parse(endDate)))
+          dateFilter.$lte = new Date(endDate);
+        if (Object.keys(dateFilter).length > 0) query.createdAt = dateFilter;
       }
 
-      // Pagination logic: apply skip and limit
+      // Fetch products with pagination
       const products = await Product.find(query)
         .populate("userType")
-        .skip(skip) // Correct application of skip
-        .limit(limitNumber); // Correct application of limit
+        .skip(skip)
+        .limit(limitNumber);
 
       // Count total products
       const totalProducts = await Product.countDocuments(query);
@@ -501,6 +507,7 @@ export const productService = {
       throw new Error("Error during search and filter");
     }
   },
+
   //bulk import products as CSV
   bulkImportProducts: async (filePath: string): Promise<void> => {
     try {
