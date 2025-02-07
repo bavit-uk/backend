@@ -1,8 +1,8 @@
 import { Product } from "@/models";
 import Papa from "papaparse";
-import mongoose, { Types } from "mongoose";
+import mongoose from "mongoose";
 import fs from "fs";
-import * as XLSX from "xlsx";
+import { validateCsvData } from "@/utils/bulkImport.util";
 export const productService = {
   // Create a new draft product
   createDraftProduct: async (stepData: any) => {
@@ -87,7 +87,6 @@ export const productService = {
       throw new Error("Failed to create draft product");
     }
   },
-
   // Update an existing draft product when user move to next stepper
   updateDraftProduct: async (productId: string, stepData: any) => {
     try {
@@ -234,7 +233,6 @@ export const productService = {
       throw new Error(`Failed to update draft product: ${error.message}`);
     }
   },
-
   getFullProductById: async (id: string) => {
     try {
       const product = await Product.findById(id)
@@ -271,7 +269,6 @@ export const productService = {
     }
   },
   //getting all template products name and their id
-
   getProductsByCondition: async (condition: Record<string, any>) => {
     try {
       // Find products matching the condition
@@ -314,7 +311,6 @@ export const productService = {
       throw new Error("Failed to fetch product");
     }
   },
-
   updateProduct: async (
     id: string,
     platform: "amazon" | "ebay" | "website",
@@ -332,7 +328,6 @@ export const productService = {
       throw new Error("Failed to update product");
     }
   },
-
   deleteProduct: (id: string) => {
     const product = Product.findByIdAndDelete(id);
     if (!product) {
@@ -340,7 +335,6 @@ export const productService = {
     }
     return product;
   },
-
   toggleBlock: async (id: string, isBlocked: boolean) => {
     try {
       const updatedProduct = await Product.findByIdAndUpdate(
@@ -388,7 +382,6 @@ export const productService = {
       throw new Error("Error fetching products statistics");
     }
   },
-
   searchAndFilterProducts: async (filters: any) => {
     try {
       const {
@@ -508,83 +501,85 @@ export const productService = {
       throw new Error("Error during search and filter");
     }
   },
-
- bulkImportProducts : async (filePath: string) => {
+  //bulk import products as CSV
+  bulkImportProducts: async (filePath: string): Promise<void> => {
     try {
-      const fileContent = fs.readFileSync(filePath, "utf8");
-      const jsonData = Papa.parse(fileContent, { header: true, skipEmptyLines: true }).data;
-  
-      for (const row of jsonData) {
-        const id = (row as any).ProductID;
-        const product = await Product.findById(id);
-  
-        if (product){
-          // Update existing product
-          product.title = row.Title;
-          product.description = row.Description;
-          product.price = row.Price;
-          product.category = row.Category;
-          product.stock = row.Stock;
-          if (row.SupplierId) {
-            product.supplier = row.SupplierId;
-          }
-          product.platformDetails.amazon.productInfo = JSON.parse(row.AmazonInfo || "{}");
-          product.platformDetails.ebay.productInfo = JSON.parse(row.EbayInfo || "{}");
-          product.platformDetails.website.productInfo = JSON.parse(row.WebsiteInfo || "{}");
-  
-          await product.save();
-        } else {
-          // Create new product
-          await Product.create({
-            title: row.Title,
-            description: row.Description,
-            price: row.Price,
-            category: row.Category,
-            stock: row.Stock,
-            supplier: row.SupplierId ? row.SupplierId : undefined,
-            platformDetails: {
-              amazon: { productInfo: JSON.parse(row.AmazonInfo || "{}") },
-              ebay: { productInfo: JSON.parse(row.EbayInfo || "{}") },
-              website: { productInfo: JSON.parse(row.WebsiteInfo || "{}") },
-            },
-          });
-        }
+      const { validRows, invalidRows } = validateCsvData(filePath);
+
+      if (invalidRows.length > 0) {
+        // If invalid rows exist, throw an error with detailed info
+        throw new Error(
+          `Some rows are invalid: ${JSON.stringify(invalidRows)}`
+        );
       }
-  
-      console.log("✅ Bulk import & update complete.");
+
+      // Prepare bulk operations for valid rows
+      const bulkOperations = validRows.map(({ data }) => ({
+        updateOne: {
+          filter: { title: data.title }, // Match product by title
+          update: {
+            $set: {
+              title: data.title,
+              description: data.productDescription,
+              price: parseFloat(data.price),
+              stock: parseInt(data.stock, 10),
+              category: new mongoose.Types.ObjectId(data.productCategory),
+              supplier: new mongoose.Types.ObjectId(data.productSupplier),
+              platformDetails: {
+                amazon: { productInfo: { ...data } },
+                ebay: { productInfo: { ...data } },
+                website: { productInfo: { ...data } },
+              },
+            },
+          },
+          upsert: true, // Insert if product does not exist
+        },
+      }));
+
+      // Bulk insert/update operation
+      await Product.bulkWrite(bulkOperations);
+      console.log("✅ Bulk import completed successfully.");
     } catch (error) {
       console.error("❌ Bulk import failed:", error);
       throw new Error("Bulk import failed.");
     }
   },
-  
-  // Export products to CSV
-exportProducts : async () => {
+  //bulk Export products to CSV
+  exportProducts: async (): Promise<string> => {
     try {
+      // Fetch all products from the database
       const products = await Product.find({});
-  
-      const formattedData = products.map((p) => ({
-        ProductID: p._id,
-        Title: p.title,
-        Description: p.description,
-        Price: p.price,
-        Category: p.category,
-        Stock: p.stock,
-        SupplierId: p.supplier?._id,
-        AmazonInfo: JSON.stringify(p.platformDetails.amazon.productInfo),
-        EbayInfo: JSON.stringify(p.platformDetails.ebay.productInfo),
-        WebsiteInfo: JSON.stringify(p.platformDetails.website.productInfo),
+
+      // Format the products data for CSV export
+      const formattedData = products.map((product: any) => ({
+        ProductID: product._id,
+        Title: product.title,
+        Description: product.description,
+        Price: product.price,
+        Category: product.category,
+        Stock: product.stock,
+        SupplierId: product.supplier?._id,
+        AmazonInfo: JSON.stringify(product.platformDetails.amazon.productInfo),
+        EbayInfo: JSON.stringify(product.platformDetails.ebay.productInfo),
+        WebsiteInfo: JSON.stringify(
+          product.platformDetails.website.productInfo
+        ),
       }));
-  
+
+      // Convert the data to CSV format using Papa.unparse
       const csv = Papa.unparse(formattedData);
+
+      // Generate a unique file path for the export
       const filePath = `exports/products_${Date.now()}.csv`;
+
+      // Write the CSV data to a file
       fs.writeFileSync(filePath, csv);
-  
+
+      console.log("✅ Export completed successfully.");
       return filePath;
     } catch (error) {
       console.error("❌ Export Failed:", error);
       throw new Error("Failed to export products.");
     }
   },
-  
 };
