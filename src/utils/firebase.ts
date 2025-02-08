@@ -1,85 +1,56 @@
-import { initializeApp } from "firebase-admin";
-import {
-  getStorage,
-  getDownloadURL,
-  ref,
-  uploadBytesResumable,
-} from "@firebase/storage";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "@firebase/auth";
-import { firebaseConfig } from "./firebaseConfig";
+import admin from "firebase-admin";
+import { getStorage } from "firebase-admin/storage";
 import { applicationDefault } from "firebase-admin/app";
+import path from "path";
+import dotenv from "dotenv";
 
-const adminApp = initializeApp({
-  credential: applicationDefault(), // Uses default Google Cloud credentials
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+// ✅ Load environment variables
+dotenv.config();
+// dotenv.config({ path: path.resolve(__dirname, "../../.env.dev") });
+// ✅ Initialize Firebase Admin SDK (For Backend)
+const adminApp = admin.initializeApp({
+  credential: applicationDefault(), // Uses Google Cloud default credentials
+  // storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET, // Ensure this is set in .env
+  storageBucket: "axiom-528ab.appspot.com", // Ensure this is set in .env
 });
 
-// ✅ Initialize Firebase Client SDK (For Frontend Authentication & Storage)
-const clientApp = initializeApp(firebaseConfig);
-
-// ✅ Export Firebase Services
-export const storage = getStorage(clientApp); // Client-side storage
-export const adminStorage = getStorage(adminApp); // Server-side storage
-export const auth = getAuth(clientApp);
-export const googleProvider = new GoogleAuthProvider();
+// ✅ Get Firebase Storage Bucket
+export const adminStorage = getStorage(adminApp).bucket();
 
 /**
- * 🔹 Upload a single file to Firebase Storage
- * @param file File object to upload
- * @param folderName Optional folder name (default: "uploads")
- * @param urlSetter Function to set the file URL after upload
- * @param setProgress Function to track upload progress
+ * 🔹 Upload a single file to Firebase Storage (Node.js Backend)
+ * @param filePath Path to the file
+ * @param destination Destination path in Firebase Storage
+ * @returns Download URL of the uploaded file
  */
-export const uploadSingleFile = ({
-  file,
-  folderName = "uploads",
-  urlSetter,
-  setProgress,
-}: {
-  file: File | null;
-  folderName?: string;
-  urlSetter: (url: string) => void;
-  setProgress: (progress: number) => void;
-}): void => {
-  if (!file) return;
+export const uploadFileToFirebase = async (
+  filePath: string,
+  destination: string
+): Promise<string> => {
+  if (!filePath) {
+    throw new Error("❌ No file path provided for upload.");
+  }
 
   try {
-    const storageRef = ref(storage, `/${folderName}/${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    const storageFile = adminStorage.file(destination);
 
-    uploadTask.on(
-      "state_changed",
-      (snapshot) => {
-        const progress = Math.round(
-          (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-        );
-        setProgress(progress);
+    await storageFile.save(filePath, {
+      metadata: {
+        contentType: destination.includes("videos")
+          ? "video/mp4"
+          : "image/jpeg",
       },
-      (error) => {
-        console.error("❌ Upload Error:", error);
-      },
-      async () => {
-        try {
-          const url = await getDownloadURL(uploadTask.snapshot.ref);
-          urlSetter(url);
-        } catch (err) {
-          console.error("❌ Error getting download URL:", err);
-        }
-      }
-    );
+      public: true, // ✅ Make file publicly accessible
+    });
+
+    // ✅ Generate and return the public URL
+    const publicUrl = `https://storage.googleapis.com/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/${destination}`;
+    console.log("✅ File uploaded successfully:", publicUrl);
+    return publicUrl;
   } catch (error) {
-    console.error("❌ Unexpected Error in uploadSingleFile:", error);
+    console.error("❌ Firebase Storage Upload Error:", error);
+    throw error;
   }
 };
 
-/**
- * 🔹 Sign in with Google Authentication
- */
-export const signInWithGoogle = async (): Promise<void> => {
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    console.log("✅ User signed in:", result.user);
-  } catch (error) {
-    console.error("❌ Authentication Error:", error);
-  }
-};
+export default adminApp;
