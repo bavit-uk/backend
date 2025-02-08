@@ -7,7 +7,7 @@ import {
 import { createHash } from "@/utils/hash.util";
 import { IUserAddress } from "@/contracts/user-address.contracts";
 import { Types } from "mongoose";
-
+import { toUpper } from "lodash";
 export const userService = {
   getAllUsers: async () => {
     return await User.find().populate("userType");
@@ -36,21 +36,31 @@ export const userService = {
       restrictedAccessRights,
       phoneNumber,
       dob,
-      //   address,
     } = data;
-    // console.log(data);
-    const hasedPassword = await createHash(password);
-    const newUser = await new User({
+
+    const hashedPassword = await createHash(password);
+
+    // Fetch the user category
+    const userCategory = await UserCategory.findById(userType);
+
+    let SupplierKey = undefined;
+    if (userCategory && userCategory.role.toLowerCase() === "supplier") {
+      SupplierKey = await generateUniqueSupplierKey(firstName, lastName);
+    }
+
+    const newUser = new User({
       firstName,
       lastName,
       email,
-      password: hasedPassword,
+      password: hashedPassword,
       userType,
       additionalAccessRights,
       restrictedAccessRights,
       phoneNumber,
       dob,
+      SupplierKey, // Ensure SupplierKey is set
     });
+
     return await newUser.save();
   },
 
@@ -207,3 +217,20 @@ export const userService = {
     }
   },
 };
+
+async function generateUniqueSupplierKey(
+  firstName: string,
+  lastName: string
+): Promise<string> {
+  let baseKey = `${toUpper(firstName)}_${toUpper(lastName)}`;
+  let uniqueKey = baseKey;
+  let counter = 1;
+
+  // Check if the key already exists and increment counter if needed
+  while (await User.exists({ SupplierKey: uniqueKey })) {
+    uniqueKey = `${baseKey}_${counter}`;
+    counter++;
+  }
+
+  return uniqueKey;
+}
