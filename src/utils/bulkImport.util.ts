@@ -13,9 +13,11 @@ const validateCsvData = (filePath: string) => {
     "brand",
     "title",
     "productDescription",
+    "productSupplier",
     "productCategory",
     "price",
     "images",
+    "videos",
   ];
 
   // Read and parse CSV file
@@ -46,7 +48,9 @@ const validateCsvData = (filePath: string) => {
     if (row.productCategory && !mongoose.isValidObjectId(row.productCategory)) {
       errors.push("productCategory must be a valid MongoDB ObjectId");
     }
-
+    if (row.productSupplier && !mongoose.isValidObjectId(row.productSupplier)) {
+      errors.push("productSupplier must be a valid MongoDB ObjectId");
+    }
     // ✅ Validate Price
     if (!row.price || isNaN(parseFloat(row.price))) {
       errors.push("Price must be a valid number");
@@ -56,7 +60,9 @@ const validateCsvData = (filePath: string) => {
     row.images = row.images
       ? row.images.split(",").map((url: string) => url.trim())
       : [];
-
+    row.videos = row.videos
+      ? row.videos.split(",").map((url: string) => url.trim())
+      : [];
     if (errors.length > 0) {
       invalidRows.push({ row: index + 1, errors });
     } else {
@@ -107,6 +113,9 @@ const bulkImportProducts = async (filePath: string) => {
                   productCategory: new mongoose.Types.ObjectId(
                     data.productCategory
                   ),
+                  productSupplier: new mongoose.Types.ObjectId(
+                    data.productSupplier
+                  ),
                 },
                 prodPricing: {
                   price: parseFloat(data.price),
@@ -119,7 +128,11 @@ const bulkImportProducts = async (filePath: string) => {
                     url,
                     type: "image/jpeg",
                   })),
-                  videos: [],
+                  // videos: [],
+                  videos: data.videos.map((url: string) => ({
+                    url,
+                    type: "video/mp4",
+                  })),
                 },
               };
               return acc;

@@ -507,7 +507,6 @@ export const productService = {
       throw new Error("Error during search and filter");
     }
   },
-
   //bulk import products as CSV
   bulkImportProducts: async (filePath: string): Promise<void> => {
     try {
@@ -539,11 +538,18 @@ export const productService = {
               productCategory: new mongoose.Types.ObjectId(
                 data.productCategory
               ),
+              productSupplier: new mongoose.Types.ObjectId(
+                data.productSupplier
+              ),
               price: parseFloat(data.price),
               media: {
                 images: data.images.map((url: string) => ({
                   url,
                   type: "image/jpeg",
+                })),
+                videos: data.videos.map((url: string) => ({
+                  url,
+                  type: "video/mp4",
                 })),
               },
               platformDetails: ["amazon", "ebay", "website"].reduce(
@@ -555,6 +561,9 @@ export const productService = {
                       productDescription: data.productDescription,
                       productCategory: new mongoose.Types.ObjectId(
                         data.productCategory
+                      ),
+                      productSupplier: new mongoose.Types.ObjectId(
+                        data.productSupplier
                       ),
                     },
                     prodPricing: {
@@ -568,7 +577,11 @@ export const productService = {
                         url,
                         type: "image/jpeg",
                       })),
-                      videos: [],
+                      // videos: [],
+                      videos: data.videos.map((url: string) => ({
+                        url,
+                        type: "video/mp4",
+                      })),
                     },
                   };
                   return acc;
@@ -593,7 +606,6 @@ export const productService = {
       console.error("❌ Bulk import failed:", error);
     }
   },
-
   //bulk Export products to CSV
   exportProducts: async (): Promise<string> => {
     try {
@@ -607,6 +619,7 @@ export const productService = {
         Description: product.description,
         Price: product.price,
         Category: product.category,
+        // ProductSupplier: product?.supplier?.name,
         Stock: product.stock,
         SupplierId: product.supplier?._id,
         AmazonInfo: JSON.stringify(product.platformDetails.amazon.productInfo),
