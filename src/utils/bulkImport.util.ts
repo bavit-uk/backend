@@ -1,26 +1,25 @@
 import fs from "fs";
 import Papa from "papaparse";
 import mongoose from "mongoose";
-import { Product } from "@/models";
+import { Product, User } from "@/models";
 
 /**
  * Validate CSV Data based on Product Schema
  * @param {string} filePath - Path to the CSV file.
  * @returns {object} - Validation result with valid and invalid rows.
  */
-const validateCsvData = (filePath: string) => {
+const validateCsvData = async (filePath: string) => {
   const requiredColumns = [
     "brand",
     "title",
     "productDescription",
-    "productSupplier",
+    "productSupplierKey", // Use SupplierKey instead of productSupplier
     "productCategory",
     "price",
     "images",
     "videos",
   ];
 
-  // Read and parse CSV file
   const fileContent = fs.readFileSync(filePath, "utf8");
   const parsedData = Papa.parse(fileContent, {
     header: true,
@@ -36,7 +35,8 @@ const validateCsvData = (filePath: string) => {
 
   console.log("PARSED DATA::: ", parsedData.data);
 
-  parsedData.data.forEach((row: any, index: number) => {
+  for (let index = 0; index < parsedData.data.length; index++) {
+    const row: any = parsedData.data[index];
     const errors: string[] = [];
 
     // ✅ Required Fields Validation
@@ -48,27 +48,42 @@ const validateCsvData = (filePath: string) => {
     if (row.productCategory && !mongoose.isValidObjectId(row.productCategory)) {
       errors.push("productCategory must be a valid MongoDB ObjectId");
     }
-    if (row.productSupplier && !mongoose.isValidObjectId(row.productSupplier)) {
-      errors.push("productSupplier must be a valid MongoDB ObjectId");
-    }
+
     // ✅ Validate Price
     if (!row.price || isNaN(parseFloat(row.price))) {
       errors.push("Price must be a valid number");
     }
 
-    // ✅ Convert CSV Strings to Arrays for Images
+    // ✅ Convert CSV Strings to Arrays
     row.images = row.images
       ? row.images.split(",").map((url: string) => url.trim())
       : [];
     row.videos = row.videos
       ? row.videos.split(",").map((url: string) => url.trim())
       : [];
+
+    // ✅ Validate SupplierKey from DB
+    if (row.productSupplierKey) {
+      const supplier = await User.findOne({
+        SupplierKey: row.productSupplierKey,
+      }).select("_id");
+      if (!supplier) {
+        errors.push(
+          `SupplierKey ${row.productSupplierKey} does not exist in the database`
+        );
+      } else {
+        row.productSupplier = supplier._id; // Replace supplierKey with actual _id
+      }
+    } else {
+      errors.push("productSupplierKey is required");
+    }
+
     if (errors.length > 0) {
       invalidRows.push({ row: index + 1, errors });
     } else {
       validRows.push({ row: index + 1, data: row });
     }
-  });
+  }
 
   return { validRows, invalidRows };
 };
@@ -79,30 +94,23 @@ const validateCsvData = (filePath: string) => {
  */
 const bulkImportProducts = async (filePath: string) => {
   try {
-    const { validRows, invalidRows } = validateCsvData(filePath);
+    const { validRows, invalidRows } = await validateCsvData(filePath);
 
     if (invalidRows.length > 0) {
-      console.log("❌ Some rows are invalid. Please fix the following errors:");
+      console.log("❌ Some rows were skipped due to validation errors:");
       invalidRows.forEach(({ row, errors }) => {
         console.log(`Row ${row}: ${errors.join(", ")}`);
       });
+    }
+
+    if (validRows.length === 0) {
+      console.log("❌ No valid products to import.");
       return;
     }
 
     const bulkOperations = validRows.map(({ data }) => ({
       insertOne: {
         document: {
-          // title: data.title,
-          // brand: data.brand,
-          // productDescription: data.productDescription,
-          // productCategory: new mongoose.Types.ObjectId(data.productCategory),
-          // price: parseFloat(data.price),
-          // media: {
-          //   images: data.images.map((url: string) => ({
-          //     url,
-          //     type: "image/jpeg",
-          //   })),
-          // },
           platformDetails: ["amazon", "ebay", "website"].reduce(
             (acc: { [key: string]: any }, platform) => {
               acc[platform] = {
@@ -128,7 +136,6 @@ const bulkImportProducts = async (filePath: string) => {
                     url,
                     type: "image/jpeg",
                   })),
-                  // videos: [],
                   videos: data.videos.map((url: string) => ({
                     url,
                     type: "video/mp4",
