@@ -1,14 +1,13 @@
 import fs from "fs";
-import Papa from "papaparse";
 import path from "path";
 import AdmZip from "adm-zip";
 import { v4 as uuidv4 } from "uuid";
 import mongoose from "mongoose";
-import { getStorage } from "firebase-admin/storage";
 import { adminStorage } from "./firebase";
 import { Product, User } from "@/models";
+import { Request, Response } from "express";
+import Papa from "papaparse";
 
-// ✅ Function to Upload File to Firebase Storage
 const uploadToFirebase = async (
   filePath: string,
   destination: string
@@ -52,6 +51,7 @@ const validateCsvData = async (csvFilePath: string) => {
 
   const validRows: { row: number; data: any }[] = [];
   const invalidRows: { row: number; errors: string[] }[] = [];
+  const validIndexes = new Set<number>();
 
   for (const [index, row] of (parsedCSV.data as any[]).entries()) {
     const errors: string[] = [];
@@ -86,10 +86,11 @@ const validateCsvData = async (csvFilePath: string) => {
       invalidRows.push({ row: index + 1, errors });
     } else {
       validRows.push({ row: index + 1, data: row });
+      validIndexes.add(index + 1);
     }
   }
 
-  return { validRows, invalidRows };
+  return { validRows, invalidRows, validIndexes };
 };
 
 const processZipFile = async (zipFilePath: string) => {
@@ -133,11 +134,13 @@ const processZipFile = async (zipFilePath: string) => {
     console.log("✅ Media Folder Found:", mediaFolder);
 
     const csvFilePath = path.join(mainFolder, csvFile);
-    const { validRows } = await validateCsvData(csvFilePath);
+    const { validRows, validIndexes } = await validateCsvData(csvFilePath);
     if (validRows.length === 0) return;
 
     for (const [index, { data }] of validRows.entries()) {
       const folderIndex = (index + 1).toString();
+      if (!validIndexes.has(index + 1)) continue;
+
       const productMediaPath = path.join(mainFolder, mediaFolder, folderIndex);
       if (!fs.existsSync(productMediaPath)) continue;
 
