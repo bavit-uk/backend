@@ -28,8 +28,7 @@ const uploadToFirebase = async (
       public: true,
     });
     console.log(`✅ Uploaded file to Firebase: ${destination}`);
-    return destination;
-    // return `https://storage.googleapis.com/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/${destination}`;
+    return `https://storage.googleapis.com/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/${destination}`;
   } catch (error) {
     console.error("❌ Error uploading file:", error);
     return null;

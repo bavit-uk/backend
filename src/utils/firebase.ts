@@ -37,8 +37,8 @@ const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf8"));
 // ✅ Prevent multiple initializations in hot-reloading environments
 if (!admin.apps?.length) {
   admin.initializeApp({
-    // credential: admin.credential.cert(serviceAccount),
-    credential: admin.credential.applicationDefault(),
+    credential: admin.credential.cert(serviceAccount),
+    // credential: admin.credential.applicationDefault(),
     storageBucket:
       process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
       "axiom-528ab.appspot.com",
