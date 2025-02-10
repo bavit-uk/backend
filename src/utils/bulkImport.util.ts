@@ -27,14 +27,10 @@ const uploadToFirebase = async (
     return `https://storage.googleapis.com/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/${destination}`;
   } catch (error) {
     console.error("❌ Error uploading file:", error);
-    return null; // Return null instead of throwing an error
+    return null;
   }
 };
-/**
- * Validate CSV Data based on Product Schema
- * @param {string} filePath - Path to the CSV file.
- * @returns {object} - Validation result with valid and invalid rows.
- */
+
 const validateCsvData = async (csvFilePath: string) => {
   const requiredColumns = [
     "brand",
@@ -60,17 +56,13 @@ const validateCsvData = async (csvFilePath: string) => {
   for (const [index, row] of (parsedCSV.data as any[]).entries()) {
     const errors: string[] = [];
 
-    // ✅ Validate Required Fields
     requiredColumns.forEach((col) => {
       if (!row[col]?.trim()) errors.push(`${col} is missing or empty`);
     });
 
-    // ✅ Validate Price
     if (!row.price || isNaN(parseFloat(row.price)))
       errors.push("Price must be a valid number");
 
-    // ✅ Validate SupplierKey from DB
-    // Inside validateCsvData function
     if (row.productSupplierKey) {
       const supplier = await User.findOne({
         SupplierKey: row.productSupplierKey,
@@ -80,12 +72,12 @@ const validateCsvData = async (csvFilePath: string) => {
           `SupplierKey ${row.productSupplierKey} does not exist in the database`
         );
       } else {
-        row.productSupplier = supplier._id; // Correctly map supplier _id
+        row.productSupplier = supplier._id;
       }
     } else {
       errors.push("productSupplierKey is required");
     }
-    // ✅ Validate MongoDB ObjectId fields
+
     if (row.productCategory && !mongoose.isValidObjectId(row.productCategory))
       errors.push("productCategory must be a valid MongoDB ObjectId");
     if (row.productSupplier && !mongoose.isValidObjectId(row.productSupplier))
@@ -164,86 +156,8 @@ const processZipFile = async (zipFilePath: any) => {
       fs.rmSync(extractPath, { recursive: true, force: true });
   }
 };
-const bulkImportProducts = async (filePath: string) => {
-  try {
-    const { validRows, invalidRows } = await validateCsvData(filePath);
-
-    if (invalidRows.length > 0) {
-      console.log("❌ Some rows were skipped due to validation errors:");
-      invalidRows.forEach(({ row, errors }) => {
-        console.log(`Row ${row}: ${errors.join(", ")}`);
-      });
-    }
-
-    if (validRows.length === 0) {
-      console.log("❌ No valid products to import.");
-      return;
-    }
-
-    const bulkOperations = validRows.map(({ data }) => ({
-      insertOne: {
-        document: {
-          platformDetails: ["amazon", "ebay", "website"].reduce(
-            (acc: { [key: string]: any }, platform) => {
-              acc[platform] = {
-                productInfo: {
-                  brand: data.brand,
-                  title: data.title,
-                  productDescription: data.productDescription,
-                  productCategory: new mongoose.Types.ObjectId(
-                    data.productCategory
-                  ),
-                  productSupplier: new mongoose.Types.ObjectId(
-                    data.productSupplier
-                  ),
-                },
-                prodPricing: {
-                  price: parseFloat(data.price),
-                  condition: "new",
-                  quantity: 10,
-                  vat: 5,
-                },
-                prodMedia: {
-                  images: data.images.map((url: string) => ({
-                    url,
-                    type: "image/jpeg",
-                  })),
-                  videos: data.videos.map((url: string) => ({
-                    url,
-                    type: "video/mp4",
-                  })),
-                },
-              };
-              return acc;
-            },
-            {}
-          ),
-        },
-      },
-    }));
-
-    // ✅ Perform Bulk Insert Operation
-    await Product.bulkWrite(bulkOperations);
-    console.log(
-      `✅ Bulk import completed. Successfully added ${validRows.length} new products.`
-    );
-  } catch (error) {
-    console.error("❌ Bulk import failed:", error);
-  }
-};
 import { Request, Response } from "express";
 
-const handleBulkImport = async (req: Request, res: Response) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-    const zipFilePath = req.file.path;
-    await processZipFile(zipFilePath);
-    fs.unlinkSync(zipFilePath);
-    res.status(200).json({ message: "File processing started" });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    res.status(500).json({ error: errorMessage });
-  }
-};
 
-export {bulkImportProducts, validateCsvData, processZipFile, handleBulkImport };
+
+export { validateCsvData, processZipFile };

@@ -535,8 +535,8 @@ export const productService = {
       const existingSuppliers = await User.find(
         { SupplierKey: { $in: supplierKeys } },
         "_id SupplierKey"
-      // ).lean();
-      )
+        // ).lean();
+      );
       const supplierMap = new Map(
         existingSuppliers.map((supplier) => [
           supplier.SupplierKey,
