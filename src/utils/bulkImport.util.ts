@@ -92,24 +92,37 @@ const validateCsvData = async (csvFilePath: string) => {
   return { validRows, invalidRows };
 };
 
-const processZipFile = async (zipFilePath: any) => {
+const processZipFile = async (zipFilePath: string) => {
   const extractPath = path.join(process.cwd(), "extracted");
+
   try {
-    if (!fs.existsSync(zipFilePath))
+    if (!fs.existsSync(zipFilePath)) {
       throw new Error(`ZIP file does not exist: ${zipFilePath}`);
+    }
+
     const zip = new AdmZip(zipFilePath);
-    if (!fs.existsSync(extractPath))
+    if (!fs.existsSync(extractPath)) {
       fs.mkdirSync(extractPath, { recursive: true });
+    }
     zip.extractAllTo(extractPath, true);
 
+    // 🔹 Log extracted files to check structure
     const files = fs.readdirSync(extractPath);
+    console.log("🔹 Extracted files:", files);
+
     const csvFile = files.find((f) => f.endsWith(".csv"));
     const mediaFolder = files.find((f) =>
       fs.lstatSync(path.join(extractPath, f)).isDirectory()
     );
-    if (!csvFile || !mediaFolder)
-      throw new Error("Invalid ZIP structure. Missing CSV or media folder.");
 
+    if (!csvFile || !mediaFolder) {
+      throw new Error("Invalid ZIP structure. Missing CSV or media folder.");
+    }
+
+    console.log("✅ CSV File:", csvFile);
+    console.log("✅ Media Folder:", mediaFolder);
+
+    // Proceed with CSV validation and media uploads...
     const { validRows } = await validateCsvData(
       path.join(extractPath, csvFile)
     );
@@ -156,8 +169,7 @@ const processZipFile = async (zipFilePath: any) => {
       fs.rmSync(extractPath, { recursive: true, force: true });
   }
 };
+
 import { Request, Response } from "express";
-
-
 
 export { validateCsvData, processZipFile };
