@@ -106,21 +106,33 @@ const processZipFile = async (zipFilePath: string) => {
     }
     zip.extractAllTo(extractPath, true);
 
-    // 🔹 Log extracted files to check structure
-    const files = fs.readdirSync(extractPath);
-    console.log("🔹 Extracted files:", files);
+    // 🔹 Log extracted files
+    const extractedItems = fs
+      .readdirSync(extractPath)
+      .filter((item) => item !== "__MACOSX");
+    console.log("🔹 Extracted files after filtering:", extractedItems);
+
+    // ✅ Handle extra root folder (e.g., 'products/')
+    const mainFolder =
+      extractedItems.length === 1 &&
+      fs.lstatSync(path.join(extractPath, extractedItems[0])).isDirectory()
+        ? path.join(extractPath, extractedItems[0]) // Use the nested folder
+        : extractPath;
+
+    const files = fs.readdirSync(mainFolder);
+    console.log("✅ Files inside main folder:", files);
 
     const csvFile = files.find((f) => f.endsWith(".csv"));
     const mediaFolder = files.find((f) =>
-      fs.lstatSync(path.join(extractPath, f)).isDirectory()
+      fs.lstatSync(path.join(mainFolder, f)).isDirectory()
     );
 
     if (!csvFile || !mediaFolder) {
       throw new Error("Invalid ZIP structure. Missing CSV or media folder.");
     }
 
-    console.log("✅ CSV File:", csvFile);
-    console.log("✅ Media Folder:", mediaFolder);
+    console.log("✅ CSV File Found:", csvFile);
+    console.log("✅ Media Folder Found:", mediaFolder);
 
     // Proceed with CSV validation and media uploads...
     const { validRows } = await validateCsvData(
@@ -170,6 +182,5 @@ const processZipFile = async (zipFilePath: string) => {
   }
 };
 
-import { Request, Response } from "express";
 
 export { validateCsvData, processZipFile };
