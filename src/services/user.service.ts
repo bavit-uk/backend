@@ -43,9 +43,9 @@ export const userService = {
     // Fetch the user category
     const userCategory = await UserCategory.findById(userType);
 
-    let SupplierKey = undefined;
+    let supplierKey = undefined;
     if (userCategory && userCategory.role.toLowerCase() === "supplier") {
-      SupplierKey = await generateUniqueSupplierKey(firstName, lastName);
+      supplierKey = await generateUniqueSupplierKey(firstName, lastName);
     }
 
     const newUser = new User({
@@ -58,7 +58,7 @@ export const userService = {
       restrictedAccessRights,
       phoneNumber,
       dob,
-      SupplierKey, // Ensure SupplierKey is set
+      supplierKey, // Ensure supplierKey is set
     });
 
     return await newUser.save();
@@ -227,7 +227,7 @@ async function generateUniqueSupplierKey(
   let counter = 1;
 
   // Check if the key already exists and increment counter if needed
-  while (await User.exists({ SupplierKey: uniqueKey })) {
+  while (await User.exists({ supplierKey: uniqueKey })) {
     uniqueKey = `${baseKey}_${counter}`;
     counter++;
   }

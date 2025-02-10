@@ -1,17 +1,30 @@
-import admin from "firebase-admin";
+import * as admin from "firebase-admin"; // ✅ Fix import
 import { getStorage } from "firebase-admin/storage";
 import { applicationDefault } from "firebase-admin/app";
 import path from "path";
 import dotenv from "dotenv";
+import fs from "fs";
 
 // ✅ Load environment variables
-dotenv.config();
-// dotenv.config({ path: path.resolve(__dirname, "../../.env.dev") });
-// ✅ Initialize Firebase Admin SDK (For Backend)
+dotenv.config({ path: `.env.${process.env.NODE_ENV || "dev"}` });
+
+// ✅ Get Service Account Key from JSON
+const serviceAccountPath = path.resolve(__dirname, "../../firebase-admin.json");
+
+if (!fs.existsSync(serviceAccountPath)) {
+  throw new Error(
+    `❌ Firebase service account file not found at ${serviceAccountPath}`
+  );
+}
+
+const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf8"));
+
+// ✅ Initialize Firebase Admin SDK
 const adminApp = admin.initializeApp({
-  credential: applicationDefault(), // Uses Google Cloud default credentials
-  // storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET, // Ensure this is set in .env
-  storageBucket: "axiom-528ab.appspot.com", // Ensure this is set in .env
+  credential: applicationDefault(), // Or admin.credential.cert(serviceAccount)
+  storageBucket:
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+    "axiom-528ab.appspot.com",
 });
 
 // ✅ Get Firebase Storage Bucket
