@@ -106,17 +106,15 @@ const processZipFile = async (zipFilePath: string) => {
     }
     zip.extractAllTo(extractPath, true);
 
-    // 🔹 Log extracted files
     const extractedItems = fs
       .readdirSync(extractPath)
       .filter((item) => item !== "__MACOSX");
     console.log("🔹 Extracted files after filtering:", extractedItems);
 
-    // ✅ Handle extra root folder (e.g., 'products/')
     const mainFolder =
       extractedItems.length === 1 &&
       fs.lstatSync(path.join(extractPath, extractedItems[0])).isDirectory()
-        ? path.join(extractPath, extractedItems[0]) // Use the nested folder
+        ? path.join(extractPath, extractedItems[0])
         : extractPath;
 
     const files = fs.readdirSync(mainFolder);
@@ -134,15 +132,13 @@ const processZipFile = async (zipFilePath: string) => {
     console.log("✅ CSV File Found:", csvFile);
     console.log("✅ Media Folder Found:", mediaFolder);
 
-    // Proceed with CSV validation and media uploads...
-    const { validRows } = await validateCsvData(
-      path.join(extractPath, csvFile)
-    );
+    const csvFilePath = path.join(mainFolder, csvFile);
+    const { validRows } = await validateCsvData(csvFilePath);
     if (validRows.length === 0) return;
 
     for (const [index, { data }] of validRows.entries()) {
       const folderIndex = (index + 1).toString();
-      const productMediaPath = path.join(extractPath, mediaFolder, folderIndex);
+      const productMediaPath = path.join(mainFolder, mediaFolder, folderIndex);
       if (!fs.existsSync(productMediaPath)) continue;
 
       const uploadFiles = async (files: string[], destination: string) => {
@@ -181,6 +177,5 @@ const processZipFile = async (zipFilePath: string) => {
       fs.rmSync(extractPath, { recursive: true, force: true });
   }
 };
-
 
 export { validateCsvData, processZipFile };
