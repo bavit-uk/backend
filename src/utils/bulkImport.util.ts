@@ -23,6 +23,7 @@ const uploadToFirebase = async (
       },
       public: true,
     });
+    console.log(`✅ Uploaded file to Firebase: ${destination}`);
     return `https://storage.googleapis.com/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/${destination}`;
   } catch (error) {
     console.error("❌ Error uploading file:", error);
@@ -31,6 +32,7 @@ const uploadToFirebase = async (
 };
 
 const validateCsvData = async (csvFilePath: string) => {
+  console.log(`📂 Validating CSV file: ${csvFilePath}`);
   const requiredColumns = [
     "brand",
     "title",
@@ -90,6 +92,9 @@ const validateCsvData = async (csvFilePath: string) => {
     }
   }
 
+  console.log(
+    `✅ Valid rows: ${validRows.length}, ❌ Invalid rows: ${invalidRows.length}`
+  );
   return { validRows, invalidRows, validIndexes };
 };
 
@@ -97,6 +102,7 @@ const processZipFile = async (zipFilePath: string) => {
   const extractPath = path.join(process.cwd(), "extracted");
 
   try {
+    console.log(`📂 Processing ZIP file: ${zipFilePath}`);
     if (!fs.existsSync(zipFilePath)) {
       throw new Error(`ZIP file does not exist: ${zipFilePath}`);
     }
@@ -141,9 +147,9 @@ const processZipFile = async (zipFilePath: string) => {
       const folderIndex = (index + 1).toString();
       if (!validIndexes.has(index + 1)) continue;
 
+      console.log(`📂 Processing media for product row: ${folderIndex}`);
       const productMediaPath = path.join(mainFolder, mediaFolder, folderIndex);
       if (!fs.existsSync(productMediaPath)) continue;
-
       const uploadFiles = async (files: string[], destination: string) => {
         const uploads = files.map((file) =>
           uploadToFirebase(file, `${destination}/${uuidv4()}`)
@@ -153,6 +159,7 @@ const processZipFile = async (zipFilePath: string) => {
           .filter((res) => res.status === "fulfilled")
           .map((res) => res.value);
       };
+
 
       const imagesFolder = path.join(productMediaPath, "images");
       const videosFolder = path.join(productMediaPath, "videos");
@@ -173,6 +180,9 @@ const processZipFile = async (zipFilePath: string) => {
     }
 
     await Product.insertMany(validRows.map(({ data }) => data));
+    console.log(
+      `✅ Successfully added ${validRows.length} products to the database.`
+    );
   } catch (error) {
     console.error("❌ Error processing ZIP file:", error);
   } finally {
@@ -182,3 +192,4 @@ const processZipFile = async (zipFilePath: string) => {
 };
 
 export { validateCsvData, processZipFile };
+
