@@ -19,7 +19,7 @@ if (!fs.existsSync(serviceAccountPath)) {
 const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf8"));
 
 // ✅ Prevent multiple initializations in hot-reloading environments
-if (!admin.apps.length) {
+if (!admin.apps?.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     storageBucket:
@@ -27,7 +27,7 @@ if (!admin.apps.length) {
       "axiom-528ab.appspot.com",
   });
 }
-
+console.log("serviceAccount",serviceAccount)
 // ✅ Get Firebase Storage Bucket
 export const adminStorage = getStorage().bucket();
 
