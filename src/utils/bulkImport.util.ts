@@ -112,8 +112,8 @@ const validateCsvData = async (csvFilePath: string) => {
 // Adjust the import path as needed
 
 const processZipFile = async (zipFilePath: string) => {
-  // Define extractPath at the beginning of the function
-  const extractPath = path.join(__dirname, "extracted");
+  // Define extractPath dynamically
+  const extractPath = path.join(process.cwd(), "extracted");
 
   try {
     // Step 0: Validate ZIP file path
@@ -186,39 +186,54 @@ const processZipFile = async (zipFilePath: string) => {
         : [];
 
       // Step 5: Upload media files to Firebase
-      const imageUrls = await Promise.all(
-        images.map((img) =>
-          uploadToFirebase(
-            img,
-            `products/${folderIndex}/images/${uuidv4()}.jpg`
+      try {
+        const imageUrls = await Promise.all(
+          images.map((img) =>
+            uploadToFirebase(
+              img,
+              `products/${folderIndex}/images/${uuidv4()}.jpg`
+            ).catch((error) => {
+              console.error(`❌ Failed to upload image ${img}:`, error);
+              return null; // Skip failed uploads
+            })
           )
-        )
-      );
-      const videoUrls = await Promise.all(
-        videos.map((vid) =>
-          uploadToFirebase(
-            vid,
-            `products/${folderIndex}/videos/${uuidv4()}.mp4`
+        );
+        const videoUrls = await Promise.all(
+          videos.map((vid) =>
+            uploadToFirebase(
+              vid,
+              `products/${folderIndex}/videos/${uuidv4()}.mp4`
+            ).catch((error) => {
+              console.error(`❌ Failed to upload video ${vid}:`, error);
+              return null; // Skip failed uploads
+            })
           )
-        )
-      );
+        );
 
-      // Step 6: Update product data with Firebase URLs
-      data.images = imageUrls;
-      data.videos = videoUrls;
+        // Filter out null values (failed uploads)
+        data.images = imageUrls.filter((url) => url !== null);
+        data.videos = videoUrls.filter((url) => url !== null);
+      } catch (error) {
+        console.error("❌ Error uploading media files:", error);
+        throw error;
+      }
     }
 
     console.log(`✅ ${validRows.length} valid products ready for insertion.`);
 
-    // Step 7: Insert valid products into the database
-    await Product.insertMany(validRows.map(({ data }) => data));
-
-    console.log(`🎉 Successfully inserted ${validRows.length} products.`);
+    // Step 6: Insert valid products into the database
+    try {
+      await Product.insertMany(validRows.map(({ data }) => data));
+      console.log(`🎉 Successfully inserted ${validRows.length} products.`);
+    } catch (error) {
+      console.error("❌ Error inserting products into the database:", error);
+      throw error;
+    }
   } catch (error) {
     console.error("❌ Error processing ZIP file:", error);
     throw error;
   } finally {
-    // Step 8: Clean up extracted files (optional)
+    // Step 7: Clean up extracted files (optional)
     if (fs.existsSync(extractPath)) {
       fs.rmSync(extractPath, { recursive: true, force: true });
     }
