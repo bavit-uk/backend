@@ -1,43 +1,33 @@
 import fs from "fs";
 import Papa from "papaparse";
-
-import mongoose from "mongoose";
 import path from "path";
 import AdmZip from "adm-zip";
 import { v4 as uuidv4 } from "uuid";
+import mongoose from "mongoose";
 import { getStorage } from "firebase-admin/storage";
 import { adminStorage } from "./firebase";
 import { Product, User } from "@/models";
-
-// ✅ Function to Upload File to Firebase
-// ✅ Import Firebase setup
 
 // ✅ Function to Upload File to Firebase Storage
 const uploadToFirebase = async (
   filePath: string,
   destination: string
-): Promise<string> => {
+): Promise<string | null> => {
   if (!filePath) throw new Error("No file provided!");
-
   try {
     const storageFile = adminStorage.file(destination);
-
     await storageFile.save(filePath, {
       metadata: {
         contentType: destination.includes("videos")
           ? "video/mp4"
           : "image/jpeg",
       },
-      public: true, // ✅ Make file publicly accessible
+      public: true,
     });
-
-    // ✅ Generate and return the public URL
-    const publicUrl = `https://storage.googleapis.com/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/${destination}`;
-    console.log("✅ File uploaded successfully:", publicUrl);
-    return publicUrl;
+    return `https://storage.googleapis.com/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/${destination}`;
   } catch (error) {
     console.error("❌ Error uploading file:", error);
-    throw error;
+    return null; // Return null instead of throwing an error
   }
 };
 /**
@@ -109,142 +99,71 @@ const validateCsvData = async (csvFilePath: string) => {
 
   return { validRows, invalidRows };
 };
-// Adjust the import path as needed
 
-const processZipFile = async (zipFilePath: string) => {
-  // Define extractPath dynamically
+const processZipFile = async (zipFilePath: any) => {
   const extractPath = path.join(process.cwd(), "extracted");
-
   try {
-    // Step 0: Validate ZIP file path
-    if (!fs.existsSync(zipFilePath)) {
+    if (!fs.existsSync(zipFilePath))
       throw new Error(`ZIP file does not exist: ${zipFilePath}`);
-    }
-
-    // Step 1: Extract ZIP file
     const zip = new AdmZip(zipFilePath);
-
-    // Ensure the extraction directory exists
-    if (!fs.existsSync(extractPath)) {
+    if (!fs.existsSync(extractPath))
       fs.mkdirSync(extractPath, { recursive: true });
-    }
-
     zip.extractAllTo(extractPath, true);
 
-    // Step 2: Validate extracted files
     const files = fs.readdirSync(extractPath);
     const csvFile = files.find((f) => f.endsWith(".csv"));
     const mediaFolder = files.find((f) =>
       fs.lstatSync(path.join(extractPath, f)).isDirectory()
     );
-
-    if (!csvFile || !mediaFolder) {
+    if (!csvFile || !mediaFolder)
       throw new Error("Invalid ZIP structure. Missing CSV or media folder.");
-    }
 
-    // Step 3: Validate CSV data
-    const { validRows, invalidRows } = await validateCsvData(
+    const { validRows } = await validateCsvData(
       path.join(extractPath, csvFile)
     );
+    if (validRows.length === 0) return;
 
-    if (invalidRows.length > 0) {
-      console.log("❌ Some products are invalid. Skipping them:");
-      invalidRows.forEach(({ row, errors }) =>
-        console.log(`Row ${row}: ${errors.join(", ")}`)
-      );
-    }
-
-    if (validRows.length === 0) {
-      console.log("❌ No valid products to process.");
-      return;
-    }
-
-    // Step 4: Process valid products
     for (const [index, { data }] of validRows.entries()) {
       const folderIndex = (index + 1).toString();
       const productMediaPath = path.join(extractPath, mediaFolder, folderIndex);
+      if (!fs.existsSync(productMediaPath)) continue;
 
-      if (!fs.existsSync(productMediaPath)) {
-        console.log(
-          `⚠️ No media folder found for Product Row ${index + 1}, skipping...`
+      const uploadFiles = async (files: string[], destination: string) => {
+        const uploads = files.map((file) =>
+          uploadToFirebase(file, `${destination}/${uuidv4()}`)
         );
-        continue;
-      }
+        const results = await Promise.allSettled(uploads);
+        return results
+          .filter((res) => res.status === "fulfilled")
+          .map((res) => res.value);
+      };
 
       const imagesFolder = path.join(productMediaPath, "images");
       const videosFolder = path.join(productMediaPath, "videos");
 
-      const images = fs.existsSync(imagesFolder)
-        ? fs
-            .readdirSync(imagesFolder)
-            .map((file) => path.join(imagesFolder, file))
-        : [];
-      const videos = fs.existsSync(videosFolder)
-        ? fs
-            .readdirSync(videosFolder)
-            .map((file) => path.join(videosFolder, file))
+      data.images = fs.existsSync(imagesFolder)
+        ? await uploadFiles(
+            fs.readdirSync(imagesFolder).map((f) => path.join(imagesFolder, f)),
+            `products/${folderIndex}/images`
+          )
         : [];
 
-      // Step 5: Upload media files to Firebase
-      try {
-        const imageUrls = await Promise.all(
-          images.map((img) =>
-            uploadToFirebase(
-              img,
-              `products/${folderIndex}/images/${uuidv4()}.jpg`
-            ).catch((error) => {
-              console.error(`❌ Failed to upload image ${img}:`, error);
-              return null; // Skip failed uploads
-            })
+      data.videos = fs.existsSync(videosFolder)
+        ? await uploadFiles(
+            fs.readdirSync(videosFolder).map((f) => path.join(videosFolder, f)),
+            `products/${folderIndex}/videos`
           )
-        );
-        const videoUrls = await Promise.all(
-          videos.map((vid) =>
-            uploadToFirebase(
-              vid,
-              `products/${folderIndex}/videos/${uuidv4()}.mp4`
-            ).catch((error) => {
-              console.error(`❌ Failed to upload video ${vid}:`, error);
-              return null; // Skip failed uploads
-            })
-          )
-        );
-
-        // Filter out null values (failed uploads)
-        data.images = imageUrls.filter((url) => url !== null);
-        data.videos = videoUrls.filter((url) => url !== null);
-      } catch (error) {
-        console.error("❌ Error uploading media files:", error);
-        throw error;
-      }
+        : [];
     }
 
-    console.log(`✅ ${validRows.length} valid products ready for insertion.`);
-
-    // Step 6: Insert valid products into the database
-    try {
-      await Product.insertMany(validRows.map(({ data }) => data));
-      console.log(`🎉 Successfully inserted ${validRows.length} products.`);
-    } catch (error) {
-      console.error("❌ Error inserting products into the database:", error);
-      throw error;
-    }
+    await Product.insertMany(validRows.map(({ data }) => data));
   } catch (error) {
     console.error("❌ Error processing ZIP file:", error);
-    throw error;
   } finally {
-    // Step 7: Clean up extracted files (optional)
-    if (fs.existsSync(extractPath)) {
+    if (fs.existsSync(extractPath))
       fs.rmSync(extractPath, { recursive: true, force: true });
-    }
   }
 };
-// ✅ Run the function with a ZIP file
-// processZipFile("path/to/uploaded.zip");
-/**
- * Perform the bulk insert after validation
- * @param {string} filePath - The path to the CSV file.
- */
 const bulkImportProducts = async (filePath: string) => {
   try {
     const { validRows, invalidRows } = await validateCsvData(filePath);
@@ -312,6 +231,19 @@ const bulkImportProducts = async (filePath: string) => {
     console.error("❌ Bulk import failed:", error);
   }
 };
-// ✅ Main Function to Process ZIP File
+import { Request, Response } from "express";
 
-export { bulkImportProducts, validateCsvData };
+const handleBulkImport = async (req: Request, res: Response) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const zipFilePath = req.file.path;
+    await processZipFile(zipFilePath);
+    fs.unlinkSync(zipFilePath);
+    res.status(200).json({ message: "File processing started" });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: errorMessage });
+  }
+};
+
+export {bulkImportProducts, validateCsvData, processZipFile, handleBulkImport };
