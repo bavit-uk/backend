@@ -1,9 +1,8 @@
-import * as admin from "firebase-admin"; // ✅ Fix import
+import * as admin from "firebase-admin";
 import { getStorage } from "firebase-admin/storage";
-import { applicationDefault } from "firebase-admin/app";
-import path from "path";
 import dotenv from "dotenv";
 import fs from "fs";
+import path from "path";
 
 // ✅ Load environment variables
 dotenv.config({ path: `.env.${process.env.NODE_ENV || "dev"}` });
@@ -19,16 +18,18 @@ if (!fs.existsSync(serviceAccountPath)) {
 
 const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf8"));
 
-// ✅ Initialize Firebase Admin SDK
-const adminApp = admin.initializeApp({
-  credential: applicationDefault(), // Or admin.credential.cert(serviceAccount)
-  storageBucket:
-    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
-    "axiom-528ab.appspot.com",
-});
+// ✅ Prevent multiple initializations in hot-reloading environments
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    storageBucket:
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+      "axiom-528ab.appspot.com",
+  });
+}
 
 // ✅ Get Firebase Storage Bucket
-export const adminStorage = getStorage(adminApp).bucket();
+export const adminStorage = getStorage().bucket();
 
 /**
  * 🔹 Upload a single file to Firebase Storage (Node.js Backend)
@@ -66,4 +67,4 @@ export const uploadFileToFirebase = async (
   }
 };
 
-export default adminApp;
+export default admin;
