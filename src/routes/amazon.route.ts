@@ -1,4 +1,5 @@
 import { amazonListingService } from "@/services";
+import { listingController } from "@/controllers";
 import { Router } from "express";
 
 export const amazon = (router: Router) => {
@@ -10,7 +11,6 @@ export const amazon = (router: Router) => {
   // Taxonomy/Category routes
   router.get("/get-amazon-categories", amazonListingService.getAmazonCategories);
 
-
   // Product routes
   router.post("/products/create", amazonListingService.addItemOnAmazon);
   router.patch("/products/update", amazonListingService.reviseItemOnAmazon);
@@ -19,6 +19,12 @@ export const amazon = (router: Router) => {
   router.get("/orders/get-orders", amazonListingService.getOrders);
   // router.get("/get-parsed-schema/:productType", amazonListingService.getAmazonSchema);
   router.get("/get-parsed-schema/:productType", amazonListingService.getAmazonSchemaDummy);
+  router.get("/get-original-schema/:productType", amazonListingService.getAmazonSchemaOriginal);
+  router.get("/check-amazon-listing-status/:sku", listingController.checkAmazonListingStatus);
+  router.get("/get-item-from-amazon/:listingId", listingController.getItemFromAmazon);
+  router.get("/get-all-items-from-amazon", listingController.getAllItemsFromAmazon);
+  // router.get("/check-amazon-submission-status/:submissionId", listingController.checkAmazonSubmissionStatus);
+
 
   // Additional routes can be added here as needed
   // For example:

@@ -4,16 +4,16 @@ import {
   getStoredAmazonAccessToken,
   refreshAmazonAccessToken,
   initializeAmazonCredentials,
-  getProductTypeDefinitions,
+  getAmazonCredentials,
 } from "@/utils/amazon-helpers.util";
 import path from "path";
 import { promises as fs } from "fs";
 import { Listing } from "@/models";
-import { parseSchemaProperties } from "@/utils/parseAmazonSchema";
+
 import { AmazonSchemaParser } from "@/utils/amazonSchemaParser.util";
 
 const type = process.env.AMAZON_ENV === "production" ? "PRODUCTION" : "SANDBOX";
-
+const { marketplaceId, sellerId, redirectUri } = getAmazonCredentials();
 export const amazonListingService = {
   getApplicationAuthToken: async (req: Request, res: Response) => {
     try {
@@ -37,7 +37,7 @@ export const amazonListingService = {
         return res.status(400).json({ error: "Missing productType parameter" });
       }
 
-      const spApiUrl = `https://sellingpartnerapi-eu.amazon.com/definitions/2020-09-01/productTypes/${productType}?marketplaceIds=A1F83G8C2ARO7P`;
+      const spApiUrl = `https://sellingpartnerapi-eu.amazon.com/definitions/2020-09-01/productTypes/${productType}?marketplaceIds=ATVPDKIKX0DER`;
 
       const accessToken = await getStoredAmazonAccessToken();
 
@@ -93,6 +93,8 @@ export const amazonListingService = {
       }
 
       // Read schema JSON from local test.json file instead of API calls
+      // const filePath = path.join(__dirname, "test.json");
+      // const filePath = path.join(__dirname, "test.json");
       const filePath = path.join(__dirname, "test.json");
       const jsonData = await fs.readFile(filePath, "utf-8");
       const actualSchema = JSON.parse(jsonData);
@@ -102,6 +104,23 @@ export const amazonListingService = {
       const transformedSchema = parser.parse();
 
       return res.json({ transformedSchema });
+    } catch (error: any) {
+      return res.status(500).json({ error: "Internal server error", details: error.message });
+    }
+  },
+  getAmazonSchemaOriginal: async (req: Request, res: Response) => {
+    try {
+      const productType = req.params.productType;
+      if (!productType) {
+        return res.status(400).json({ error: "Missing productType parameter" });
+      }
+
+      // Read schema JSON from local test.json file instead of API calls
+      const filePath = path.join(__dirname, "test.json");
+      const jsonData = await fs.readFile(filePath, "utf-8");
+      const actualSchema = JSON.parse(jsonData);
+
+      return res.json({ actualSchema });
     } catch (error: any) {
       return res.status(500).json({ error: "Internal server error", details: error.message });
     }
@@ -136,8 +155,340 @@ export const amazonListingService = {
       });
     }
   },
+  // Function to check the status of your submitted listing
+  checkListingStatus: async (sku: string): Promise<string> => {
+    try {
+      const token = await getStoredAmazonAccessToken();
+      if (!token) {
+        throw new Error("Missing or invalid Amazon access token");
+      }
 
-  addItemOnAmazon: async (listing: any): Promise<string> => {
+      // Get listing details
+      const response = await fetch(
+        `${redirectUri}/listings/2021-08-01/items/${sellerId}/${sku}?marketplaceIds=${marketplaceId}&includedData=summaries,attributes,issues,offers,fulfillmentAvailability,procurement`,
+        {
+          method: "GET",
+          headers: {
+            "x-amz-access-token": token,
+            "Content-Type": "application/json",
+            "x-amzn-api-sandbox-only": type === "SANDBOX" ? "true" : "false",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        return JSON.stringify(
+          {
+            status: 200,
+            statusText: "OK",
+            listingData: result,
+          },
+          null,
+          2
+        );
+      } else {
+        return JSON.stringify(
+          {
+            status: response.status,
+            statusText: response.statusText,
+            errorResponse: result,
+          },
+          null,
+          2
+        );
+      }
+    } catch (error: any) {
+      console.error("Error checking listing status:", error.message);
+      return JSON.stringify({
+        status: 500,
+        message: error.message || "Error checking listing status",
+      });
+    }
+  },
+
+  // Function to get submission status
+  getSubmissionStatus: async (submissionId: string): Promise<string> => {
+    try {
+      const token = await getStoredAmazonAccessToken();
+      if (!token) {
+        throw new Error("Missing or invalid Amazon access token");
+      }
+
+      // Check submission status
+      const response = await fetch(`${redirectUri}/listings/2021-08-01/submissions/${submissionId}`, {
+        method: "GET",
+        headers: {
+          "x-amz-access-token": token,
+          "Content-Type": "application/json",
+          "x-amzn-api-sandbox-only": type === "SANDBOX" ? "true" : "false",
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        return JSON.stringify(
+          {
+            status: 200,
+            statusText: "OK",
+            submissionStatus: result,
+          },
+          null,
+          2
+        );
+      } else {
+        return JSON.stringify(
+          {
+            status: response.status,
+            statusText: response.statusText,
+            errorResponse: result,
+          },
+          null,
+          2
+        );
+      }
+    } catch (error: any) {
+      console.error("Error checking submission status:", error.message);
+      return JSON.stringify({
+        status: 500,
+        message: error.message || "Error checking submission status",
+      });
+    }
+  },
+  // DELETE Listing Item Function
+  deleteItemFromAmazon: async (sku: string): Promise<string> => {
+    try {
+      const token = await getStoredAmazonAccessToken();
+      if (!token) {
+        throw new Error("Missing or invalid Amazon access token");
+      }
+
+      if (!sellerId || !sku) {
+        throw new Error("Missing required sellerId or SKU");
+      }
+
+      // URL encode the SKU to handle special characters
+      const encodedSku = encodeURIComponent(sku);
+
+      // Build query parameters
+      const queryParams = new URLSearchParams({
+        marketplaceIds: marketplaceId,
+      });
+
+      // Add optional issueLocale if available
+      if (process.env.AMAZON_ISSUE_LOCALE) {
+        queryParams.append("issueLocale", process.env.AMAZON_ISSUE_LOCALE);
+      }
+
+      // Make DELETE API call
+      const apiUrl = `${redirectUri}/listings/2021-08-01/items/${sellerId}/${encodedSku}?${queryParams.toString()}`;
+
+      const response = await fetch(apiUrl, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "x-amz-access-token": token,
+          Accept: "application/json",
+        },
+      });
+
+      const result = response.status === 204 ? { message: "Successfully deleted" } : await response.json();
+
+      if (response.ok) {
+        return JSON.stringify({
+          status: response.status,
+          statusText: "Successfully deleted listing",
+          sellerId: sellerId,
+          sku: sku,
+          response: result,
+        });
+      } else {
+        return JSON.stringify({
+          status: response.status,
+          statusText: "Failed to delete listing",
+          errorResponse: result,
+        });
+      }
+    } catch (error: any) {
+      console.error("Error deleting listing from Amazon:", error.message);
+      return JSON.stringify({
+        status: 500,
+        message: error.message || "Error deleting Amazon listing",
+      });
+    }
+  },
+
+  // GET Listing Item Function
+  getItemFromAmazon: async (listingId: any, includedData?: string[]): Promise<string> => {
+    try {
+      const token = await getStoredAmazonAccessToken();
+      if (!token) {
+        throw new Error("Missing or invalid Amazon access token");
+      }
+
+      const populatedListing: any = await Listing.findById(listingId);
+      if (!populatedListing) {
+        throw new Error("Listing not found");
+      }
+
+      const sku = populatedListing.amazonSku;
+
+      if (!sellerId || !sku) {
+        throw new Error("Missing required sellerId or SKU");
+      }
+
+      // URL encode the SKU to handle special characters
+      const encodedSku = encodeURIComponent(sku);
+
+      // Build query parameters
+      const queryParams = new URLSearchParams({
+        marketplaceIds: marketplaceId,
+      });
+
+      // Add includedData parameter (defaults to "summaries" as per API docs)
+      const dataToInclude = includedData && includedData.length > 0 ? includedData.join(",") : "summaries";
+      queryParams.append("includedData", dataToInclude);
+
+      // Add optional issueLocale if available
+      if (process.env.AMAZON_ISSUE_LOCALE) {
+        queryParams.append("issueLocale", process.env.AMAZON_ISSUE_LOCALE);
+      }
+
+      // Make GET API call
+      const apiUrl = `${redirectUri}/listings/2021-08-01/items/${sellerId}/${encodedSku}?${queryParams.toString()}`;
+      // console.log("API URL:", apiUrl);
+
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "x-amz-access-token": token,
+          Accept: "application/json",
+        },
+      });
+
+      // Log the response status and body for debugging
+      const responseBody = await response.text(); // Use text() to avoid body already consumed error
+      // console.log("Response Status:", response.status);
+      // console.log("Response Body:", responseBody);
+
+      // Try parsing JSON from the response body
+      let result;
+      try {
+        result = JSON.parse(responseBody);
+      } catch (err) {
+        console.error("Error parsing JSON from Amazon API response", err);
+        result = { error: "Failed to parse Amazon API response" };
+      }
+
+      if (response.ok) {
+        return JSON.stringify({
+          status: response.status,
+          statusText: "Successfully retrieved listing",
+          sellerId: sellerId,
+          sku: sku,
+          response: result,
+        });
+      } else {
+        return JSON.stringify({
+          status: response.status,
+          statusText: "Failed to retrieve listing",
+          errorResponse: result,
+        });
+      }
+    } catch (error: any) {
+      console.error("Error retrieving listing from Amazon:", error.message);
+      return JSON.stringify({
+        status: 500,
+        message: error.message || "Error retrieving Amazon listing",
+      });
+    }
+  },
+  getAllItemsFromAmazon: async (): Promise<string> => {
+    try {
+      const token = await getStoredAmazonAccessToken();
+      if (!token) {
+        throw new Error("Missing or invalid Amazon access token");
+      }
+
+      if (!sellerId) {
+        throw new Error("Missing required sellerId");
+      }
+
+      // URL for retrieving all listings (can use pagination if necessary)
+      const apiUrl = `${redirectUri}/listings/2021-08-01/items/${sellerId}?marketplaceIds=${marketplaceId}&limit=100`; // Limit can be changed as required
+
+      // Make GET API call
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "x-amz-access-token": token,
+          Accept: "application/json",
+        },
+      });
+
+      // Log the response status and body for debugging
+      const responseBody = await response.text(); // Use text() to avoid body already consumed error
+
+      // Try parsing JSON from the response body
+      let result;
+      try {
+        result = JSON.parse(responseBody);
+      } catch (err) {
+        console.error("Error parsing JSON from Amazon API response", err);
+        result = { error: "Failed to parse Amazon API response" };
+      }
+
+      if (response.ok) {
+        // Successfully retrieved listings, now return the data
+        return JSON.stringify({
+          status: response.status,
+          statusText: "Successfully retrieved all listings",
+          sellerId: sellerId,
+          response: result, // This will contain all the listings data
+        });
+      } else {
+        // If response is not okay, return the error response
+        return JSON.stringify({
+          status: response.status,
+          statusText: "Failed to retrieve listings",
+          errorResponse: result,
+        });
+      }
+    } catch (error: any) {
+      console.error("Error retrieving all listings from Amazon:", error.message);
+      return JSON.stringify({
+        status: 500,
+        message: error.message || "Error retrieving Amazon listings",
+      });
+    }
+  },
+
+  // Helper function to get listing with specific data sets
+  getDetailedItemFromAmazon: async (listing: any): Promise<string> => {
+    // Get comprehensive data including attributes, issues, offers, and fulfillment availability
+    const includedData = ["summaries", "attributes", "issues", "offers", "fulfillmentAvailability", "relationships"];
+
+    // return getItemFromAmazon(listing, includedData);
+    return amazonListingService.getItemFromAmazon(listing, includedData);
+  },
+
+  // Helper function to get only basic listing summary
+  getBasicItemFromAmazon: async (listing: any): Promise<string> => {
+    // Get only basic summary data (default)
+    return amazonListingService.getItemFromAmazon(listing, ["summaries"]);
+  },
+
+  // Helper function to check listing issues
+  checkListingIssues: async (listing: any): Promise<string> => {
+    // Get only issues data to check for problems
+    return amazonListingService.getItemFromAmazon(listing, ["issues"]);
+  },
+
+  addItemOnAmazon: async (listing: any): Promise<any> => {
     try {
       const token = await getStoredAmazonAccessToken();
       if (!token) {
@@ -153,76 +504,120 @@ export const amazonListingService = {
         throw new Error("Listing not found or failed to populate");
       }
 
-      const amazonData = populatedListing;
-      const productType = amazonData.productInfo.productCategory.amazonProductType || "LUGGAGE";
-
-      // Get product type definitions
-      const productDefinitions = await getProductTypeDefinitions(productType);
-
-      // Prepare product data
-      const productData: any = {
-        productType,
+      const {
+        productInfo: { sku, item_name, brand, product_description },
+        prodTechInfo: {
+          condition_type,
+          color,
+          model_name,
+          model_number,
+          generic_keyword,
+          memory_storage_capacity,
+          item_weight,
+          item_dimensions,
+          bullet_point,
+          max_order_quantity,
+          fulfillment_availability,
+        },
+        // prodPricing: { retailPrice },
+        // prodDelivery: { deliveryTime },
+        // prodSeo: { seoTitle, seoDescription },
+        // prodMedia: { images, videos },
+      } = populatedListing;
+      const amzData = populatedListing;
+      const categoryId =
+        amzData.productInfo.productCategory.amazonCategoryId ||
+        amzData.productInfo.productCategory.categoryId ||
+        "NOTEBOOK_COMPUTER"; // Fallback if no category is found
+      console.log("categoryId is", categoryId);
+      const productData = {
+        productType: categoryId,
         requirements: "LISTING",
         attributes: {
-          title: amazonData.productInfo?.title,
-          bullet_point: amazonData.productInfo?.description?.split(".").slice(0, 5),
-          description: amazonData.productInfo?.description,
-          brand: amazonData.prodTechInfo?.brand,
-          manufacturer: amazonData.prodTechInfo?.manufacturer,
-          item_type: productType,
-          condition_type: "New",
-          standard_price: {
-            amount: amazonData.prodPricing?.retailPrice,
-            currency: "GBP",
-          },
-          quantity: amazonData.prodPricing?.listingQuantity,
-          // Add more attributes based on product type
+          condition_type: condition_type,
+          item_name: item_name || [],
+          brand: brand || [],
+          manufacturer: [
+            {
+              value: brand?.[0]?.value || "Manufacturer Not Available",
+              marketplace_id: marketplaceId,
+            },
+          ],
+          model_name: model_name || [],
+          model_number: model_number || [],
+          product_description: product_description || [],
+          color: color || [],
+          memory_storage_capacity: memory_storage_capacity || [],
+          item_weight: item_weight || [],
+          item_dimensions: item_dimensions || [],
+          bullet_point: bullet_point || [],
+          max_order_quantity: max_order_quantity || [],
+          generic_keyword: generic_keyword || [],
+          fulfillment_availability: fulfillment_availability || [],
         },
       };
 
-      // Handle variations if present
-      if (amazonData.listingHasVariations) {
-        productData.attributes.variations = amazonData.prodPricing?.selectedVariations?.map((variation: any) => ({
-          sku: variation.variationId?.sku,
-          price: variation.retailPrice,
-          quantity: variation.listingQuantity,
-          attributes: variation.variationId?.attributes,
-        }));
+      console.log("🔗 Preparing to create Amazon listing with data:", JSON.stringify(productData, null, 2));
+
+      const response = await fetch(
+        `${redirectUri}/listings/2021-08-01/items/${sellerId}/${sku || "ABC-123-DUMMY"}?marketplaceIds=${marketplaceId}`,
+        {
+          method: "PUT",
+          headers: {
+            "x-amz-access-token": token,
+            "Content-Type": "application/json",
+            "x-amzn-api-sandbox-only": type === "SANDBOX" ? "true" : "false", // Use sandbox mode if type is SANDBOX
+          },
+          body: JSON.stringify(productData),
+        }
+      );
+      console.log(
+        "url is",
+        `${redirectUri}/listings/2021-08-01/items/${sellerId}/${sku || "ABC-123_DUMMY"}?marketplaceIds=${marketplaceId}`
+      );
+      const rawResponse = await response.text(); // Read the raw response from Amazon
+
+      // Log the raw response for debugging purposes
+      console.log("🔍 Raw response from Amazon:", rawResponse);
+
+      // Attempt to parse the raw response as JSON
+      let jsonObj: any = {};
+      try {
+        jsonObj = JSON.parse(rawResponse); // Parse the raw response
+      } catch (error) {
+        console.error("Error parsing the response as JSON:", error);
       }
 
-      // Make API call to create listing
-      const response = await fetch(`${process.env.AMAZON_API_ENDPOINT}/catalog/2022-04-01/items`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "x-amz-access-token": token,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(productData),
-      });
+      // Extract necessary fields from the response
+      const status = jsonObj?.status;
+      const submissionId = jsonObj?.submissionId;
+      const issues = jsonObj?.issues;
 
-      const result = await response.json();
-
-      if (response.ok) {
-        return JSON.stringify({
+      // If status is ACCEPTED, return the submissionId
+      if (status === "ACCEPTED" && submissionId) {
+        return {
           status: 200,
           statusText: "OK",
-          itemId: result.itemId,
-          response: result,
-        });
+          sku,
+          submissionId, // Return submissionId
+          response: jsonObj, // Return the parsed response as an object (formatted)
+        };
       } else {
-        return JSON.stringify({
-          status: response.status,
+        // If there are issues, return them in the response
+        return {
+          status: 400,
           statusText: "Failed to create listing",
-          errorResponse: result,
-        });
+          errorResponse: issues || jsonObj,
+          response: jsonObj, // Return the parsed response as an object (formatted)
+        };
       }
     } catch (error: any) {
       console.error("Error adding listing on Amazon:", error.message);
-      return JSON.stringify({
+
+      return {
         status: 500,
         message: error.message || "Error syncing with Amazon API",
-      });
+      };
     }
   },
 
@@ -243,47 +638,158 @@ export const amazonListingService = {
       }
 
       const amazonData = populatedListing;
-      const productType = amazonData.productInfo.productCategory.amazonProductType || "LUGGAGE";
+      const productType = amazonData.productInfo.productCategory.amazonProductType;
+      const sku = amazonData.sku; // Make sure your listing has an SKU field
 
-      // Prepare update data
-      const updateData: any = {
-        productType,
-        requirements: "LISTING",
-        attributes: {
-          title: amazonData.productInfo?.title,
-          bullet_point: amazonData.productInfo?.description?.split(".").slice(0, 5),
-          description: amazonData.productInfo?.description,
-          standard_price: {
-            amount: amazonData.prodPricing?.retailPrice,
-            currency: "GBP",
-          },
-          quantity: amazonData.prodPricing?.listingQuantity,
-        },
-      };
-
-      // Handle variations if present
-      if (amazonData.listingHasVariations) {
-        updateData.attributes.variations = amazonData.prodPricing?.selectedVariations?.map((variation: any) => ({
-          sku: variation.variationId?.sku,
-          price: variation.retailPrice,
-          quantity: variation.listingQuantity,
-          attributes: variation.variationId?.attributes,
-        }));
+      if (!sellerId || !sku) {
+        throw new Error("Missing required sellerId or SKU");
       }
 
-      // Make API call to update listing
-      const response = await fetch(
-        `${process.env.AMAZON_API_ENDPOINT}/catalog/2022-04-01/items/${amazonData.amazonItemId}`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "x-amz-access-token": token,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updateData),
+      // Prepare JSON Patch operations according to API docs
+      const patches: any[] = [];
+
+      // Update title if present
+      if (amazonData.productInfo?.title) {
+        patches.push({
+          op: "replace",
+          path: "/attributes/item_name",
+          value: [
+            {
+              value: amazonData.productInfo.title,
+              marketplace_id: marketplaceId,
+            },
+          ],
+        });
+      }
+
+      // Update bullet points if present
+      if (amazonData.productInfo?.description) {
+        const bulletPoints = amazonData.productInfo.description
+          .split(".")
+          .slice(0, 5)
+          .filter((point: any) => point.trim().length > 0)
+          .map((point: any) => point.trim());
+
+        if (bulletPoints.length > 0) {
+          patches.push({
+            op: "replace",
+            path: "/attributes/bullet_point",
+            value: bulletPoints.map((point: any) => ({
+              value: point,
+              marketplace_id: marketplaceId,
+            })),
+          });
         }
-      );
+      }
+
+      // Update description if present
+      if (amazonData.productInfo?.description) {
+        patches.push({
+          op: "replace",
+          path: "/attributes/description",
+          value: [
+            {
+              value: amazonData.productInfo.description,
+              marketplace_id: marketplaceId,
+            },
+          ],
+        });
+      }
+
+      // Update price if present
+      if (amazonData.prodPricing?.retailPrice) {
+        patches.push({
+          op: "replace",
+          path: "/attributes/list_price",
+          value: [
+            {
+              value: {
+                Amount: amazonData.prodPricing.retailPrice,
+                CurrencyCode: "GBP",
+              },
+              marketplace_id: marketplaceId,
+            },
+          ],
+        });
+      }
+
+      // Update quantity if present
+      if (amazonData.prodPricing?.listingQuantity !== undefined) {
+        patches.push({
+          op: "replace",
+          path: "/attributes/fulfillment_availability",
+          value: [
+            {
+              value: [
+                {
+                  fulfillment_channel_code: "DEFAULT",
+                  quantity: amazonData.prodPricing.listingQuantity,
+                },
+              ],
+              marketplace_id: marketplaceId,
+            },
+          ],
+        });
+      }
+
+      // Handle variations if present
+      if (amazonData.listingHasVariations && amazonData.prodPricing?.selectedVariations?.length > 0) {
+        const variations = amazonData.prodPricing.selectedVariations.map((variation: any) => ({
+          sku: variation.variationId?.sku,
+          attributes: variation.variationId?.attributes,
+          price: variation.retailPrice,
+          quantity: variation.listingQuantity,
+        }));
+
+        patches.push({
+          op: "replace",
+          path: "/attributes/child_parent_sku_relationship",
+          value: [
+            {
+              value: variations.map((v: any) => ({
+                child_sku: v.sku,
+                parent_sku: sku,
+              })),
+              marketplace_id: marketplaceId,
+            },
+          ],
+        });
+      }
+
+      if (patches.length === 0) {
+        throw new Error("No valid data to update");
+      }
+
+      // Prepare request body according to ListingsItemPatchRequest schema
+      const requestBody = {
+        productType: productType,
+        patches: patches,
+      };
+
+      // Build query parameters
+      const queryParams = new URLSearchParams({
+        marketplaceIds: marketplaceId,
+        includedData: "issues", // Default as per API docs
+      });
+
+      // Add optional parameters if needed
+      if (process.env.AMAZON_ISSUE_LOCALE) {
+        queryParams.append("issueLocale", process.env.AMAZON_ISSUE_LOCALE);
+      }
+
+      // Make API call using the correct endpoint structure
+      const apiUrl = `${redirectUri}/listings/2021-08-01/items/${sellerId}/${sku}?${queryParams.toString()}`;
+
+      const response = await fetch(apiUrl, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "x-amz-access-token": token,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
 
       const result = await response.json();
 
@@ -291,7 +797,8 @@ export const amazonListingService = {
         return JSON.stringify({
           status: 200,
           statusText: "OK",
-          itemId: amazonData.amazonItemId,
+          sellerId: sellerId,
+          sku: sku,
           response: result,
         });
       } else {
@@ -389,7 +896,6 @@ export const amazonListingService = {
       }
 
       // Accept dynamic marketplaceId and environment via query parameters
-      let marketplaceId = process.env.AMAZON_MARKETPLACE_ID; // Default UK here
 
       const env = process.env.AMAZON_TOKEN_ENV === "production" ? "production" : "sandbox";
       console.log(`Environment set to: ${env}`);

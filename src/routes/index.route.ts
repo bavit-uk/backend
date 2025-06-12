@@ -14,6 +14,7 @@ import { productBrand } from "./product-brand.route";
 import { listing } from "./listing.route";
 import { inventory } from "./inventory.route";
 import { bundle } from "./bundle.route";
+import { workshift } from "./workshift.route";
 import { permissions } from "./permissions.route";
 import { me } from "./me.route";
 import { document } from "./documents.route"
@@ -40,6 +41,7 @@ import { complaintcategory } from "./complaintcategory.route";
 import { expense } from "./expense.route";
 import { expensecategory } from "./expensecategory.route";
 import { complaint } from "./complaint.routes";
+import { revenue } from "./revenue.routes";
 
 // Create a new router to handle all routes
 const router: Router = Router();
@@ -62,6 +64,7 @@ const routes: {
   expense, 
   document,
   expensecategory,
+  workshift,
   supplier,
   complaintcategory,
   supplierCategory,
@@ -87,6 +90,7 @@ const routes: {
   taxes,
   faqsPolicy,
   chat,
+  revenue,
   // discriminator,
 };
 
