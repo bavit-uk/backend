@@ -11,6 +11,22 @@ export interface IFile {
   filename: string;
 }
 
+export interface  IAddress extends Document {
+  label?: string;
+  address: string;
+  city: string;
+  appartment?: string;
+  postalCode: string;
+  country: string;
+  county?: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+  radius?: number; // in meters
+}
+
+
 export interface IUser extends Document {
   firstName: string;
   lastName: string;
@@ -34,6 +50,8 @@ export interface IUser extends Document {
   resetPasswordExpires?: number;
   isBlocked: boolean;
   additionalDocuments: [IFile];
+  address?: IAddress[];
+  workShift?: Types.ObjectId;
   // isSupplier: boolean;
 }
 
@@ -57,4 +75,4 @@ export interface IUserMethods {
   hashPassword: (password: string) => string;
 }
 
-export type UserModel = Model<IUser, unknown, IUserMethods>;
+export type UserModel = Model<IUser, unknown,IAddress, IUserMethods>;

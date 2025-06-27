@@ -2,7 +2,8 @@ import mongoose, { Schema, model } from "mongoose";
 import { REGEX } from "@/constants/regex";
 import { compareSync, hashSync } from "bcrypt";
 import { ENUMS } from "@/constants/enum";
-import { IUser, IUserMethods, UserModel } from "@/contracts/user.contract";
+import { IUser, IUserMethods, UserModel  , IAddress} from "@/contracts/user.contract";
+
 
 const validateEmail = (email: string) => REGEX.EMAIL.test(email);
 
@@ -15,6 +16,24 @@ export const fileSchema = {
   type: { type: String },
   filename: { type: String },
 };
+
+
+const addressSchema = new Schema<IAddress>({
+  label: { type: String },
+  address: { type: String, required: true },
+  city: { type: String, required: true },
+  appartment: { type: String },
+  postalCode: { type: String, required: true },
+  country: { type: String, required: true },
+  county: { type: String },
+  coordinates: {
+    lat: { type: Number },
+    lng: { type: Number }
+  },
+  radius: { type: Number, default: 100 } // default 100m radius
+});
+
+
 
 const schema = new Schema<IUser, UserModel, IUserMethods>(
   {
@@ -53,6 +72,8 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
     resetPasswordExpires: { type: Number },
     additionalDocuments: { type: [fileSchema], _id: false },
     isBlocked: { type: Boolean, default: false },
+    address: { type: [addressSchema]},
+    workShift: { type: Schema.Types.ObjectId, ref: "Shift" },
 
     // supplierKey added but not required by default
     supplierKey: { type: String, required: false },
