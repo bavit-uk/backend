@@ -840,7 +840,7 @@ export const ebayListingService = {
       // const verificationToken = process.env.EBAY_VERIFICATION_TOKEN;
       // const endpoint = process.env.EBAY_ENDPOINT_URL;
       const verificationToken = "EeNv89Ubsq8912NX6vJ5VP78D9cyeUlf";
-      const endpoint = "https://bavit-ebay-4d05ee8f0363.herokuapp.com/api/ebay/auth/ebay";
+      const endpoint = "https://bavit-ebay-4d05ee8f0363.herokuapp.com/api/ebay/notifications";
       const hash = createHash("sha256");
       hash.update(challengeCode as string);
       hash.update(verificationToken);
