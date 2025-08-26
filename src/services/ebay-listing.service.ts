@@ -860,6 +860,19 @@ export const ebayListingService = {
     }
   },
 
+  captureNotification: async (req: Request, res: Response): Promise<any> => {
+    try {
+      console.log("🔍 Received eBay webhook notification");
+      console.log("📝 Notification data:", req.body);
+      return res.status(200).json({
+        message: "Notification captured",
+      });
+    } catch (error: any) {
+      console.error("Error capturing notification:", error.message);
+      throw new Error("Error capturing notification");
+    }
+  },
+
   // This endpoint handles both challenge validation (GET) and account deletion notifications (POST)
   accountDeletion: async (req: Request, res: Response): Promise<any> => {
     try {
