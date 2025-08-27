@@ -685,68 +685,27 @@ export class EmailAccountController {
 
         let threads;
         try {
-          threads = await EmailThreadModel.aggregate([
-            {
-              $lookup: {
-                from: "emails",
-                localField: "threadId",
-                foreignField: "threadId",
-                as: "emails",
-                pipeline: [
-                  { $match: threadEmailFilter },
-                  { $sort: { receivedAt: -1 } },
-                  { $limit: 20 }, // Increase limit to show more emails per thread
-                ],
-              },
-            },
-            {
-              $match: {
-                "emails.0": { $exists: true }, // Only threads with matching emails
-                accountId: account._id, // Ensure thread belongs to this account
-              },
-            },
-            {
-              $addFields: {
-                unreadCount: {
-                  $size: {
-                    $filter: {
-                      input: "$emails",
-                      cond: { $eq: ["$$this.isRead", false] },
-                    },
-                  },
-                },
-                latestEmail: { $arrayElemAt: ["$emails", 0] },
-                // Add thread metadata for better display
-                threadDirection: { $arrayElemAt: ["$emails.direction", 0] },
-                threadSubject: { $arrayElemAt: ["$emails.subject", 0] },
-                // Add email count for this thread
-                emailCount: { $size: "$emails" },
-                // Add participants from all emails in thread (simplified to avoid $concatArrays issues)
-                participants: {
-                  $map: {
-                    input: { $slice: ["$emails", 5] }, // Limit to first 5 emails to avoid complexity
-                    as: "email",
-                    in: {
-                      from: "$$email.from",
-                      to: "$$email.to",
-                      emailId: "$$email._id",
-                    },
-                  },
-                },
-              },
-            },
-            { $sort: { lastMessageAt: -1 } },
-            { $skip: parseInt(offset as string) },
-            { $limit: parseInt(limit as string) },
-          ]);
+          // Simple query to get thread metadata only - no email lookup needed
+          threads = await EmailThreadModel.find({
+            accountId: account._id,
+          })
+            .sort({ lastMessageAt: -1 })
+            .skip(parseInt(offset as string))
+            .limit(parseInt(limit as string))
+            .lean();
 
           console.log(`🧵 Found ${threads.length} threads for account ${account.emailAddress}`);
+
+          // Get total count for pagination
+          const totalCount = await EmailThreadModel.countDocuments({
+            accountId: account._id,
+          });
 
           res.json({
             success: true,
             data: {
               threads,
-              totalCount: threads.length, // Add totalCount for pagination
+              totalCount: totalCount, // Use actual total count for pagination
               account: {
                 id: account._id,
                 emailAddress: account.emailAddress,
