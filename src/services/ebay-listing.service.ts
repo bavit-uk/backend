@@ -14,6 +14,7 @@ import {
   refreshEbayAccessToken,
 } from "@/utils/ebay-helpers.util";
 import { Listing } from "@/models";
+import { IntegrationTokenModel } from "@/models/integration-token.model";
 import { IParamsRequest, IQueryRequest } from "@/contracts/request.contract";
 const type: any =
   process.env.EBAY_TOKEN_ENV === "production" || process.env.EBAY_TOKEN_ENV === "sandbox"
@@ -155,13 +156,52 @@ export const ebayListingService = {
         throw new Error("No authorization code received");
       }
 
-      const accessToken = await exchangeCodeForAccessToken(code as string, "production", "true");
+      const tokenResponse = await exchangeCodeForAccessToken(code as string, "production", "true");
 
-      if (!accessToken) {
+      if (!tokenResponse) {
         throw new Error("Failed to exchange code for access token");
       }
 
-      console.log("✅ Token exchange successful, redirecting to frontend...");
+      const parsedToken = typeof tokenResponse === "string" ? JSON.parse(tokenResponse) : tokenResponse;
+
+      // Extract token data from the response structure
+      const tokenData = parsedToken.accessToken || parsedToken;
+
+      if (!tokenData.access_token) {
+        console.error("Invalid token response:", tokenData);
+        throw new Error("Invalid token response - missing access_token");
+      }
+
+      console.log("✅ Token exchange successful, saving to database...");
+
+      // Save token to database
+      try {
+        await IntegrationTokenModel.findOneAndUpdate(
+          {
+            provider: "ebay",
+            environment: "PRODUCTION",
+            useClient: true,
+          },
+          {
+            provider: "ebay",
+            environment: "PRODUCTION",
+            useClient: true,
+            access_token: tokenData.access_token,
+            refresh_token: tokenData.refresh_token,
+            expires_in: tokenData.expires_in,
+            refresh_token_expires_in: tokenData.refresh_token_expires_in,
+            generated_at: Date.now(),
+            token_type: tokenData.token_type,
+            created_at: new Date(),
+            updated_at: new Date(),
+          },
+          { upsert: true, new: true }
+        );
+        console.log("✅ Token successfully saved to database");
+      } catch (dbError) {
+        console.error("❌ Failed to save token to database:", dbError);
+        throw new Error("Failed to save token to database");
+      }
 
       // Redirect to dashboard with success status
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
