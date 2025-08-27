@@ -150,8 +150,8 @@ const EbayLineItemPropertiesSchema = new Schema(
 
 const EbayLineItemFulfillmentInstructionsSchema = new Schema(
   {
-    minEstimatedDeliveryDate: { type: String, required: true },
-    maxEstimatedDeliveryDate: { type: String, required: true },
+    minEstimatedDeliveryDate: { type: String },
+    maxEstimatedDeliveryDate: { type: String },
     shipByDate: { type: String },
     guaranteedDelivery: { type: Boolean },
   },
