@@ -31,6 +31,7 @@ export const ebay = (router: Router) => {
   router.get("/account-deletion", ebayListingService.accountDeletion);
   router.get("/notifications", ebayListingService.createWebhook);
   router.post("/notifications", ebayListingService.captureNotification);
+  router.post("/notifications-preferences-one", ebayListingService.captureNotificationPreferencesOne);
 
   // router.get("/inventory", ebayListingService.getAllInventory);
   // router.get("/inventory/get-all-categories", ebayListingService.getAllCategories);
