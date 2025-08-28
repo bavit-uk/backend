@@ -18,7 +18,7 @@ import { EbayNotificationModel } from "@/models/ebay-notification.model";
 const type: any =
   process.env.EBAY_TOKEN_ENV === "production" || process.env.EBAY_TOKEN_ENV === "sandbox"
     ? process.env.EBAY_TOKEN_ENV
-    : "production";
+    : "sandbox";
 const useClient =
   process.env.USE_CLIENT === "true" || process.env.USE_CLIENT === "false" ? process.env.USE_CLIENT : "true";
 const ebayUrl = type === "production" ? "https://api.ebay.com/ws/api.dll" : "https://api.sandbox.ebay.com/ws/api.dll";
@@ -116,6 +116,7 @@ export const ebayListingService = {
     try {
       // const type = req.query.type as "production" | "sandbox";
 
+      console.log("Type", type);
       const authUrl = getEbayAuthURL(type);
       return res.status(StatusCodes.OK).json({ status: StatusCodes.OK, message: ReasonPhrases.OK, authUrl });
     } catch (error) {

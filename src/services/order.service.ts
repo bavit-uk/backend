@@ -800,111 +800,111 @@ export const orderService = {
       const newOrder = new Order(orderData);
       await newOrder.save();
 
-      // Create tasks for the converted order based on workflows
-      try {
-        // 1) Resolve relevant workflows for all item conditions
-        const appliesToOrderType = newOrder.type ?? ("SALE" as any);
-        const itemConditions = Array.from(
-          new Set((newOrder.items || []).map((it: any) => (it?.condition as unknown as string) || ""))
-        ).filter(Boolean);
+      // // Create tasks for the converted order based on workflows
+      // try {
+      //   // 1) Resolve relevant workflows for all item conditions
+      //   const appliesToOrderType = newOrder.type ?? ("SALE" as any);
+      //   const itemConditions = Array.from(
+      //     new Set((newOrder.items || []).map((it: any) => (it?.condition as unknown as string) || ""))
+      //   ).filter(Boolean);
 
-        const workflows = await ProductTypeWorkflow.find({
-          isActive: true,
-          $or: [{ appliesToOrderType: appliesToOrderType }, { appliesToOrderType: "ANY" }],
-          $and: [
-            {
-              $or: [
-                { appliesToCondition: "any" },
-                ...(itemConditions.length > 0 ? itemConditions.map((c) => ({ appliesToCondition: c })) : []),
-              ],
-            },
-          ],
-        })
-          .populate({ path: "steps.taskTypeId" })
-          .lean();
+      //   const workflows = await ProductTypeWorkflow.find({
+      //     isActive: true,
+      //     $or: [{ appliesToOrderType: appliesToOrderType }, { appliesToOrderType: "ANY" }],
+      //     $and: [
+      //       {
+      //         $or: [
+      //           { appliesToCondition: "any" },
+      //           ...(itemConditions.length > 0 ? itemConditions.map((c) => ({ appliesToCondition: c })) : []),
+      //         ],
+      //       },
+      //     ],
+      //   })
+      //     .populate({ path: "steps.taskTypeId" })
+      //     .lean();
 
-        // 2) For each item, create tasks based on matching workflows
-        const createdTaskIds: Types.ObjectId[] = [];
-        for (const item of newOrder.items || []) {
-          const itemCondition = (item?.condition as unknown as string) || undefined;
+      //   // 2) For each item, create tasks based on matching workflows
+      //   const createdTaskIds: Types.ObjectId[] = [];
+      //   for (const item of newOrder.items || []) {
+      //     const itemCondition = (item?.condition as unknown as string) || undefined;
 
-          const matchingForItem = workflows
-            .filter((wf: any) => {
-              return wf.appliesToOrderType === appliesToOrderType || wf.appliesToOrderType === "ANY";
-            })
-            .filter((wf: any) => wf.appliesToCondition === "any" || wf.appliesToCondition === itemCondition);
+      //     const matchingForItem = workflows
+      //       .filter((wf: any) => {
+      //         return wf.appliesToOrderType === appliesToOrderType || wf.appliesToOrderType === "ANY";
+      //       })
+      //       .filter((wf: any) => wf.appliesToCondition === "any" || wf.appliesToCondition === itemCondition);
 
-          // For each physical unit (quantity), create a separate set of tasks
-          const quantityCount = Math.max(Number(item?.quantity ?? 1), 1);
-          for (let unitIndex = 1; unitIndex <= quantityCount; unitIndex++) {
-            for (const wf of matchingForItem) {
-              const steps = [...(wf.steps || [])].sort((a: any, b: any) => a.stepOrder - b.stepOrder);
-              const stepIndexToTaskId: Record<number, Types.ObjectId> = {};
+      //     // For each physical unit (quantity), create a separate set of tasks
+      //     const quantityCount = Math.max(Number(item?.quantity ?? 1), 1);
+      //     for (let unitIndex = 1; unitIndex <= quantityCount; unitIndex++) {
+      //       for (const wf of matchingForItem) {
+      //         const steps = [...(wf.steps || [])].sort((a: any, b: any) => a.stepOrder - b.stepOrder);
+      //         const stepIndexToTaskId: Record<number, Types.ObjectId> = {};
 
-              for (const step of steps) {
-                const taskType: any = step.taskTypeId;
+      //         for (const step of steps) {
+      //           const taskType: any = step.taskTypeId;
 
-                const baseEstimated = taskType?.defaultEstimatedTimeMinutes ?? 30;
-                const basePriority = taskType?.defaultPriority ?? 2;
-                const baseAssignedRole = taskType?.defaultAssignedRole ?? null;
-                const baseName = taskType?.name ?? "Workflow Task";
+      //           const baseEstimated = taskType?.defaultEstimatedTimeMinutes ?? 30;
+      //           const basePriority = taskType?.defaultPriority ?? 2;
+      //           const baseAssignedRole = taskType?.defaultAssignedRole ?? null;
+      //           const baseName = taskType?.name ?? "Workflow Task";
 
-                const estimatedTimeMinutes = step.overrideEstimatedTimeMinutes ?? baseEstimated;
-                const priority = step.overridePriority ?? basePriority;
-                const defaultAssignedRole = step.overrideDefaultAssignedRole ?? baseAssignedRole;
-                const name = quantityCount > 1 ? `${baseName} (unit ${unitIndex}/${quantityCount})` : baseName;
+      //           const estimatedTimeMinutes = step.overrideEstimatedTimeMinutes ?? baseEstimated;
+      //           const priority = step.overridePriority ?? basePriority;
+      //           const defaultAssignedRole = step.overrideDefaultAssignedRole ?? baseAssignedRole;
+      //           const name = quantityCount > 1 ? `${baseName} (unit ${unitIndex}/${quantityCount})` : baseName;
 
-                const dependentOnTaskIds: Types.ObjectId[] = [];
-                if (Array.isArray(step.dependsOnSteps) && step.dependsOnSteps.length > 0) {
-                  for (const dep of step.dependsOnSteps) {
-                    const depIndex = parseInt(dep, 10);
-                    const depTaskId = stepIndexToTaskId[depIndex];
-                    if (depTaskId) dependentOnTaskIds.push(depTaskId);
-                  }
-                }
+      //           const dependentOnTaskIds: Types.ObjectId[] = [];
+      //           if (Array.isArray(step.dependsOnSteps) && step.dependsOnSteps.length > 0) {
+      //             for (const dep of step.dependsOnSteps) {
+      //               const depIndex = parseInt(dep, 10);
+      //               const depTaskId = stepIndexToTaskId[depIndex];
+      //               if (depTaskId) dependentOnTaskIds.push(depTaskId);
+      //             }
+      //           }
 
-                const taskDoc = await OrderTask.create({
-                  orderId: newOrder._id,
-                  orderItemId: item?.itemId ?? null,
-                  taskTypeId: taskType?._id,
-                  name,
-                  priority,
-                  estimatedTimeMinutes,
-                  status: dependentOnTaskIds.length > 0 ? "Pending" : "Ready",
-                  isCustom: false,
-                  defaultAssignedRole: defaultAssignedRole,
-                  dependentOnTaskIds,
-                  pendingDependenciesCount: dependentOnTaskIds.length,
-                  externalRefId: item?.itemId ? `${item.itemId}:${unitIndex}` : undefined,
-                  logs: [
-                    {
-                      userName: "System",
-                      action: "Task created from workflow for converted eBay order",
-                      details: `Workflow ${wf.name} step ${step.stepOrder} for item ${item?.itemId ?? "n/a"} unit ${unitIndex}/${quantityCount} - Converted from eBay order ${ebayOrder.orderId}`,
-                      timestamp: new Date(),
-                    },
-                  ],
-                });
+      //           const taskDoc = await OrderTask.create({
+      //             orderId: newOrder._id,
+      //             orderItemId: item?.itemId ?? null,
+      //             taskTypeId: taskType?._id,
+      //             name,
+      //             priority,
+      //             estimatedTimeMinutes,
+      //             status: dependentOnTaskIds.length > 0 ? "Pending" : "Ready",
+      //             isCustom: false,
+      //             defaultAssignedRole: defaultAssignedRole,
+      //             dependentOnTaskIds,
+      //             pendingDependenciesCount: dependentOnTaskIds.length,
+      //             externalRefId: item?.itemId ? `${item.itemId}:${unitIndex}` : undefined,
+      //             logs: [
+      //               {
+      //                 userName: "System",
+      //                 action: "Task created from workflow for converted eBay order",
+      //                 details: `Workflow ${wf.name} step ${step.stepOrder} for item ${item?.itemId ?? "n/a"} unit ${unitIndex}/${quantityCount} - Converted from eBay order ${ebayOrder.orderId}`,
+      //                 timestamp: new Date(),
+      //               },
+      //             ],
+      //           });
 
-                stepIndexToTaskId[step.stepOrder] = taskDoc._id as Types.ObjectId;
-                createdTaskIds.push(taskDoc._id as Types.ObjectId);
-              }
-            }
-          }
-        }
+      //           stepIndexToTaskId[step.stepOrder] = taskDoc._id as Types.ObjectId;
+      //           createdTaskIds.push(taskDoc._id as Types.ObjectId);
+      //         }
+      //       }
+      //     }
+      //   }
 
-        // 3) Update the order with the created task IDs
-        if (createdTaskIds.length > 0) {
-          await Order.findByIdAndUpdate(
-            newOrder._id,
-            { $addToSet: { taskIds: { $each: createdTaskIds } } },
-            { new: true }
-          );
-        }
-      } catch (taskError) {
-        console.error("Error creating tasks for converted eBay order:", taskError);
-        // Don't fail the conversion if task creation fails, just log it
-      }
+      //   // 3) Update the order with the created task IDs
+      //   if (createdTaskIds.length > 0) {
+      //     await Order.findByIdAndUpdate(
+      //       newOrder._id,
+      //       { $addToSet: { taskIds: { $each: createdTaskIds } } },
+      //       { new: true }
+      //     );
+      //   }
+      // } catch (taskError) {
+      //   console.error("Error creating tasks for converted eBay order:", taskError);
+      //   // Don't fail the conversion if task creation fails, just log it
+      // }
 
       return newOrder;
     } catch (error: any) {
@@ -1011,6 +1011,86 @@ export const orderService = {
     } catch (error: any) {
       console.error("Error fetching eBay orders:", error);
       throw new Error(error.message || "Error fetching eBay orders");
+    }
+  },
+
+  // Update order items with listing, inventory, stock, and quantity details
+  updateOrderItems: async (orderId: string, items: any[], recalculateTotals: boolean = true) => {
+    try {
+      // Find the order
+      const order = await Order.findById(orderId);
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      // Update each item in the order
+      for (const updateItem of items) {
+        const { itemId, ...updateData } = updateItem;
+
+        // Find the item in the order by itemId
+        const itemIndex = order.items.findIndex((item) => item.itemId === itemId);
+        if (itemIndex === -1) {
+          throw new Error("Item not found");
+        }
+
+        // Update the item with new data
+        const originalItem = order.items[itemIndex];
+
+        // Update fields that are provided in the request
+        const updatedItem = {
+          ...originalItem,
+          ...updateData,
+        };
+
+        // Recalculate item totals if quantity or prices changed
+        if (updateData.quantity || updateData.unitPrice || updateData.discountAmount || updateData.taxAmount) {
+          const quantity = updateData.quantity ?? originalItem.quantity;
+          const unitPrice = updateData.unitPrice ?? originalItem.unitPrice;
+          const discountAmount = updateData.discountAmount ?? originalItem.discountAmount;
+          const taxAmount = updateData.taxAmount ?? originalItem.taxAmount;
+
+          updatedItem.itemTotal = quantity * unitPrice;
+          updatedItem.finalPrice = updatedItem.itemTotal - discountAmount + taxAmount;
+        }
+
+        // Replace the item in the order
+        order.items[itemIndex] = updatedItem as any;
+      }
+
+      // Recalculate order totals if requested
+      if (recalculateTotals) {
+        let subtotal = 0;
+        let totalDiscount = 0;
+        let taxAmount = 0;
+
+        for (const item of order.items) {
+          subtotal += item.itemTotal;
+          totalDiscount += item.discountAmount;
+          taxAmount += item.taxAmount;
+        }
+
+        order.subtotal = subtotal;
+        order.totalDiscount = totalDiscount;
+        order.taxAmount = taxAmount;
+        order.grandTotal = subtotal - totalDiscount + taxAmount + order.shippingCost;
+      }
+
+      // Save the updated order
+      await order.save();
+
+      // Return the updated order with populated fields
+      const updatedOrder = await Order.findById(orderId)
+        .populate("customer", "firstName lastName email")
+        .populate("customerId", "firstName lastName email")
+        .populate("items.listingId", "title description")
+        .populate("items.inventoryId", "sku name")
+        .populate("items.stockId", "quantity location")
+        .populate("products.product", "name sku");
+
+      return updatedOrder;
+    } catch (error: any) {
+      console.error("Error updating order items:", error);
+      throw new Error(error.message || "Failed to update order items");
     }
   },
 };

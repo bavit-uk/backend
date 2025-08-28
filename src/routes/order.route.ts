@@ -26,6 +26,14 @@ export const orderRoutes = (router: Router) => {
     orderController.updateOrderStatus
   );
 
+  // Order items management
+  router.patch(
+    "/:id/items",
+    orderValidation.validateOrderId,
+    orderValidation.validateUpdateOrderItems,
+    orderController.updateOrderItems
+  );
+
   // Customer-specific routes
   router.get("/customer/:customerId", orderController.getOrdersByCustomerId);
 

@@ -492,4 +492,55 @@ export const orderValidation = {
       });
     }
   },
+
+  // Validation for updating order items
+  validateUpdateOrderItems: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Update order item schema with listing, inventory, and stock fields
+      const updateOrderItemSchema = z.object({
+        itemId: z.string().min(1, "Item ID is required"),
+        listingId: objectId.optional(),
+        inventoryId: objectId.optional(),
+        stockId: objectId.optional(),
+        externalListingId: z.string().trim().optional(),
+        externalListingUrl: z.string().trim().optional(),
+        sku: z.string().trim().optional(),
+        name: z.string().trim().min(1, "Product name is required").optional(),
+        description: z.string().trim().optional(),
+        quantity: z.number().min(1, "Quantity must be at least 1").optional(),
+        unitPrice: z.number().min(0, "Unit price must be non-negative").optional(),
+        condition: productConditionEnum.optional(),
+        attributes: z.array(productAttributeSchema).optional(),
+        components: z.array(bundleComponentSchema).optional(),
+        itemTotal: z.number().min(0, "Item total must be non-negative").optional(),
+        discountAmount: z.number().min(0, "Discount amount must be non-negative").optional(),
+        taxAmount: z.number().min(0, "Tax amount must be non-negative").optional(),
+        finalPrice: z.number().min(0, "Final price must be non-negative").optional(),
+      });
+
+      const updateOrderItemsSchema = z.object({
+        items: z.array(updateOrderItemSchema).min(1, "At least one item is required"),
+        recalculateTotals: z.boolean().default(true),
+      });
+
+      const validatedData = updateOrderItemsSchema.parse(req.body);
+      Object.assign(req.body, validatedData);
+      next();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const { message, issues } = getZodErrors(error);
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+          issueMessage: message,
+          issues: issues,
+        });
+      } else {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: ReasonPhrases.BAD_REQUEST,
+          status: StatusCodes.BAD_REQUEST,
+        });
+      }
+    }
+  },
 };

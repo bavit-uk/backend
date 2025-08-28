@@ -696,4 +696,55 @@ export const orderController = {
       });
     }
   },
+
+  // Update order items
+  updateOrderItems: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { items, recalculateTotals } = req.body;
+
+      if (!id) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Order ID is required",
+        });
+      }
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "At least one item is required",
+        });
+      }
+
+      const updatedOrder = await orderService.updateOrderItems(id, items, recalculateTotals);
+
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Order items updated successfully",
+        data: updatedOrder,
+      });
+    } catch (error: any) {
+      console.error("Error updating order items:", error);
+
+      if (error.message === "Order not found") {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Order not found",
+        });
+      }
+
+      if (error.message === "Item not found") {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "One or more items not found in the order",
+        });
+      }
+
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error.message || "Error updating order items",
+      });
+    }
+  },
 };
