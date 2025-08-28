@@ -1021,8 +1021,18 @@ export const ebayListingService = {
 
   captureNotification: async (req: Request, res: Response): Promise<any> => {
     try {
-      console.log("🔍 Received eBay webhook notification");
-      // console.log("📝 Notification data:", req.body);
+      console.log("🔍 Received eBay webhook notification in normal JSON format");
+      if (
+        req.body &&
+        req.body.metadata &&
+        req.body.metadata.topic &&
+        req.body.metadata.topic === "MARKETPLACE_ACCOUNT_DELETION"
+      ) {
+        return res.status(200).json({
+          message: "Notification captured",
+        });
+      }
+
       await EbayNotificationModel.create({ data: req.body });
       return res.status(200).json({
         message: "Notification captured",
@@ -1036,7 +1046,6 @@ export const ebayListingService = {
   captureNotificationPreferencesOne: async (req: Request, res: Response): Promise<any> => {
     try {
       console.log("🔍 Received eBay webhook notification preferences one");
-      console.log("📝 Notification data:", req.body);
       await EbayNotificationModel.create({ data: req.body });
       return res.status(200).json({
         message: "Notification captured",
