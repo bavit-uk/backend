@@ -5,7 +5,7 @@ interface IStock extends Document {
   productSupplier: mongoose.Types.ObjectId;
   selectedVariations?: {
     variationId: mongoose.Types.ObjectId;
-    totalCostPrice: number;
+    costPricePerUnit: number;
     retailPricePerUnit: number;
     purchasePricePerUnit: number;
     totalUnits: number;
@@ -19,7 +19,7 @@ interface IStock extends Document {
   stockInvoice: typeof mediaSchema;
   totalUnits?: number;
   usableUnits?: number;
-  totalCostPrice?: number;
+  costPricePerUnit?: number;
   retailPricePerUnit?: number;
   purchasePricePerUnit?: number;
 

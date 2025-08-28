@@ -2,7 +2,6 @@ import { Stock } from "@/models/stock.model";
 import { Inventory, User, Variation } from "@/models";
 import { IStock } from "@/contracts/stock.contract";
 import mongoose from "mongoose";
-import { SystemExpenseService } from "./system-expense.service";
 
 export const stockService = {
   // 📌 Add New Stock Purchase Entry
@@ -13,7 +12,7 @@ export const stockService = {
       variations,
       totalUnits,
       usableUnits,
-      totalCostPrice,
+      costPricePerUnit,
       retailPricePerUnit,
       purchasePricePerUnit,
       receivedDate,
@@ -26,30 +25,20 @@ export const stockService = {
       videos,
     } = data;
 
-    console.log("totalCostPrice:", totalCostPrice);
-
     // Validate inventory existence
     const inventoryExists = await Inventory.findById(inventoryId);
     if (!inventoryExists) {
-      throw new Error(
-        "Inventory not found. Please provide a valid inventoryId."
-      );
+      throw new Error("Inventory not found. Please provide a valid inventoryId.");
     }
     const supplierExists = await User.findById(productSupplier);
     if (!supplierExists) {
-      throw new Error(
-        "Supplier not found. Please provide a valid inventoryId."
-      );
+      throw new Error("Supplier not found. Please provide a valid inventoryId.");
     }
     const { isVariation } = inventoryExists;
 
     // Ensure variations exist if isVariation is true
     if (isVariation) {
-      if (
-        !variations ||
-        !Array.isArray(variations) ||
-        variations.length === 0
-      ) {
+      if (!variations || !Array.isArray(variations) || variations.length === 0) {
         throw new Error("At least one variation must be provided.");
       }
 
@@ -58,14 +47,14 @@ export const stockService = {
         if (
           !variation.variationId ||
           !mongoose.Types.ObjectId.isValid(variation.variationId) ||
-          variation.totalCostPrice === undefined ||
+          variation.costPricePerUnit === undefined ||
           variation.retailPricePerUnit === undefined ||
           variation.purchasePricePerUnit === undefined ||
           variation.totalUnits === undefined ||
           variation.usableUnits === undefined
         ) {
           throw new Error(
-            "Each variation must have a valid variationId, totalCostPrice, retailPricePerUnit, purchasePricePerUnit, totalUnits, and usableUnits."
+            "Each variation must have a valid variationId, costPricePerUnit, retailPricePerUnit, purchasePricePerUnit, totalUnits, and usableUnits."
           );
         }
       }
@@ -73,7 +62,7 @@ export const stockService = {
       // Transform variations to match the Stock model structure
       const selectedVariations = variations.map((variation: any) => ({
         variationId: variation.variationId,
-        totalCostPrice: variation.totalCostPrice,
+        costPricePerUnit: variation.costPricePerUnit,
         retailPricePerUnit: variation.retailPricePerUnit,
         purchasePricePerUnit: variation.purchasePricePerUnit,
         totalUnits: variation.totalUnits,
@@ -96,65 +85,18 @@ export const stockService = {
       });
 
       await stock.save();
-
-      // 🆕 EXPENSE TRACKING: Auto-create expense record for inventory purchase ONLY when markAsStock is true
-      // This ensures only published stock items are tracked in the accounting system
-      // for proper financial reporting and expense calculations
-      if (markAsStock === true) {
-        try {
-          // Calculate total amount from totalCostPrice (which already includes all expenses)
-          const totalCostAmount = variations.reduce(
-            (total: number, variation: any) => {
-              return total + variation.totalCostPrice;
-            },
-            0
-          );
-
-          // Get product name safely - productInfo only exists on discriminated models
-          const productName =
-            (inventoryExists as any).productInfo?.item_name?.[0]?.value ||
-            "Unknown Product";
-
-          console.log(
-            `📊 Creating expense record for published inventory purchase: ${productName} - Total Cost: ${totalCostAmount}`
-          );
-
-          await SystemExpenseService.createInventoryPurchaseExpense({
-            productName: productName,
-            totalAmount: totalCostAmount,
-            stockId: (stock._id as any).toString(),
-            purchaseDate: purchaseDate ? new Date(purchaseDate) : new Date(),
-          });
-
-          console.log(
-            `✅ Expense record created successfully for published stock ID: ${stock._id as any}`
-          );
-        } catch (expenseError) {
-          console.error(
-            "❌ Failed to create expense for inventory purchase:",
-            expenseError
-          );
-          // 🚨 IMPORTANT: Don't fail the stock creation if expense creation fails
-          // This ensures business operations continue even if accounting integration has issues
-        }
-      } else {
-        console.log(
-          `📝 Stock created but not published (markAsStock: false) - No expense record created for stock ID: ${stock._id as any}`
-        );
-      }
-
       return { message: "Stock saved successfully", stock };
     } else {
       // Handle non-variation inventory
       if (
         totalUnits === undefined ||
         usableUnits === undefined ||
-        totalCostPrice === undefined ||
+        costPricePerUnit === undefined ||
         retailPricePerUnit === undefined ||
         purchasePricePerUnit === undefined
       ) {
         throw new Error(
-          "For non-variation inventory, totalUnits, usableUnits, totalCostPrice, retailPricePerUnit, and purchasePricePerUnit are required."
+          "For non-variation inventory, totalUnits, usableUnits, costPricePerUnit, retailPricePerUnit, and purchasePricePerUnit are required."
         );
       }
 
@@ -164,7 +106,7 @@ export const stockService = {
         productSupplier,
         totalUnits,
         usableUnits,
-        totalCostPrice,
+        costPricePerUnit,
         retailPricePerUnit,
         purchasePricePerUnit,
         receivedDate,
@@ -178,45 +120,6 @@ export const stockService = {
       });
 
       await stock.save();
-
-      // 🆕 EXPENSE TRACKING: Auto-create expense record for inventory purchase ONLY when markAsStock is true (non-variation)
-      // This ensures only published stock items are tracked in the accounting system
-      // for proper financial reporting and expense calculations
-      if (markAsStock === true) {
-        try {
-          // Get product name safely - productInfo only exists on discriminated models
-          const productName =
-            (inventoryExists as any).productInfo?.item_name?.[0]?.value ||
-            "Unknown Product";
-
-          console.log(
-            `📊 Creating expense record for published inventory purchase: ${productName} - Total Cost: ${totalCostPrice}`
-          );
-
-          await SystemExpenseService.createInventoryPurchaseExpense({
-            productName: productName,
-            totalAmount: totalCostPrice,
-            stockId: (stock._id as any).toString(),
-            purchaseDate: purchaseDate ? new Date(purchaseDate) : new Date(),
-          });
-
-          console.log(
-            `✅ Expense record created successfully for published stock ID: ${stock._id as any}`
-          );
-        } catch (expenseError) {
-          console.error(
-            "❌ Failed to create expense for inventory purchase:",
-            expenseError
-          );
-          // 🚨 IMPORTANT: Don't fail the stock creation if expense creation fails
-          // This ensures business operations continue even if accounting integration has issues
-        }
-      } else {
-        console.log(
-          `📝 Stock created but not published (markAsStock: false) - No expense record created for stock ID: ${stock._id as any}`
-        );
-      }
-
       return { message: "Stock saved successfully", stock };
     }
   },
@@ -234,9 +137,7 @@ export const stockService = {
         .populate("selectedVariations.variationId")
         .populate("receivedBy");
     } catch (error: any) {
-      throw new Error(
-        `Error fetching stock for inventoryId: ${inventoryId}. Error: ${error.message}`
-      );
+      throw new Error(`Error fetching stock for inventoryId: ${inventoryId}. Error: ${error.message}`);
     }
   },
 
@@ -251,9 +152,7 @@ export const stockService = {
         .populate("selectedVariations.variationId")
         .populate("receivedBy");
     } catch (error: any) {
-      throw new Error(
-        `Error fetching stock for Supplier: ${productSupplier}. Error: ${error.message}`
-      );
+      throw new Error(`Error fetching stock for Supplier: ${productSupplier}. Error: ${error.message}`);
     }
   },
 
@@ -265,10 +164,7 @@ export const stockService = {
       return { message: "No stock records found", totalQuantity: 0 };
     }
 
-    const totalQuantity = stocks.reduce(
-      (sum, stock: any) => sum + stock.totalUnits,
-      0
-    );
+    const totalQuantity = stocks.reduce((sum, stock: any) => sum + stock.totalUnits, 0);
     const lastStockEntry: any = stocks[stocks.length - 1];
 
     return {
@@ -305,7 +201,7 @@ export const stockService = {
   // 📌 Bulk Update Stock Costs
   async bulkUpdateStockCost(
     stockIds: string[],
-    totalCostPrice: number,
+    costPricePerUnit: number,
     retailPricePerUnit: number,
     purchasePricePerUnit: number
   ) {
@@ -313,7 +209,7 @@ export const stockService = {
       { _id: { $in: stockIds } },
       {
         $set: {
-          totalCostPrice,
+          costPricePerUnit,
           retailPricePerUnit,
           purchasePricePerUnit,
         },
@@ -345,12 +241,7 @@ export const stockService = {
           pipeline: [{ $project: { password: 0 } }],
         },
       },
-      {
-        $unwind: {
-          path: "$stocks.receivedBy",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
+      { $unwind: { path: "$stocks.receivedBy", preserveNullAndEmptyArrays: true } },
 
       // Lookup and populate variations inside selectedVariations
       {
@@ -371,7 +262,7 @@ export const stockService = {
               as: "variation",
               in: {
                 variationId: "$$variation.variationId",
-                totalCostPrice: "$$variation.totalCostPrice",
+                costPricePerUnit: "$$variation.costPricePerUnit",
                 retailPricePerUnit: "$$variation.retailPricePerUnit",
                 purchasePricePerUnit: "$$variation.purchasePricePerUnit",
                 totalUnits: "$$variation.totalUnits",
@@ -379,12 +270,7 @@ export const stockService = {
                 variationDetails: {
                   $arrayElemAt: [
                     "$variationDetails",
-                    {
-                      $indexOfArray: [
-                        "$variationDetails._id",
-                        "$$variation.variationId",
-                      ],
-                    },
+                    { $indexOfArray: ["$variationDetails._id", "$$variation.variationId"] },
                   ],
                 },
               },
@@ -414,9 +300,7 @@ export const stockService = {
           as: "productCategory",
         },
       },
-      {
-        $unwind: { path: "$productCategory", preserveNullAndEmptyArrays: true },
-      },
+      { $unwind: { path: "$productCategory", preserveNullAndEmptyArrays: true } },
 
       // Lookup and populate `productSupplier` from `users` collection inside productInfo
       {
@@ -428,9 +312,7 @@ export const stockService = {
           pipeline: [{ $project: { password: 0 } }], // Optionally exclude sensitive fields
         },
       },
-      {
-        $unwind: { path: "$productSupplier", preserveNullAndEmptyArrays: true },
-      },
+      { $unwind: { path: "$productSupplier", preserveNullAndEmptyArrays: true } },
 
       // Regroup stocks after unwind and move `isVariation` & `status` outside `inventory`
       {
@@ -454,10 +336,7 @@ export const stockService = {
                 productInfo: {
                   $mergeObjects: [
                     "$inventory.productInfo",
-                    {
-                      productCategory: "$productCategory",
-                      productSupplier: "$productSupplier",
-                    },
+                    { productCategory: "$productCategory", productSupplier: "$productSupplier" },
                   ],
                 },
               },
@@ -545,7 +424,7 @@ export const stockService = {
               as: "variation",
               in: {
                 variationId: "$$variation.variationId",
-                totalCostPrice: "$$variation.totalCostPrice",
+                costPricePerUnit: "$$variation.costPricePerUnit",
                 retailPricePerUnit: "$$variation.retailPricePerUnit",
                 purchasePricePerUnit: "$$variation.purchasePricePerUnit",
                 totalUnits: "$$variation.totalUnits",
@@ -553,12 +432,7 @@ export const stockService = {
                 variationDetails: {
                   $arrayElemAt: [
                     "$variationDetails",
-                    {
-                      $indexOfArray: [
-                        "$variationDetails._id",
-                        "$$variation.variationId",
-                      ],
-                    },
+                    { $indexOfArray: ["$variationDetails._id", "$$variation.variationId"] },
                   ],
                 },
               },
@@ -572,9 +446,7 @@ export const stockService = {
       // Ensure `receivedBy` is populated and filter only valid stocks
       {
         $match: {
-          "stocks.receivedByStatus": {
-            $ne: "Inventory manager has been deleted or is invalid",
-          }, // Only filter invalid "receivedBy" here
+          "stocks.receivedByStatus": { $ne: "Inventory manager has been deleted or is invalid" }, // Only filter invalid "receivedBy" here
         },
       },
 
@@ -587,9 +459,7 @@ export const stockService = {
           as: "productCategory",
         },
       },
-      {
-        $unwind: { path: "$productCategory", preserveNullAndEmptyArrays: true },
-      },
+      { $unwind: { path: "$productCategory", preserveNullAndEmptyArrays: true } },
 
       // Lookup and populate `productSupplier` from `users` collection inside productInfo
       {
@@ -601,9 +471,7 @@ export const stockService = {
           pipeline: [{ $project: { password: 0 } }], // Optionally exclude sensitive fields
         },
       },
-      {
-        $unwind: { path: "$productSupplier", preserveNullAndEmptyArrays: true },
-      },
+      { $unwind: { path: "$productSupplier", preserveNullAndEmptyArrays: true } },
 
       // Regroup stocks after unwind and move `isVariation` & `status` outside `inventory`
       {
@@ -627,10 +495,7 @@ export const stockService = {
                 productInfo: {
                   $mergeObjects: [
                     "$inventory.productInfo",
-                    {
-                      productCategory: "$productCategory",
-                      productSupplier: "$productSupplier",
-                    },
+                    { productCategory: "$productCategory", productSupplier: "$productSupplier" },
                   ],
                 },
               },

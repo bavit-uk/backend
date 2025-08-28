@@ -49,10 +49,9 @@ export const orderService = {
         const quantityCount = Math.max(Number(item?.quantity ?? 1), 1);
         for (let unitIndex = 1; unitIndex <= quantityCount; unitIndex++) {
           for (const wf of matchingForItem) {
-            const steps = [...(wf.steps || [])];
-            const stepIdToTaskId: Record<string, Types.ObjectId> = {};
+            const steps = [...(wf.steps || [])].sort((a: any, b: any) => a.stepOrder - b.stepOrder);
+            const stepIndexToTaskId: Record<number, Types.ObjectId> = {};
 
-            // First pass: create all tasks without dependencies
             for (const step of steps) {
               const taskType: any = step.taskTypeId;
 
@@ -66,7 +65,15 @@ export const orderService = {
               const defaultAssignedRole = step.overrideDefaultAssignedRole ?? baseAssignedRole;
               const name = quantityCount > 1 ? `${baseName} (unit ${unitIndex}/${quantityCount})` : baseName;
 
-              // Initially set all tasks as Ready, we'll update dependencies in the second pass
+              const dependentOnTaskIds: Types.ObjectId[] = [];
+              if (Array.isArray(step.dependsOnSteps) && step.dependsOnSteps.length > 0) {
+                for (const dep of step.dependsOnSteps) {
+                  const depIndex = parseInt(dep, 10);
+                  const depTaskId = stepIndexToTaskId[depIndex];
+                  if (depTaskId) dependentOnTaskIds.push(depTaskId);
+                }
+              }
+
               const taskDoc = await OrderTask.create({
                 orderId: newOrder._id,
                 orderItemId: item?.itemId ?? null,
@@ -74,49 +81,24 @@ export const orderService = {
                 name,
                 priority,
                 estimatedTimeMinutes,
-                status: "Ready",
+                status: dependentOnTaskIds.length > 0 ? "Pending" : "Ready",
                 isCustom: false,
                 defaultAssignedRole: defaultAssignedRole,
-                dependentOnTaskIds: [],
-                pendingDependenciesCount: 0,
+                dependentOnTaskIds,
+                pendingDependenciesCount: dependentOnTaskIds.length,
                 externalRefId: item?.itemId ? `${item.itemId}:${unitIndex}` : undefined,
                 logs: [
                   {
                     userName: "System",
                     action: "Task created from workflow",
-                    details: `Workflow ${wf.name} step ${step.id} for item ${item?.itemId ?? "n/a"} unit ${unitIndex}/${quantityCount}`,
+                    details: `Workflow ${wf.name} step ${step.stepOrder} for item ${item?.itemId ?? "n/a"} unit ${unitIndex}/${quantityCount}`,
                     timestamp: new Date(),
                   },
                 ],
               });
 
-              stepIdToTaskId[step.id] = taskDoc._id as Types.ObjectId;
+              stepIndexToTaskId[step.stepOrder] = taskDoc._id as Types.ObjectId;
               createdTaskIds.push(taskDoc._id as Types.ObjectId);
-            }
-
-            // Second pass: update dependencies
-            for (const step of steps) {
-              if (Array.isArray(step.dependsOnSteps) && step.dependsOnSteps.length > 0) {
-                const dependentOnTaskIds: Types.ObjectId[] = [];
-
-                for (const dependencyStepId of step.dependsOnSteps) {
-                  const dependencyTaskId = stepIdToTaskId[dependencyStepId];
-                  if (dependencyTaskId) {
-                    dependentOnTaskIds.push(dependencyTaskId);
-                  }
-                }
-
-                if (dependentOnTaskIds.length > 0) {
-                  const currentTaskId = stepIdToTaskId[step.id];
-                  if (currentTaskId) {
-                    await OrderTask.findByIdAndUpdate(currentTaskId, {
-                      status: "Pending",
-                      dependentOnTaskIds,
-                      pendingDependenciesCount: dependentOnTaskIds.length,
-                    });
-                  }
-                }
-              }
             }
           }
         }
@@ -224,15 +206,15 @@ export const orderService = {
   getOrderById: async (orderId: string) => {
     try {
       const order = await Order.findById(orderId)
-        .populate("customer")
-        .populate("customerId")
-        .populate("items.productId")
-        .populate("products.product")
-        .populate("taskIds")
-        .populate("originalOrderId")
-        .populate("replacementDetails.replacementOrderId")
-        .populate("createdBy")
-        .populate("updatedBy");
+        .populate("customer", "firstName lastName email phoneNumber")
+        .populate("customerId", "firstName lastName email phoneNumber")
+        .populate("items.productId", "name sku description")
+        .populate("products.product", "name sku description")
+        .populate("taskIds", "name status priority estimatedTimeMinutes")
+        .populate("originalOrderId", "orderId orderNumber status")
+        .populate("replacementDetails.replacementOrderId", "orderId orderNumber status")
+        .populate("createdBy", "firstName lastName")
+        .populate("updatedBy", "firstName lastName");
 
       if (!order) {
         throw new Error("Order not found");
@@ -248,15 +230,15 @@ export const orderService = {
   getOrderByOrderId: async (orderId: string) => {
     try {
       const order = await Order.findOne({ orderId })
-        .populate("customer")
-        .populate("customerId")
-        .populate("items.productId")
-        .populate("products.product")
-        .populate("taskIds")
-        .populate("originalOrderId")
-        .populate("replacementDetails.replacementOrderId")
-        .populate("createdBy")
-        .populate("updatedBy");
+        .populate("customer", "firstName lastName email phoneNumber")
+        .populate("customerId", "firstName lastName email phoneNumber")
+        .populate("items.productId", "name sku description")
+        .populate("products.product", "name sku description")
+        .populate("taskIds", "name status priority estimatedTimeMinutes")
+        .populate("originalOrderId", "orderId orderNumber status")
+        .populate("replacementDetails.replacementOrderId", "orderId orderNumber status")
+        .populate("createdBy", "firstName lastName")
+        .populate("updatedBy", "firstName lastName");
 
       if (!order) {
         throw new Error("Order not found");

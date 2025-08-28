@@ -29,9 +29,7 @@ const IExpensecat = new Schema<IExpenseCategory, IExpenseCategoryModel>({
     type: Boolean,
     default: false,
   },
-}, {
-  timestamps: true
 });
 
 
-export const ExpenseCategory = model("ExpenseCategory", IExpensecat)
+export const IExpenseModel = model("IExpenseModel", IExpensecat)

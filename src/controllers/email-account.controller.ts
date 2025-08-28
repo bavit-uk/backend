@@ -6,7 +6,6 @@ import { EmailAccountConfigService } from "@/services/email-account-config.servi
 import { logger } from "@/utils/logger.util";
 import { jwtVerify } from "@/utils/jwt.util";
 import { authService } from "@/services/user-auth.service";
-import { DirectEmailFetchingService } from "../services/direct-email-fetching.service";
 
 export class EmailAccountController {
   // Get all email providers
@@ -686,76 +685,166 @@ export class EmailAccountController {
 
         let threads;
         try {
-          // First, get all emails for this account that match the filter
-          const emails = await EmailModel.find(threadEmailFilter)
-            .sort({ receivedAt: -1 })
-            .limit(parseInt(limit as string) * 5); // Get more emails to ensure we have enough for threading
-
-          // Group emails by threadId
-          const emailGroups = new Map<string, any[]>();
-          emails.forEach((email) => {
-            if (email.threadId) {
-              if (!emailGroups.has(email.threadId)) {
-                emailGroups.set(email.threadId, []);
-              }
-              emailGroups.get(email.threadId)!.push(email);
-            }
-          });
-
-          // Convert groups to thread objects
-          threads = Array.from(emailGroups.entries()).map(([threadId, threadEmails]) => {
-            const latestEmail = threadEmails[0]; // Already sorted by receivedAt desc
-            const unreadCount = threadEmails.filter((e) => !e.isRead).length;
-
-            // Get unique participants from all emails in thread
-            const participants = new Map<string, { email: string; name?: string }>();
-            threadEmails.forEach((email) => {
-              // Add sender
-              if (email.from) {
-                participants.set(email.from.email, { email: email.from.email, name: email.from.name });
-              }
-              // Add recipients
-              if (email.to) {
-                email.to.forEach((recipient: { email: string; name?: string }) => {
-                  participants.set(recipient.email, { email: recipient.email, name: recipient.name });
-                });
-              }
-            });
-
-            return {
-              _id: threadId,
-              threadId: threadId,
-              subject: latestEmail.subject,
-              participants: Array.from(participants.values()),
-              messageCount: threadEmails.length,
-              unreadCount: unreadCount,
-              lastMessageAt: latestEmail.receivedAt,
-              status: "active",
-              latestEmail: {
-                ...latestEmail.toObject(),
-                date: latestEmail.receivedAt, // Ensure date field is present for frontend
-              },
-              emails: threadEmails.map((email) => ({
-                ...email.toObject(),
-                date: email.receivedAt, // Ensure date field is present for frontend
-              })),
-              accountId: account._id,
-            };
-          });
-
-          // Sort threads by latest message date
-          threads.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
-
-          // Apply pagination
-          threads = threads.slice(parseInt(offset as string), parseInt(offset as string) + parseInt(limit as string));
+          // Simple query to get thread metadata only - no email lookup needed
+          threads = await EmailThreadModel.find({
+            accountId: account._id,
+          })
+            .sort({ lastMessageAt: -1 })
+            .skip(parseInt(offset as string))
+            .limit(parseInt(limit as string))
+            .lean();
 
           console.log(`🧵 Found ${threads.length} threads for account ${account.emailAddress}`);
+
+          // FIRST-TIME SYNC: If no threads found, trigger auto-sync
+          if (threads.length === 0) {
+            console.log(`🔄 No threads found for account ${account.emailAddress} - checking if first-time sync needed`);
+
+            // Check if first-time sync was already completed
+            if (account.syncState?.firstTimeSyncCompleted) {
+              console.log(`ℹ️ Account ${account.emailAddress} was already synced once - no auto-sync needed`);
+              // Return empty response without triggering sync
+              return res.json({
+                success: true,
+                data: {
+                  threads: [],
+                  totalCount: 0,
+                  account: {
+                    id: account._id,
+                    emailAddress: account.emailAddress,
+                    accountName: account.accountName,
+                  },
+                  viewMode: "threads",
+                  message: "No emails found in this account",
+                },
+              });
+            }
+
+            // Check if account is already being processed to prevent duplicate syncs
+            if (account.syncState?.isProcessing) {
+              console.log(`⚠️ Account ${account.emailAddress} is already being processed - skipping duplicate sync`);
+              return res.json({
+                success: true,
+                data: {
+                  threads: [],
+                  totalCount: 0,
+                  account: {
+                    id: account._id,
+                    emailAddress: account.emailAddress,
+                    accountName: account.accountName,
+                  },
+                  viewMode: "threads",
+                  message: "Sync in progress, please wait...",
+                },
+              });
+            }
+
+            try {
+              // Mark account as processing to prevent duplicate syncs
+              await EmailAccountModel.findByIdAndUpdate(account._id, {
+                $set: {
+                  "syncState.isProcessing": true,
+                  "syncState.firstTimeSyncStarted": new Date(),
+                },
+              });
+              // Import sync services
+              const { ManualEmailSyncService } = await import("@/services/manual-email-sync.service");
+              const { EmailFetchingService } = await import("@/services/email-fetching.service");
+
+              let syncResult;
+
+              // Choose sync method based on account type - LIMITED BATCH ONLY
+              if (account.accountType === "gmail" && account.oauth) {
+                console.log(
+                  `🔄 Starting LIMITED Gmail sync for first-time account (100 emails only): ${account.emailAddress}`
+                );
+                // Use fetchEmailsFromAccount with limit instead of full sync
+                syncResult = await EmailFetchingService.fetchEmailsFromAccount(account, {
+                  limit: 100,
+                  includeBody: true,
+                  folder: "INBOX",
+                });
+              } else {
+                console.log(
+                  `🔄 Starting LIMITED email fetch for IMAP/other account (100 emails only): ${account.emailAddress}`
+                );
+                syncResult = await EmailFetchingService.fetchEmailsFromAccount(account, {
+                  limit: 100,
+                  includeBody: true,
+                  folder: "INBOX",
+                });
+              }
+
+              console.log(`✅ First-time sync completed for ${account.emailAddress}:`, syncResult.success);
+
+              // After sync, retry getting threads
+              if (syncResult.success) {
+                const updatedThreads = await EmailThreadModel.find({
+                  accountId: account._id,
+                })
+                  .sort({ lastMessageAt: -1 })
+                  .skip(parseInt(offset as string))
+                  .limit(parseInt(limit as string))
+                  .lean();
+
+                const updatedTotalCount = await EmailThreadModel.countDocuments({
+                  accountId: account._id,
+                });
+
+                console.log(`🔄 After first-time sync: found ${updatedThreads.length} threads`);
+
+                // Mark sync as completed
+                await EmailAccountModel.findByIdAndUpdate(account._id, {
+                  $set: {
+                    "syncState.isProcessing": false,
+                    "syncState.firstTimeSyncCompleted": new Date(),
+                    "syncState.syncStatus": "partial", // Mark as partial since we only synced 100 emails
+                    "stats.lastSyncAt": new Date(),
+                  },
+                });
+
+                // Return the updated threads
+                return res.json({
+                  success: true,
+                  data: {
+                    threads: updatedThreads,
+                    totalCount: updatedTotalCount,
+                    account: {
+                      id: account._id,
+                      emailAddress: account.emailAddress,
+                      accountName: account.accountName,
+                    },
+                    viewMode: "threads",
+                    wasFirstTimeSync: true,
+                  },
+                });
+              }
+            } catch (syncError: any) {
+              console.error(`❌ First-time sync failed for ${account.emailAddress}:`, syncError.message);
+
+              // Reset processing flag on error
+              await EmailAccountModel.findByIdAndUpdate(account._id, {
+                $set: {
+                  "syncState.isProcessing": false,
+                  "syncState.lastError": syncError.message,
+                  "syncState.lastErrorAt": new Date(),
+                },
+              });
+
+              // Continue with empty response - don't fail the API call
+            }
+          }
+
+          // Get total count for pagination
+          const totalCount = await EmailThreadModel.countDocuments({
+            accountId: account._id,
+          });
 
           res.json({
             success: true,
             data: {
               threads,
-              totalCount: threads.length,
+              totalCount: totalCount, // Use actual total count for pagination
               account: {
                 id: account._id,
                 emailAddress: account.emailAddress,
@@ -784,16 +873,10 @@ export class EmailAccountController {
 
           const totalCount = await EmailModel.countDocuments(fallbackFilter);
 
-          // Transform emails to include date field for frontend compatibility
-          const transformedFallbackEmails = fallbackEmails.map((email) => ({
-            ...email.toObject(),
-            date: email.receivedAt, // Ensure date field is present for frontend
-          }));
-
           res.json({
             success: true,
             data: {
-              emails: transformedFallbackEmails,
+              emails: fallbackEmails,
               totalCount,
               account: {
                 id: account._id,
@@ -861,16 +944,10 @@ export class EmailAccountController {
 
         console.log(`📧 Found ${emails.length} individual emails for account ${account.emailAddress}`);
 
-        // Transform emails to include date field for frontend compatibility
-        const transformedEmails = emails.map((email) => ({
-          ...email.toObject(),
-          date: email.receivedAt, // Ensure date field is present for frontend
-        }));
-
         res.json({
           success: true,
           data: {
-            emails: transformedEmails,
+            emails,
             totalCount,
             account: {
               id: account._id,
@@ -933,17 +1010,11 @@ export class EmailAccountController {
         accountId: account._id,
       }).sort({ receivedAt: 1 }); // Chronological order for thread view
 
-      // Transform emails to include date field for frontend compatibility
-      const transformedEmails = emails.map((email) => ({
-        ...email.toObject(),
-        date: email.receivedAt, // Ensure date field is present for frontend
-      }));
-
       res.json({
         success: true,
         data: {
           thread,
-          emails: transformedEmails,
+          emails,
           account: {
             id: account._id,
             emailAddress: account.emailAddress,
@@ -1025,13 +1096,12 @@ export class EmailAccountController {
     }
   }
 
-  // Sync account emails (fetch new emails)
-  // Supports fetchAll parameter to fetch all emails instead of just recent ones
+  // Sync account threads metadata (raw Gmail data)
   static async syncAccountEmails(req: Request, res: Response) {
     try {
-      console.log("🔄 SYNC EMAILS REQUEST");
+      console.log("🔄 SYNC THREADS METADATA REQUEST (Raw Gmail Data)");
       const { accountId } = req.params;
-      const { fetchAll = "false" } = req.query; // New parameter to fetch all emails
+      const { fetchAll = "false" } = req.query;
       const token = req.headers.authorization?.replace("Bearer ", "");
 
       console.log("Request details:", {
@@ -1063,49 +1133,50 @@ export class EmailAccountController {
       account.status = "syncing";
       await account.save();
 
-      const { EmailFetchingService } = await import("@/services/email-fetching.service");
+      const { EmailThreadMetadataService } = await import("@/services/email-thread-metadata.service");
 
-      // Fetch emails based on fetchAll parameter
+      // Fetch raw thread metadata based on account type
       const options = {
-        since: fetchAll === "true" ? undefined : account.stats.lastSyncAt || new Date(Date.now() - 24 * 60 * 60 * 1000), // Skip since filter if fetchAll is true
-        includeBody: true,
+        folder: "INBOX", // Default folder
+        limit: fetchAll === "true" ? 1000 : 100, // Higher limit for fetchAll
+        since: fetchAll === "true" ? undefined : account.stats.lastSyncAt || new Date(Date.now() - 24 * 60 * 60 * 1000),
         fetchAll: fetchAll === "true",
-        useHistoryAPI: account.accountType === "gmail" && account.oauth, // Use History API for Gmail OAuth accounts
-        limit: fetchAll === "true" ? 1000 : 50, // Higher limit for fetchAll
       };
-      console.log("📧 Fetch options:", options);
 
-      // Use multi-folder sync if account has multiple folders configured
-      const syncFolders = account.settings?.syncFolders || ["INBOX"];
-      const useMultiFolderSync = syncFolders.length > 1;
-
-      console.log("📁 Sync configuration:", {
-        useMultiFolderSync,
-        syncFolders,
-        folderCount: syncFolders.length,
-      });
+      console.log("📧 Raw thread metadata fetch options:", options);
 
       let result;
-      if (useMultiFolderSync) {
-        console.log("🔄 Using multi-folder sync");
-        result = await EmailFetchingService.syncMultipleFolders(account, options);
+      if (account.accountType === "gmail" && account.oauth) {
+        // Use Gmail thread metadata service (raw data)
+        console.log("🔄 Using Gmail thread metadata service (raw data)");
+        result = await EmailThreadMetadataService.fetchGmailThreadMetadata(account, options);
       } else {
-        console.log("📧 Using single folder sync (INBOX)");
-        result = await EmailFetchingService.fetchEmailsFromAccount(account, options);
+        // Use IMAP thread metadata service
+        console.log("🔄 Using IMAP thread metadata service");
+        result = await EmailThreadMetadataService.fetchImapThreadMetadata(account, options);
       }
 
-      console.log("📤 Sending response:", {
+      console.log("📤 Raw thread metadata sync response:", {
         success: result.success,
-        newEmails: result.newCount,
-        totalEmails: result.emails?.length || 0,
+        newThreads: result.newCount,
+        totalThreads: result.threads?.length || 0,
         hasError: !!result.error,
       });
+
+      // Update account sync status
+      account.status = "active";
+      account.stats = {
+        ...account.stats,
+        lastSyncAt: new Date(),
+        totalThreads: (account.stats?.totalThreads || 0) + result.newCount,
+      };
+      await account.save();
 
       res.json({
         success: result.success,
         data: {
-          newEmailsCount: result.newCount,
-          totalProcessed: result.emails?.length || 0,
+          newThreadsCount: result.newCount,
+          totalProcessed: result.threads?.length || 0,
           account: {
             id: account._id,
             emailAddress: account.emailAddress,
@@ -1115,16 +1186,16 @@ export class EmailAccountController {
         },
         message: result.success
           ? fetchAll === "true"
-            ? `Successfully synced ${result.emails?.length || 0} emails (all emails)`
-            : `Successfully synced ${result.newCount} new emails`
-          : "Sync failed",
+            ? `Successfully synced ${result.threads?.length || 0} thread metadata (raw Gmail data)`
+            : `Successfully synced ${result.newCount} new thread metadata (raw data)`
+          : "Thread metadata sync failed",
         error: result.error,
       });
     } catch (error: any) {
-      logger.error("Error syncing account emails:", error);
+      logger.error("Error syncing account thread metadata:", error);
       res.status(500).json({
         success: false,
-        message: "Failed to sync emails",
+        message: "Failed to sync thread metadata",
         error: error.message,
       });
     }
@@ -1183,6 +1254,90 @@ export class EmailAccountController {
       res.status(500).json({
         success: false,
         message: "Failed to setup Gmail watch",
+        error: error.message,
+      });
+    }
+  }
+
+  // Enhanced Gmail sync using History API
+  static async syncGmailWithHistoryAPI(req: Request, res: Response) {
+    try {
+      console.log("🔄 GMAIL HISTORY API SYNC REQUEST");
+      const { accountId } = req.params;
+      const token = req.headers.authorization?.replace("Bearer ", "");
+
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: "Authorization token required",
+        });
+      }
+
+      const decoded = jwtVerify(token);
+      const userId = decoded.id.toString();
+      const account = await EmailAccountModel.findOne({ _id: accountId, userId });
+
+      if (!account) {
+        return res.status(404).json({
+          success: false,
+          message: "Email account not found",
+        });
+      }
+
+      // Verify this is a Gmail OAuth account
+      if (account.accountType !== "gmail" || !account.oauth) {
+        return res.status(400).json({
+          success: false,
+          message: "This endpoint is only for Gmail OAuth accounts",
+        });
+      }
+
+      // Update status to syncing
+      account.status = "syncing";
+      await account.save();
+
+      const { EmailFetchingService } = await import("@/services/email-fetching.service");
+
+      console.log("🔄 Starting Gmail History API sync for:", account.emailAddress);
+
+      const result = await EmailFetchingService.syncGmailWithHistoryAPI(account, {
+        useHistoryAPI: true,
+        includeBody: true,
+        fetchAll: true, // Force fetch ALL emails
+      });
+
+      console.log("📤 Gmail History API sync response:", {
+        success: result.success,
+        historyId: result.historyId,
+        totalCount: result.totalCount,
+        newCount: result.newCount,
+        hasError: !!result.error,
+      });
+
+      res.json({
+        success: result.success,
+        data: {
+          historyId: result.historyId,
+          totalProcessed: result.totalCount,
+          newEmailsCount: result.newCount,
+          syncStatus: account.syncState?.syncStatus,
+          account: {
+            id: account._id,
+            emailAddress: account.emailAddress,
+            accountName: account.accountName,
+            lastSyncAt: account.stats.lastSyncAt,
+          },
+        },
+        message: result.success
+          ? `Gmail History API sync completed. Status: ${account.syncState?.syncStatus}`
+          : "Gmail History API sync failed",
+        error: result.error,
+      });
+    } catch (error: any) {
+      logger.error("Error in Gmail History API sync:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to sync Gmail with History API",
         error: error.message,
       });
     }
@@ -1432,24 +1587,10 @@ export class EmailAccountController {
     }
   }
 
-  // Fetch emails directly from account without storing in database (for real-time display)
-  static async fetchEmailsDirectly(req: Request, res: Response) {
+  // Manual sync endpoints
+  static async startManualSync(req: Request, res: Response) {
     try {
       const { accountId } = req.params;
-      const {
-        folder = "INBOX",
-        page = "1",
-        pageSize = "20",
-        since,
-        before,
-        query,
-        labelIds,
-        includeBody = "true",
-        markAsRead = "false",
-        sortBy = "date",
-        sortOrder = "desc",
-        groupByThread = "false", // New parameter for thread grouping
-      } = req.query;
       const token = req.headers.authorization?.replace("Bearer ", "");
 
       if (!token) {
@@ -1462,6 +1603,7 @@ export class EmailAccountController {
       const decoded = jwtVerify(token);
       const userId = decoded.id.toString();
 
+      // Verify account belongs to user
       const account = await EmailAccountModel.findOne({ _id: accountId, userId });
       if (!account) {
         return res.status(404).json({
@@ -1470,55 +1612,35 @@ export class EmailAccountController {
         });
       }
 
-      const options = {
-        folder: folder as string,
-        page: parseInt(page as string),
-        pageSize: parseInt(pageSize as string),
-        since: since ? new Date(since as string) : undefined,
-        before: before ? new Date(before as string) : undefined,
-        query: query as string,
-        labelIds: labelIds ? (labelIds as string).split(",") : undefined,
-        includeBody: includeBody === "true",
-        markAsRead: markAsRead === "true",
-        sortBy: sortBy as "date" | "from" | "subject" | "size",
-        sortOrder: sortOrder as "asc" | "desc",
-        groupByThread: groupByThread === "true", // New option
-      };
+      const { ManualEmailSyncService } = await import("@/services/manual-email-sync.service");
+      const result = await ManualEmailSyncService.startManualSync(accountId);
 
-      const result = await DirectEmailFetchingService.fetchEmailsDirectly(account, options);
-
-      logger.info(`Direct email fetch completed for ${account.emailAddress}: ${result.emails.length} emails fetched`);
-
-      res.json({
-        success: result.success,
-        data: {
-          emails: result.emails,
-          threads: result.threads || [], // Include threads in response
-          totalCount: result.totalCount,
-          pagination: result.pagination,
-          account: {
-            id: account._id,
-            emailAddress: account.emailAddress,
-            accountName: account.accountName,
-          },
-        },
-        error: result.error,
-        requiresReauth: result.requiresReauth,
-      });
+      if (result.success) {
+        res.json({
+          success: true,
+          message: result.message,
+          data: result.data,
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.message,
+          error: result.error,
+        });
+      }
     } catch (error: any) {
-      logger.error("Error fetching emails directly:", error);
+      logger.error("Error starting manual sync:", error);
       res.status(500).json({
         success: false,
-        message: "Failed to fetch emails",
+        message: "Failed to start manual sync",
         error: error.message,
       });
     }
   }
 
-  static async fetchEmailDirectly(req: Request, res: Response) {
-    console.log("🔄 FETCH EMAIL DIRECTLY REQUEST");
+  static async continueManualSync(req: Request, res: Response) {
     try {
-      const { accountId, messageId } = req.params;
+      const { accountId } = req.params;
       const token = req.headers.authorization?.replace("Bearer ", "");
 
       if (!token) {
@@ -1531,6 +1653,7 @@ export class EmailAccountController {
       const decoded = jwtVerify(token);
       const userId = decoded.id.toString();
 
+      // Verify account belongs to user
       const account = await EmailAccountModel.findOne({ _id: accountId, userId });
       if (!account) {
         return res.status(404).json({
@@ -1539,50 +1662,124 @@ export class EmailAccountController {
         });
       }
 
-      console.log("📧 Account details:", {
-        accountId: account._id,
-        emailAddress: account.emailAddress,
-        accountType: account.accountType,
-        oauthProvider: account.oauth?.provider,
-        messageId: messageId,
-      });
+      const { ManualEmailSyncService } = await import("@/services/manual-email-sync.service");
+      const result = await ManualEmailSyncService.continueManualSync(accountId);
 
-      // Determine the account type and call the appropriate method
-      let result;
-      
-      if (account.accountType === "outlook" || account.accountType === "exchange") {
-        console.log("📧 Using Outlook API for message fetch");
-        // Use Outlook/Microsoft Graph API
-        result = await DirectEmailFetchingService.fetchOutlookMessageById(account, messageId);
-      } else if (account.accountType === "gmail" || account.accountType === "google") {
-        console.log("📧 Using Gmail API for message fetch");
-        // Use Gmail API
-        result = await DirectEmailFetchingService.fetchGmailMessageById(account, messageId);
+      if (result.success) {
+        res.json({
+          success: true,
+          message: result.message,
+          data: result.data,
+        });
       } else {
-        console.log("📧 Using database lookup for message fetch");
-        // For other account types, try to find the email in the database
-        result = await DirectEmailFetchingService.fetchEmailFromDatabase(account, messageId);
+        res.status(400).json({
+          success: false,
+          message: result.message,
+          error: result.error,
+        });
       }
-
-      console.log("📧 Fetch result:", {
-        success: !!result,
-        hasData: !!result,
-        subject: result?.subject,
-        hasHtmlContent: !!result?.htmlContent,
-        hasTextContent: !!result?.textContent,
-        htmlContentLength: result?.htmlContent?.length || 0,
-        textContentLength: result?.textContent?.length || 0,
-      });
-
-      res.json({
-        success: result ? true : false,
-        data: result,
-      });
     } catch (error: any) {
-      logger.error("Error fetching email directly:", error);
+      logger.error("Error continuing manual sync:", error);
       res.status(500).json({
         success: false,
-        message: "Failed to fetch email",
+        message: "Failed to continue manual sync",
+        error: error.message,
+      });
+    }
+  }
+
+  static async stopManualSync(req: Request, res: Response) {
+    try {
+      const { accountId } = req.params;
+      const token = req.headers.authorization?.replace("Bearer ", "");
+
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: "Authorization token required",
+        });
+      }
+
+      const decoded = jwtVerify(token);
+      const userId = decoded.id.toString();
+
+      // Verify account belongs to user
+      const account = await EmailAccountModel.findOne({ _id: accountId, userId });
+      if (!account) {
+        return res.status(404).json({
+          success: false,
+          message: "Email account not found",
+        });
+      }
+
+      const { ManualEmailSyncService } = await import("@/services/manual-email-sync.service");
+      const result = await ManualEmailSyncService.stopManualSync(accountId);
+
+      if (result.success) {
+        res.json({
+          success: true,
+          message: result.message,
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.message,
+          error: result.error,
+        });
+      }
+    } catch (error: any) {
+      logger.error("Error stopping manual sync:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to stop manual sync",
+        error: error.message,
+      });
+    }
+  }
+
+  static async getManualSyncProgress(req: Request, res: Response) {
+    try {
+      const { accountId } = req.params;
+      const token = req.headers.authorization?.replace("Bearer ", "");
+
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: "Authorization token required",
+        });
+      }
+
+      const decoded = jwtVerify(token);
+      const userId = decoded.id.toString();
+
+      // Verify account belongs to user
+      const account = await EmailAccountModel.findOne({ _id: accountId, userId });
+      if (!account) {
+        return res.status(404).json({
+          success: false,
+          message: "Email account not found",
+        });
+      }
+
+      const { ManualEmailSyncService } = await import("@/services/manual-email-sync.service");
+      const progress = await ManualEmailSyncService.getManualSyncProgress(accountId);
+
+      if (progress) {
+        res.json({
+          success: true,
+          data: progress,
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          message: "No manual sync progress found",
+        });
+      }
+    } catch (error: any) {
+      logger.error("Error getting manual sync progress:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to get manual sync progress",
         error: error.message,
       });
     }

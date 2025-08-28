@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { stockService } from "@/services/stock.service";
-import { SystemExpenseService } from "@/services/system-expense.service";
 import { Inventory, Stock, Variation } from "@/models";
 
 export const stockController = {
@@ -17,7 +16,7 @@ export const stockController = {
         variations, // Only required if isVariation is true
         totalUnits,
         usableUnits,
-        totalCostPrice,
+        costPricePerUnit,
         retailPricePerUnit,
         priceBreakdown,
         purchasePricePerUnit,
@@ -47,7 +46,7 @@ export const stockController = {
           if (
             !variation.variationId ||
             !mongoose.Types.ObjectId.isValid(variation.variationId) ||
-            variation.totalCostPrice === undefined ||
+            variation.costPricePerUnit === undefined ||
             variation.retailPricePerUnit === undefined ||
             variation.purchasePricePerUnit === undefined ||
             variation.totalUnits === undefined ||
@@ -55,7 +54,7 @@ export const stockController = {
           ) {
             return res.status(400).json({
               message:
-                "Each variation must have a valid variationId, totalCostPrice, retailPricePerUnit, purchasePricePerUnit, totalUnits, and usableUnits.",
+                "Each variation must have a valid variationId, costPricePerUnit, retailPricePerUnit, purchasePricePerUnit, totalUnits, and usableUnits.",
             });
           }
         }
@@ -64,13 +63,13 @@ export const stockController = {
         if (
           totalUnits === undefined ||
           usableUnits === undefined ||
-          totalCostPrice === undefined ||
+          costPricePerUnit === undefined ||
           retailPricePerUnit === undefined ||
           purchasePricePerUnit === undefined
         ) {
           return res.status(400).json({
             message:
-              "For non-variation inventory, totalUnits, usableUnits, totalCostPrice, retailPricePerUnit, and purchasePricePerUnit are required.",
+              "For non-variation inventory, totalUnits, usableUnits, costPricePerUnit, retailPricePerUnit, and purchasePricePerUnit are required.",
           });
         }
       }
@@ -88,7 +87,7 @@ export const stockController = {
         totalUnits,
         priceBreakdown,
         usableUnits,
-        totalCostPrice,
+        costPricePerUnit,
         retailPricePerUnit,
         purchasePricePerUnit,
         images,
@@ -247,7 +246,7 @@ export const stockController = {
   updateStock: async (req: Request, res: Response) => {
     try {
       const { stockId } = req.params;
-      const stock: any = await Stock.findById(stockId);
+      const stock = await Stock.findById(stockId);
 
       if (!stock) {
         return res.status(404).json({ message: "Stock not found" });
@@ -262,11 +261,11 @@ export const stockController = {
         }
         stock.selectedVariations = req.body.selectedVariations;
       } else {
-        const { totalUnits, usableUnits, totalCostPrice, retailPricePerUnit, purchasePricePerUnit } = req.body;
+        const { totalUnits, usableUnits, costPricePerUnit, retailPricePerUnit, purchasePricePerUnit } = req.body;
         if (
           totalUnits === undefined ||
           usableUnits === undefined ||
-          totalCostPrice === undefined ||
+          costPricePerUnit === undefined ||
           retailPricePerUnit === undefined ||
           purchasePricePerUnit === undefined
         ) {
@@ -274,7 +273,7 @@ export const stockController = {
         }
         stock.totalUnits = totalUnits;
         stock.usableUnits = usableUnits;
-        stock.totalCostPrice = totalCostPrice;
+        stock.costPricePerUnit = costPricePerUnit;
         stock.retailPricePerUnit = retailPricePerUnit;
         stock.purchasePricePerUnit = purchasePricePerUnit;
       }
@@ -294,51 +293,6 @@ export const stockController = {
       stock.videos = req.body.videos || stock.videos;
 
       await stock.save();
-
-      // 🆕 EXPENSE TRACKING: Check if markAsStock changed from false to true
-      // This handles the scenario where a draft stock is now being published
-      if (req.body.markAsStock === true && stock.markAsStock === true) {
-        // Check if this stock already has an expense record
-        const existingExpense = await SystemExpenseService.checkExistingExpense(stock._id.toString());
-        
-        console.log(`Checking for existing expense record for stock ID: ${stock._id}`);
-
-        if (!existingExpense) {
-          try {
-            // Get inventory details for product name
-            const inventory = await Inventory.findById(stock.inventoryId);
-            const productName = (inventory as any)?.productInfo?.item_name?.[0]?.value || "Unknown Product";
-            
-            // Calculate total amount based on whether it's variation or non-variation
-            let totalAmount = 0;
-            if (stock.selectedVariations && stock.selectedVariations.length > 0) {
-              // Variation stock
-              totalAmount = stock.selectedVariations.reduce((sum: number, variation: any) => {
-                return sum + (variation.totalCostPrice || 0);
-              }, 0);
-            } else {
-              // Non-variation stock
-              totalAmount = stock.totalCostPrice || 0;
-            }
-            
-            console.log(`📊 Creating expense record for newly published stock: ${productName} - Total Cost: ${totalAmount}`);
-            
-            await SystemExpenseService.createInventoryPurchaseExpense({
-              productName: productName,
-              totalAmount: totalAmount,
-              stockId: stock._id.toString(),
-              purchaseDate: stock.purchaseDate ? new Date(stock.purchaseDate) : new Date(),
-            });
-            
-            console.log(`✅ Expense record created successfully for newly published stock ID: ${stock._id}`);
-          } catch (expenseError) {
-            console.error("❌ Failed to create expense for newly published stock:", expenseError);
-            // Don't fail the update if expense creation fails
-          }
-        } else {
-          console.log(`📝 Stock already has an expense record - no new expense created for stock ID: ${stock._id}`);
-        }
-      }
 
       res.status(200).json({ message: "Stock updated successfully", stock });
     } catch (error: any) {
@@ -370,13 +324,13 @@ export const stockController = {
   // 📌 Bulk Update Stock Costs
   bulkUpdateStockCost: async (req: Request, res: Response) => {
     try {
-      const { stockIds, totalCostPrice, purchasePricePerUnit, retailPricePerUnit } = req.body;
+      const { stockIds, costPricePerUnit, purchasePricePerUnit, retailPricePerUnit } = req.body;
 
       if (!Array.isArray(stockIds) || stockIds.length === 0) {
         return res.status(400).json({ message: "stockIds array is required" });
       }
 
-      if (totalCostPrice === undefined || purchasePricePerUnit === undefined || retailPricePerUnit === undefined) {
+      if (costPricePerUnit === undefined || purchasePricePerUnit === undefined || retailPricePerUnit === undefined) {
         return res.status(400).json({ message: "All cost values are required" });
       }
 
@@ -393,7 +347,7 @@ export const stockController = {
 
       const result = await stockService.bulkUpdateStockCost(
         stockIds,
-        totalCostPrice,
+        costPricePerUnit,
         purchasePricePerUnit,
         retailPricePerUnit
       );

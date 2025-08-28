@@ -20,9 +20,9 @@ export const EbayChatService = {
   sendMessage: async (req: Request, res: Response): Promise<any> => {
     try {
       console.log("=== EBAY CHAT: SENDING MESSAGE TO EBAY ===");
-      
+
       const { ebayItemId, buyerUsername, content, orderId, sellerUsername } = req.body;
-      
+
       // Validate required fields
       if (!ebayItemId || !buyerUsername || !content) {
         return res.status(StatusCodes.BAD_REQUEST).json({
@@ -36,12 +36,12 @@ export const EbayChatService = {
         buyerUsername,
         content,
         orderId,
-        sellerUsername: sellerUsername || "current_seller"
+        sellerUsername: sellerUsername || "current_seller",
       };
 
       // Send message directly to eBay API
       const success = await EbayChatService.sendEbayMessage(messageData);
-      
+
       if (!success) {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
           status: StatusCodes.INTERNAL_SERVER_ERROR,
@@ -59,14 +59,14 @@ export const EbayChatService = {
         content: messageData.content!,
         status: EbayMessageStatus.SENT,
         sentAt: new Date(),
-        isRead: false
+        isRead: false,
       };
 
       console.log("=== EBAY CHAT: MESSAGE SENT SUCCESSFULLY TO EBAY ===");
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
         message: ReasonPhrases.OK,
-        data: message
+        data: message,
       });
     } catch (error: any) {
       console.error("=== EBAY CHAT: ERROR SENDING MESSAGE ===", error);
@@ -82,11 +82,11 @@ export const EbayChatService = {
   getMessages: async (req: Request, res: Response): Promise<any> => {
     try {
       console.log("=== EBAY CHAT: GETTING MESSAGES FROM EBAY ===");
-      
+
       const { ebayItemId, buyerUsername } = req.params;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
-      
+
       const accessToken = await getStoredEbayUserAccessToken();
       if (!accessToken) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
@@ -97,11 +97,11 @@ export const EbayChatService = {
 
       // Get messages directly from eBay API
       const messages = await EbayChatService.getMessagesFromEbay(accessToken, ebayItemId);
-      
+
       // Filter by buyer if specified
-      const filteredMessages = buyerUsername ? 
-        messages.filter((msg: IEbayChat) => msg.buyerUsername === buyerUsername) : 
-        messages;
+      const filteredMessages = buyerUsername
+        ? messages.filter((msg: IEbayChat) => msg.buyerUsername === buyerUsername)
+        : messages;
 
       // Apply pagination
       const startIndex = (page - 1) * limit;
@@ -114,8 +114,8 @@ export const EbayChatService = {
           messages: paginatedMessages,
           total: filteredMessages.length,
           page,
-          limit
-        }
+          limit,
+        },
       });
     } catch (error: any) {
       console.error("Error getting messages from eBay:", error);
@@ -131,9 +131,9 @@ export const EbayChatService = {
   getConversations: async (req: Request, res: Response): Promise<any> => {
     try {
       console.log("=== EBAY CHAT: GETTING CONVERSATIONS FROM EBAY ===");
-      
+
       const sellerUsername = req.params.sellerUsername || "current_seller";
-      
+
       const accessToken = await getStoredEbayUserAccessToken();
       if (!accessToken) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
@@ -145,14 +145,14 @@ export const EbayChatService = {
       // Get orders first to get item IDs
       const orders = await EbayChatService.getOrdersFromEbay(accessToken);
       const conversations: IEbayConversation[] = [];
-      
+
       for (const order of orders) {
         if (order.OrderID && order.ItemArray) {
           for (const item of order.ItemArray) {
             if (item.ItemID) {
               // Get messages for this item
               const messages = await EbayChatService.getMessagesFromEbay(accessToken, item.ItemID);
-              
+
               if (messages.length > 0) {
                 // Group messages by buyer
                 const buyerGroups = messages.reduce((groups: any, message: IEbayChat) => {
@@ -168,8 +168,8 @@ export const EbayChatService = {
                 for (const [buyerUsername, buyerMessages] of Object.entries(buyerGroups)) {
                   const messages = buyerMessages as IEbayChat[];
                   const lastMessage = messages[messages.length - 1];
-                  const unreadCount = messages.filter((msg: IEbayChat) => 
-                    !msg.isRead && msg.messageType === EbayMessageType.BUYER_TO_SELLER
+                  const unreadCount = messages.filter(
+                    (msg: IEbayChat) => !msg.isRead && msg.messageType === EbayMessageType.BUYER_TO_SELLER
                   ).length;
 
                   conversations.push({
@@ -182,7 +182,7 @@ export const EbayChatService = {
                     lastMessage: lastMessage.content,
                     lastMessageAt: lastMessage.sentAt,
                     unreadCount,
-                    totalMessages: messages.length
+                    totalMessages: messages.length,
                   });
                 }
               }
@@ -199,8 +199,8 @@ export const EbayChatService = {
         message: ReasonPhrases.OK,
         data: {
           conversations,
-          total: conversations.length
-        }
+          total: conversations.length,
+        },
       });
     } catch (error: any) {
       console.error("Error getting conversations from eBay:", error);
@@ -216,17 +216,17 @@ export const EbayChatService = {
   markAsRead: async (req: Request, res: Response): Promise<any> => {
     try {
       console.log("=== EBAY CHAT: MARKING MESSAGE AS READ ===");
-      
+
       const { messageId } = req.params;
-      
+
       // Since we're not storing in DB, we'll just return success
       // In a real implementation, you might want to call eBay API to mark as read
       console.log("Message marked as read (no DB storage)");
-      
+
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
         message: ReasonPhrases.OK,
-        data: { messageId, markedAsRead: true }
+        data: { messageId, markedAsRead: true },
       });
     } catch (error: any) {
       console.error("Error marking message as read:", error);
@@ -242,16 +242,16 @@ export const EbayChatService = {
   markConversationAsRead: async (req: Request, res: Response): Promise<any> => {
     try {
       console.log("=== EBAY CHAT: MARKING CONVERSATION AS READ ===");
-      
+
       const { ebayItemId, buyerUsername } = req.params;
-      
+
       // Since we're not storing in DB, we'll just log
       console.log(`Conversation marked as read for item ${ebayItemId} and buyer ${buyerUsername} (no DB storage)`);
-      
+
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
         message: ReasonPhrases.OK,
-        data: { ebayItemId, buyerUsername, markedAsRead: true }
+        data: { ebayItemId, buyerUsername, markedAsRead: true },
       });
     } catch (error: any) {
       console.error("Error marking conversation as read:", error);
@@ -268,9 +268,9 @@ export const EbayChatService = {
   syncEbayMessages: async (req: Request, res: Response): Promise<any> => {
     try {
       console.log("=== EBAY CHAT: SYNCING MESSAGES FROM EBAY ===");
-      
+
       const sellerUsername = req.params.sellerUsername || "current_seller";
-      
+
       const accessToken = await getStoredEbayUserAccessToken();
       if (!accessToken) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
@@ -282,7 +282,7 @@ export const EbayChatService = {
       // Get orders first to get item IDs
       const orders = await EbayChatService.getOrdersFromEbay(accessToken);
       console.log(`Found ${orders.length} orders from eBay`);
-      
+
       for (const order of orders) {
         if (order.OrderID && order.ItemArray) {
           for (const item of order.ItemArray) {
@@ -296,14 +296,14 @@ export const EbayChatService = {
       }
 
       console.log("=== EBAY CHAT: MESSAGE SYNC COMPLETED ===");
-      
+
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
         message: ReasonPhrases.OK,
-        data: { 
-          synced: true, 
-          ordersProcessed: orders.length 
-        }
+        data: {
+          synced: true,
+          ordersProcessed: orders.length,
+        },
       });
     } catch (error: any) {
       console.error("=== EBAY CHAT: ERROR SYNCING MESSAGES ===", error);
@@ -352,7 +352,7 @@ export const EbayChatService = {
       });
 
       const responseText = await response.text();
-      
+
       if (response.ok) {
         console.log("Message sent successfully to eBay");
         return true;
@@ -370,9 +370,9 @@ export const EbayChatService = {
   getUnreadCount: async (req: Request, res: Response): Promise<any> => {
     try {
       console.log("=== EBAY CHAT: GETTING UNREAD COUNT FROM EBAY ===");
-      
+
       const sellerUsername = req.params.sellerUsername || "current_seller";
-      
+
       const accessToken = await getStoredEbayUserAccessToken();
       if (!accessToken) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
@@ -384,11 +384,11 @@ export const EbayChatService = {
       // Get all conversations and count unread messages
       const conversations = await EbayChatService.getConversationsInternal(sellerUsername);
       const totalUnread = conversations.reduce((sum: number, conv: any) => sum + conv.unreadCount, 0);
-      
+
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
         message: ReasonPhrases.OK,
-        data: { unreadCount: totalUnread }
+        data: { unreadCount: totalUnread },
       });
     } catch (error: any) {
       console.error("Error getting unread count:", error);
@@ -404,17 +404,17 @@ export const EbayChatService = {
   searchMessages: async (req: Request, res: Response): Promise<any> => {
     try {
       console.log("=== EBAY CHAT: SEARCHING MESSAGES FROM EBAY ===");
-      
+
       const { query } = req.query;
       const sellerUsername = req.params.sellerUsername || "current_seller";
-      
-      if (!query || typeof query !== 'string') {
+
+      if (!query || typeof query !== "string") {
         return res.status(StatusCodes.BAD_REQUEST).json({
           status: StatusCodes.BAD_REQUEST,
           message: "Search query is required",
         });
       }
-      
+
       const accessToken = await getStoredEbayUserAccessToken();
       if (!accessToken) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
@@ -426,25 +426,25 @@ export const EbayChatService = {
       // Get all conversations and search through messages
       const conversations = await EbayChatService.getConversationsInternal(sellerUsername);
       const allMessages: IEbayChat[] = [];
-      
+
       for (const conversation of conversations) {
         const messages = await EbayChatService.getMessagesInternal(conversation.ebayItemId, conversation.buyerUsername);
         allMessages.push(...messages);
       }
 
       // Filter messages by search query
-      const filteredMessages = allMessages.filter(message => 
+      const filteredMessages = allMessages.filter((message) =>
         message.content.toLowerCase().includes(query.toLowerCase())
       );
 
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
         message: ReasonPhrases.OK,
-        data: { 
+        data: {
           messages: filteredMessages,
           total: filteredMessages.length,
-          query
-        }
+          query,
+        },
       });
     } catch (error: any) {
       console.error("Error searching messages:", error);
@@ -469,7 +469,7 @@ export const EbayChatService = {
         ebayItemId,
         buyerUsername,
         sellerUsername,
-        updateData
+        updateData,
       });
     } catch (error) {
       console.error("Error updating conversation:", error);
@@ -510,7 +510,7 @@ export const EbayChatService = {
       });
 
       const responseText = await response.text();
-      
+
       if (response.ok) {
         // Parse XML response to get orders
         const orders = EbayChatService.parseOrdersFromXml(responseText);
@@ -549,7 +549,7 @@ export const EbayChatService = {
       });
 
       const responseText = await response.text();
-      
+
       if (response.ok) {
         const messages = EbayChatService.parseMessagesFromXml(responseText, itemId);
         return messages;
@@ -563,7 +563,12 @@ export const EbayChatService = {
     }
   },
 
-  syncMessagesForItem: async (accessToken: string, itemId: string, orderId: string, sellerUsername: string): Promise<void> => {
+  syncMessagesForItem: async (
+    accessToken: string,
+    itemId: string,
+    orderId: string,
+    sellerUsername: string
+  ): Promise<void> => {
     try {
       // Get messages for this item (no storage)
       await EbayChatService.getMessagesFromEbay(accessToken, itemId);
@@ -576,31 +581,34 @@ export const EbayChatService = {
     // Simple XML parsing for orders
     // In a real implementation, you'd use a proper XML parser
     const orders: any[] = [];
-    
+
     // Extract OrderID and ItemArray from XML
     const orderMatches = xmlText.match(/<OrderID>(.*?)<\/OrderID>/g);
     const itemMatches = xmlText.match(/<ItemID>(.*?)<\/ItemID>/g);
     const titleMatches = xmlText.match(/<ItemTitle>(.*?)<\/ItemTitle>/g);
     const priceMatches = xmlText.match(/<TransactionPrice>(.*?)<\/TransactionPrice>/g);
-    
+
     if (orderMatches && itemMatches) {
       for (let i = 0; i < orderMatches.length; i++) {
-        const orderId = orderMatches[i].replace(/<\/?OrderID>/g, '');
-        const itemId = itemMatches[i] ? itemMatches[i].replace(/<\/?ItemID>/g, '') : '';
-        const title = titleMatches && titleMatches[i] ? titleMatches[i].replace(/<\/?ItemTitle>/g, '') : 'Unknown Item';
-        const price = priceMatches && priceMatches[i] ? parseFloat(priceMatches[i].replace(/<\/?TransactionPrice>/g, '')) : 0;
-        
+        const orderId = orderMatches[i].replace(/<\/?OrderID>/g, "");
+        const itemId = itemMatches[i] ? itemMatches[i].replace(/<\/?ItemID>/g, "") : "";
+        const title = titleMatches && titleMatches[i] ? titleMatches[i].replace(/<\/?ItemTitle>/g, "") : "Unknown Item";
+        const price =
+          priceMatches && priceMatches[i] ? parseFloat(priceMatches[i].replace(/<\/?TransactionPrice>/g, "")) : 0;
+
         orders.push({
           OrderID: orderId,
-          ItemArray: [{ 
-            ItemID: itemId,
-            Title: title,
-            TransactionPrice: price
-          }]
+          ItemArray: [
+            {
+              ItemID: itemId,
+              Title: title,
+              TransactionPrice: price,
+            },
+          ],
         });
       }
     }
-    
+
     return orders;
   },
 
@@ -608,26 +616,28 @@ export const EbayChatService = {
     // Simple XML parsing for messages
     // In a real implementation, you'd use a proper XML parser
     const messages: IEbayChat[] = [];
-    
+
     // Extract message data from XML
     const messageMatches = xmlText.match(/<MemberMessage>(.*?)<\/MemberMessage>/gs);
-    
+
     if (messageMatches) {
       for (const messageMatch of messageMatches) {
         const senderMatch = messageMatch.match(/<Sender>(.*?)<\/Sender>/);
         const recipientMatch = messageMatch.match(/<RecipientID>(.*?)<\/RecipientID>/);
         const bodyMatch = messageMatch.match(/<Body>(.*?)<\/Body>/);
         const timestampMatch = messageMatch.match(/<MessageTime>(.*?)<\/MessageTime>/);
-        
+
         if (senderMatch && recipientMatch && bodyMatch) {
           const sender = senderMatch[1];
           const recipient = recipientMatch[1];
           const content = bodyMatch[1];
           const timestamp = timestampMatch ? timestampMatch[1] : new Date().toISOString();
-          
+
           // Determine message type based on sender/recipient
-          const messageType = sender.includes('seller') ? EbayMessageType.SELLER_TO_BUYER : EbayMessageType.BUYER_TO_SELLER;
-          
+          const messageType = sender.includes("seller")
+            ? EbayMessageType.SELLER_TO_BUYER
+            : EbayMessageType.BUYER_TO_SELLER;
+
           messages.push({
             ebayItemId: itemId,
             buyerUsername: messageType === EbayMessageType.BUYER_TO_SELLER ? sender : recipient,
@@ -636,23 +646,28 @@ export const EbayChatService = {
             content,
             status: EbayMessageStatus.DELIVERED,
             sentAt: new Date(timestamp),
-            isRead: false
+            isRead: false,
           });
         }
       }
     }
-    
+
     return messages;
   },
 
-  saveMessageFromEbay: async (message: IEbayApiMessage, itemId: string, orderId: string, sellerUsername: string): Promise<void> => {
+  saveMessageFromEbay: async (
+    message: IEbayApiMessage,
+    itemId: string,
+    orderId: string,
+    sellerUsername: string
+  ): Promise<void> => {
     try {
       // Since we're not storing in DB, we'll just log
       console.log("Message from eBay received (no DB storage):", {
         message,
         itemId,
         orderId,
-        sellerUsername
+        sellerUsername,
       });
     } catch (error) {
       console.error("Error processing message from eBay:", error);
@@ -670,14 +685,14 @@ export const EbayChatService = {
       // Get orders first to get item IDs
       const orders = await EbayChatService.getOrdersFromEbay(accessToken);
       const conversations: IEbayConversation[] = [];
-      
+
       for (const order of orders) {
         if (order.OrderID && order.ItemArray) {
           for (const item of order.ItemArray) {
             if (item.ItemID) {
               // Get messages for this item
               const messages = await EbayChatService.getMessagesFromEbay(accessToken, item.ItemID);
-              
+
               if (messages.length > 0) {
                 // Group messages by buyer
                 const buyerGroups = messages.reduce((groups: any, message: IEbayChat) => {
@@ -693,8 +708,8 @@ export const EbayChatService = {
                 for (const [buyerUsername, buyerMessages] of Object.entries(buyerGroups)) {
                   const messages = buyerMessages as IEbayChat[];
                   const lastMessage = messages[messages.length - 1];
-                  const unreadCount = messages.filter((msg: IEbayChat) => 
-                    !msg.isRead && msg.messageType === EbayMessageType.BUYER_TO_SELLER
+                  const unreadCount = messages.filter(
+                    (msg: IEbayChat) => !msg.isRead && msg.messageType === EbayMessageType.BUYER_TO_SELLER
                   ).length;
 
                   conversations.push({
@@ -707,7 +722,7 @@ export const EbayChatService = {
                     lastMessage: lastMessage.content,
                     lastMessageAt: lastMessage.sentAt,
                     unreadCount,
-                    totalMessages: messages.length
+                    totalMessages: messages.length,
                   });
                 }
               }
@@ -726,7 +741,12 @@ export const EbayChatService = {
     }
   },
 
-  getMessagesInternal: async (ebayItemId: string, buyerUsername: string, page: number = 1, limit: number = 50): Promise<IEbayChat[]> => {
+  getMessagesInternal: async (
+    ebayItemId: string,
+    buyerUsername: string,
+    page: number = 1,
+    limit: number = 50
+  ): Promise<IEbayChat[]> => {
     try {
       const accessToken = await getStoredEbayUserAccessToken();
       if (!accessToken) {
@@ -735,11 +755,11 @@ export const EbayChatService = {
 
       // Get messages directly from eBay API
       const messages = await EbayChatService.getMessagesFromEbay(accessToken, ebayItemId);
-      
+
       // Filter by buyer if specified
-      const filteredMessages = buyerUsername ? 
-        messages.filter((msg: IEbayChat) => msg.buyerUsername === buyerUsername) : 
-        messages;
+      const filteredMessages = buyerUsername
+        ? messages.filter((msg: IEbayChat) => msg.buyerUsername === buyerUsername)
+        : messages;
 
       // Apply pagination
       const startIndex = (page - 1) * limit;
@@ -750,5 +770,5 @@ export const EbayChatService = {
       console.error("Error getting messages from eBay:", error);
       throw error;
     }
-  }
+  },
 };

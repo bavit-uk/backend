@@ -249,42 +249,6 @@ function calculateOvertime(record: any) {
 }
 
 export const attendanceService = {
-  // Clean up duplicate attendance records (run this once after deploying the fix)
-  cleanupDuplicateRecords: async () => {
-    try {
-      console.log("Starting cleanup of duplicate attendance records...");
-
-      // Find all attendance records
-      const allAttendance = await Attendance.find({}).sort({ employeeId: 1, date: 1, createdAt: 1 });
-
-      const duplicates = [];
-      const seen = new Set();
-
-      for (const record of allAttendance) {
-        const key = `${record.employeeId}-${record.date.toISOString().split("T")[0]}`;
-
-        if (seen.has(key)) {
-          duplicates.push(record._id);
-        } else {
-          seen.add(key);
-        }
-      }
-
-      if (duplicates.length > 0) {
-        console.log(`Found ${duplicates.length} duplicate records to remove`);
-        await Attendance.deleteMany({ _id: { $in: duplicates } });
-        console.log(`Successfully removed ${duplicates.length} duplicate records`);
-      } else {
-        console.log("No duplicate records found");
-      }
-
-      return { success: true, removedCount: duplicates.length };
-    } catch (error: any) {
-      console.error("Error cleaning up duplicate records:", error);
-      return { success: false, error: error.message };
-    }
-  },
-
   // Get employee punch-in details by employee ID
   getPunchInDetails: async (employeeId: string) => {
     try {
@@ -1264,14 +1228,14 @@ const isWeekend = (date: Date): boolean => {
  * SKIPS WEEKEND DATES - only processes weekdays
  */
 export const markAbsentForUsers = async () => {
-  // GRACE_MINUTES: Grace period after shift end before marking as absent
-  // This is used to determine when to process absence marking
   const GRACE_MINUTES = 120;
   const now = new Date();
 
   const shifts = await Shift.find({ isBlocked: false }).populate("employees");
 
   for (const shift of shifts) {
+    const [endHour, endMinute] = shift.endTime.split(":").map(Number);
+
     for (const employeeId of shift.employees) {
       // Check multiple days to find shifts that ended before current cron run
       // We need to check today and previous days to catch all relevant shifts
@@ -1285,8 +1249,9 @@ export const markAbsentForUsers = async () => {
           continue;
         }
 
-        // Calculate when the grace period ended for this shift (handles overnight shifts)
-        const gracePeriodEnd = calculateGracePeriodEnd(shift, shiftDate, GRACE_MINUTES);
+        // Calculate when the grace period ended for this shift
+        const shiftEnd = new Date(shiftDate);
+        shiftEnd.setHours(endHour, endMinute + GRACE_MINUTES, 0, 0);
 
         // Check if this shift ended before the current cron run
         if (now >= gracePeriodEnd) {
@@ -1350,14 +1315,14 @@ export const markAbsentForUsers = async () => {
  * SKIPS WEEKEND DATES - only processes weekdays
  */
 export const autoCheckoutForUsers = async () => {
-  // BUFFER_MINUTES: Grace period after shift end before auto-checkout is triggered
-  // This is NOT the checkout time - it's just used to determine when to process auto-checkout
   const BUFFER_MINUTES = 120;
   const now = new Date();
 
   const shifts = await Shift.find({ isBlocked: false }).populate("employees");
 
   for (const shift of shifts) {
+    const [endHour, endMinute] = shift.endTime.split(":").map(Number);
+
     for (const employeeId of shift.employees) {
       // Check multiple days to find shifts that ended before current cron run
       // We need to check today and previous days to catch all relevant shifts
@@ -1371,8 +1336,9 @@ export const autoCheckoutForUsers = async () => {
           continue;
         }
 
-        // Calculate when the buffer period ended for this shift (handles overnight shifts)
-        const bufferPeriodEnd = calculateGracePeriodEnd(shift, shiftDate, BUFFER_MINUTES);
+        // Calculate when the buffer period ended for this shift
+        const shiftEnd = new Date(shiftDate);
+        shiftEnd.setHours(endHour, endMinute + BUFFER_MINUTES, 0, 0);
 
         // Check if this shift ended before the current cron run
         if (now >= bufferPeriodEnd) {
