@@ -26,7 +26,8 @@ function computeNextRunAt(
   frequency: RecurrenceFrequency,
   interval: number,
   dayOfWeek?: number,
-  dayOfMonth?: number
+  dayOfMonth?: number,
+  monthOfYear?: number
 ): Date {
   const base = new Date(currentFrom);
   switch (frequency) {
@@ -63,6 +64,14 @@ function computeNextRunAt(
     }
     case "yearly": {
       const next = new Date(base);
+      if (typeof monthOfYear === "number") {
+        // Set the specific month (0-indexed, so subtract 1)
+        next.setMonth(monthOfYear - 1);
+        // Keep the same day of month if possible
+        const lastDayOfMonth = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+        const desiredDay = Math.min(base.getDate(), lastDayOfMonth);
+        next.setDate(desiredDay);
+      }
       next.setFullYear(base.getFullYear() + interval);
       return next;
     }
@@ -106,7 +115,8 @@ export const RecurringExpenseService = {
               data.frequency!,
               data.interval || 1,
               data.dayOfWeek,
-              data.dayOfMonth
+              data.dayOfMonth,
+              data.monthOfYear
             );
           }
           nextRunAt = candidate;
@@ -124,7 +134,8 @@ export const RecurringExpenseService = {
               data.frequency!,
               data.interval || 1,
               data.dayOfWeek,
-              data.dayOfMonth
+              data.dayOfMonth,
+              data.monthOfYear
             );
           }
           nextRunAt = candidate;
@@ -156,7 +167,61 @@ export const RecurringExpenseService = {
   getAll: (filter: FilterQuery<IRecurringExpense> = {}) => {
     return RecurringExpense.find(filter)
       .populate("category", "title")
-      .sort({ nextRunAt: 1 });
+      .sort({ createdAt: -1 });
+  },
+
+  searchRecurringExpenses: async (filters: {
+    searchQuery?: string;
+    isBlocked?: boolean;
+    frequency?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const { searchQuery, isBlocked, frequency, page = 1, limit = 10 } = filters;
+    
+    // Build filter object
+    const filter: any = {};
+    
+    if (isBlocked !== undefined) {
+      filter.isBlocked = isBlocked;
+    }
+    
+    if (frequency && frequency !== "all") {
+      filter.frequency = frequency;
+    }
+    
+    // Build search query
+    if (searchQuery) {
+      filter.$or = [
+        { title: { $regex: searchQuery, $options: 'i' } },
+        { description: { $regex: searchQuery, $options: 'i' } }
+      ];
+    }
+    
+    // Calculate skip value for pagination
+    const skip = (page - 1) * limit;
+    
+    // Get total count for pagination
+    const totalRecurringExpenses = await RecurringExpense.countDocuments(filter);
+    
+    // Get paginated results
+    const recurringExpenses = await RecurringExpense.find(filter)
+      .populate("category", "title")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    
+    return {
+      recurringExpenses,
+      pagination: {
+        totalRecurringExpenses,
+        currentPage: page,
+        totalPages: Math.ceil(totalRecurringExpenses / limit),
+        limit,
+        hasNextPage: page < Math.ceil(totalRecurringExpenses / limit),
+        hasPrevPage: page > 1
+      }
+    };
   },
 
   toggleBlock: async (id: string, isBlocked: boolean) => {
@@ -216,7 +281,8 @@ export const RecurringExpenseService = {
           item.frequency,
           item.interval || 1,
           item.dayOfWeek,
-          item.dayOfMonth
+          item.dayOfMonth,
+          item.monthOfYear
         );
 
         item.lastRunAt = now;
