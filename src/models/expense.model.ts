@@ -22,7 +22,7 @@ const expenseSchema = new Schema<IExpense, IExpenseModel>({
   },
   category: {
     type: Schema.Types.ObjectId,
-    ref: "ExpenseCategory",
+    ref:"IExpenseModel",
     required: [true, "Category is required"],
   },
   date: {
@@ -38,68 +38,9 @@ const expenseSchema = new Schema<IExpense, IExpenseModel>({
     type: String,
     default: "",
   },
-  isSystemGenerated: {
-    type: Boolean,
-    default: false,
-  },
-  systemType: {
-    type: String,
-    enum: ["inventory_purchase", "payroll", "recurring", "adjustment"],
-    required: function() {
-      return this.isSystemGenerated;
-    },
-  },
-  payrollType: {
-    type: String,
-    enum: ["ACTUAL", "GOVERNMENT"],
-    required: function() {
-      return this.isSystemGenerated && this.systemType === "payroll";
-    },
-  },
-  // Separate reference fields for each system type
-  inventoryReferenceId: {
-    type: Schema.Types.ObjectId,
-    ref: "Stock",
-    required: function() {
-      return this.isSystemGenerated && this.systemType === "inventory_purchase";
-    },
-  },
-  payrollReferenceId: {
-    type: Schema.Types.ObjectId,
-    ref: "ProcessedPayroll",
-    required: function() {
-      return this.isSystemGenerated && this.systemType === "payroll";
-    },
-  },
-  recurringReferenceId: {
-    type: Schema.Types.ObjectId,
-    ref: "RecurringExpense",
-    required: function() {
-      return this.isSystemGenerated && this.systemType === "recurring";
-    },
-  },
-  adjustmentReferenceId: {
-    type: Schema.Types.ObjectId,
-    ref: "Expense",
-    required: function() {
-      return this.isSystemGenerated && this.systemType === "adjustment";
-    },
-  },
-  adjustments: [{
-    adjustmentId: {
-      type: Schema.Types.ObjectId,
-      ref: "Expense"
-    },
-    amount: Number,
-    reason: String,
-    date: {
-      type: Date,
-      default: Date.now
-    },
-    adjustedBy: String
-  }],
-}, {
-  timestamps: true
 });
 
-export const ExpenseModel = model<IExpense, IExpenseModel>("Expense", expenseSchema);
+export const ExpenseModel = model<IExpense, IExpenseModel>(
+  "Expense",
+  expenseSchema
+);

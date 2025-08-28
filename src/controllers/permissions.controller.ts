@@ -40,17 +40,12 @@ export const permissionsController = {
             "VIEW_BUNDLES",
           ],
         },
-        orderPipelineManagement: {
-          parent: "ORDER_PIPELINE_MANAGEMENT",
-          // children: [
-          // ],
-        },
         orderManagement: {
-          parent: "ORDER_MANAGEMENT",
+          parent: "ORDER_PIPELINE",
           // children: [
+          
           // ],
         },
-
         // discountAndTaxes: {
         //   parent: "MANAGE_TAXES_AND_DISCOUNTS",
         //   children: [
@@ -80,9 +75,9 @@ export const permissionsController = {
             "VIEW_EXPENSE",
             "VIEW_REVENUE",
             "ADD_REVENUE",
+            "VIEW_INVENTORY_PURCHASES",
             "VIEW_RECURRING_EXPENSE",
             "ADD_RECURRING_EXPENSE",
-            "VIEW_REPORT",
           ],
         },
         hrManagement: {

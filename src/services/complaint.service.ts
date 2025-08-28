@@ -78,12 +78,7 @@ getAllComplaints: async () => {
     });
 },
   getComplaintById: (id: string) => {
-    return ComplaintModel.findById(id)
-      .populate('timeline.changedBy', 'firstName lastName')
-      .populate('resolution.resolvedBy', 'firstName lastName')
-      .populate('notes.notedBy', 'firstName lastName')
-      .populate('assignedTo', 'firstName lastName')
-      .populate('userId', 'firstName lastName');
+    return ComplaintModel.findById(id).populate('timeline.changedBy', 'firstName lastName');
   },
 
   changeStatus: async (id: string, status: string, userId?: string) => {

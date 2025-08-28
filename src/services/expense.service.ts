@@ -12,13 +12,6 @@ export const expenseService = {
     category: string;
     date: Date;
     image: string;
-    isSystemGenerated?: boolean;
-    systemType?: "inventory_purchase" | "payroll" | "recurring" | "adjustment";
-    payrollType?: "ACTUAL" | "GOVERNMENT";
-    inventoryReferenceId?: string;
-    payrollReferenceId?: string;
-    recurringReferenceId?: string;
-    adjustmentReferenceId?: string;
   }): Promise<IExpense> => {
     const expense = new ExpenseModel(data);
     return expense.save();
@@ -28,51 +21,42 @@ export const expenseService = {
    * Get expense by ID
    */
   getExpenseById: async (id: string): Promise<IExpense | null> => {
-    return ExpenseModel.findById(id)
-      .populate("category")
-      .populate("inventoryReferenceId")
-      .populate("payrollReferenceId")
-      .populate("recurringReferenceId")
-      .populate("adjustmentReferenceId");
+    return ExpenseModel.findById(id);
   },
 
-  //  Get all expenses
-  getAllExpenses: async (): Promise<IExpense[]> => {
-    const Results = await ExpenseModel.find()
-      .populate("category")
+  /**
+   * Get all expenses with optional filters
+   */
+  getAllExpenses: async (
+    filters: {
+      category?: string;
+      startDate?: Date;
+      endDate?: Date;
+      minAmount?: number;
+      maxAmount?: number;
+    } = {}
+  ): Promise<IExpense[]> => {
+    const query: any = {};
+  
+    if (filters.category) query.category = filters.category;
+    if (filters.startDate || filters.endDate) {
+      query.date = {};
+      if (filters.startDate) query.date.$gte = filters.startDate;
+      if (filters.endDate) query.date.$lte = filters.endDate;
+    }
+    if (filters.minAmount || filters.maxAmount) {
+      query.amount = {};
+      if (filters.minAmount) query.amount.$gte = filters.minAmount;
+      if (filters.maxAmount) query.amount.$lte = filters.maxAmount;
+    }
+  
+    return ExpenseModel.find(query)
       .populate({
-        path: "inventoryReferenceId",
-        populate: [
-          {
-            path: "inventoryId",
-            populate: {
-              path: "productInfo.productCategory",
-            },
-          },
-          {
-            path: "productSupplier",
-          },
-          {
-            path: "receivedBy",
-          },
-          {
-            path: "selectedVariations.variationId",
-          },
-        ],
+        path: 'category',
+        select: 'title', // Only get the title from Category
+        model: 'IExpenseModel' // The model name you used when creating the Category model
       })
-      .populate({
-        path: "payrollReferenceId",
-        populate: {
-          path: "employeeId",
-        },
-      })
-      .populate("recurringReferenceId")
-      .populate("adjustmentReferenceId");
-    console.log(
-      "Results of getAllExpenses with populated references:",
-      Results
-    );
-    return Results;
+      .sort({ date: -1 });
   },
 
   /**
@@ -85,7 +69,7 @@ export const expenseService = {
     return ExpenseModel.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
-    }).populate("category");
+    });
   },
 
   /**
@@ -96,124 +80,26 @@ export const expenseService = {
   },
 
   /**
-   * Search expenses with pagination and filters
+   * Get expense statistics by category
    */
-  searchExpenses: async (filters: {
-    searchQuery?: string;
-    isBlocked?: boolean;
-    category?: string;
-    expenseType?: string;
-    payrollType?: string;
-    page?: number;
-    limit?: number;
-  }) => {
-    const { searchQuery, isBlocked, category, expenseType, payrollType, page = 1, limit = 10 } = filters;
-    
-    // Build filter object
-    const filter: any = {};
-    
-    if (isBlocked !== undefined) {
-      filter.isBlocked = isBlocked;
-    }
-    
-    if (category) {
-      filter.category = category;
-    }
-    
-    if (expenseType && expenseType !== "all") {
-      if (expenseType === "manual") {
-        filter.isSystemGenerated = false;
-      } else if (expenseType === "system") {
-        filter.isSystemGenerated = true;
-      }
-    }
-    
-    // Special handling for payroll type filter
-    // We want to show all expenses but only show the selected payroll type for payroll expenses
-    if (payrollType) {
-      // For payroll expenses, filter by payroll type
-      // For non-payroll expenses, include them regardless of payroll type
-      filter.$or = [
-        { systemType: { $ne: "payroll" } }, // Include all non-payroll expenses
-        { 
-          systemType: "payroll", 
-          payrollType: payrollType 
-        } // Include only the selected payroll type for payroll expenses
-      ];
-    }
-    
-    // Build search query
-    if (searchQuery) {
-      const searchFilter = {
-        $or: [
-          { title: { $regex: searchQuery, $options: 'i' } },
-          { description: { $regex: searchQuery, $options: 'i' } }
-        ]
-      };
-      
-      // If we already have $or for payroll filter, combine them
-      if (filter.$or) {
-        filter.$and = [
-          { $or: filter.$or },
-          searchFilter
-        ];
-        delete filter.$or;
-      } else {
-        filter.$or = searchFilter.$or;
-      }
-    }
-    
-    // Calculate skip value for pagination
-    const skip = (page - 1) * limit;
-    
-    // Get total count for pagination
-    const totalExpenses = await ExpenseModel.countDocuments(filter);
-    
-    // Get paginated results with population
-    const expenses = await ExpenseModel.find(filter)
-      .populate("category")
-      .populate({
-        path: "inventoryReferenceId",
-        populate: [
-          {
-            path: "inventoryId",
-            populate: {
-              path: "productInfo.productCategory",
-            },
-          },
-          {
-            path: "productSupplier",
-          },
-          {
-            path: "receivedBy",
-          },
-          {
-            path: "selectedVariations.variationId",
-          },
-        ],
-      })
-      .populate({
-        path: "payrollReferenceId",
-        populate: {
-          path: "employeeId",
+  getExpenseStatistics: async (): Promise<
+    { category: string; total: number }[]
+  > => {
+    return ExpenseModel.aggregate([
+      {
+        $group: {
+          _id: "$category",
+          total: { $sum: "$amount" },
         },
-      })
-      .populate("recurringReferenceId")
-      .populate("adjustmentReferenceId")
-      .sort({ date: -1 })
-      .skip(skip)
-      .limit(limit);
-    
-    return {
-      expenses,
-      pagination: {
-        totalExpenses,
-        currentPage: page,
-        totalPages: Math.ceil(totalExpenses / limit),
-        limit,
-        hasNextPage: page < Math.ceil(totalExpenses / limit),
-        hasPrevPage: page > 1
-      }
-    };
+      },
+      {
+        $project: {
+          category: "$_id",
+          total: 1,
+          _id: 0,
+        },
+      },
+      { $sort: { total: -1 } },
+    ]);
   },
 };

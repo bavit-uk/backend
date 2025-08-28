@@ -50,6 +50,14 @@ const markAsProcessed = async (jobType: string, employeeId: string, shiftId: str
   }
 };
 
+// Helper to format a local date as YYYY-MM-DD (using local timezone)
+const formatLocalDateKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 // Helper function to calculate grace period end for a shift
 const calculateGracePeriodEnd = (shift: any, shiftDate: Date, graceMinutes: number): Date => {
   const [endHour, endMinute] = shift.endTime.split(":").map(Number);
@@ -63,10 +71,10 @@ const calculateGracePeriodEnd = (shift: any, shiftDate: Date, graceMinutes: numb
   if (isOvernight) {
     // For overnight shifts, end time is on the next day
     gracePeriodEnd.setDate(shiftDate.getDate() + 1);
-    gracePeriodEnd.setUTCHours(endHour, endMinute + graceMinutes, 0, 0);
+    gracePeriodEnd.setHours(endHour, endMinute + graceMinutes, 0, 0);
   } else {
     // Regular shift ends same day
-    gracePeriodEnd.setUTCHours(endHour, endMinute + graceMinutes, 0, 0);
+    gracePeriodEnd.setHours(endHour, endMinute + graceMinutes, 0, 0);
   }
 
   return gracePeriodEnd;
@@ -241,42 +249,6 @@ function calculateOvertime(record: any) {
 }
 
 export const attendanceService = {
-  // Clean up duplicate attendance records (run this once after deploying the fix)
-  cleanupDuplicateRecords: async () => {
-    try {
-      console.log("Starting cleanup of duplicate attendance records...");
-
-      // Find all attendance records
-      const allAttendance = await Attendance.find({}).sort({ employeeId: 1, date: 1, createdAt: 1 });
-
-      const duplicates = [];
-      const seen = new Set();
-
-      for (const record of allAttendance) {
-        const key = `${record.employeeId}-${record.date.toISOString().split("T")[0]}`;
-
-        if (seen.has(key)) {
-          duplicates.push(record._id);
-        } else {
-          seen.add(key);
-        }
-      }
-
-      if (duplicates.length > 0) {
-        console.log(`Found ${duplicates.length} duplicate records to remove`);
-        await Attendance.deleteMany({ _id: { $in: duplicates } });
-        console.log(`Successfully removed ${duplicates.length} duplicate records`);
-      } else {
-        console.log("No duplicate records found");
-      }
-
-      return { success: true, removedCount: duplicates.length };
-    } catch (error: any) {
-      console.error("Error cleaning up duplicate records:", error);
-      return { success: false, error: error.message };
-    }
-  },
-
   // Get employee punch-in details by employee ID
   getPunchInDetails: async (employeeId: string) => {
     try {
@@ -1256,29 +1228,30 @@ const isWeekend = (date: Date): boolean => {
  * SKIPS WEEKEND DATES - only processes weekdays
  */
 export const markAbsentForUsers = async () => {
-  // GRACE_MINUTES: Grace period after shift end before marking as absent
-  // This is used to determine when to process absence marking
   const GRACE_MINUTES = 120;
   const now = new Date();
 
   const shifts = await Shift.find({ isBlocked: false }).populate("employees");
 
   for (const shift of shifts) {
+    const [endHour, endMinute] = shift.endTime.split(":").map(Number);
+
     for (const employeeId of shift.employees) {
       // Check multiple days to find shifts that ended before current cron run
       // We need to check today and previous days to catch all relevant shifts
       for (let daysBack = 0; daysBack <= 7; daysBack++) {
         const shiftDate = new Date(now);
         shiftDate.setDate(now.getDate() - daysBack);
-        shiftDate.setUTCHours(0, 0, 0, 0);
+        shiftDate.setHours(0, 0, 0, 0);
 
         // SKIP WEEKEND DATES - only process weekdays
         if (isWeekend(shiftDate)) {
           continue;
         }
 
-        // Calculate when the grace period ended for this shift (handles overnight shifts)
-        const gracePeriodEnd = calculateGracePeriodEnd(shift, shiftDate, GRACE_MINUTES);
+        // Calculate when the grace period ended for this shift
+        const shiftEnd = new Date(shiftDate);
+        shiftEnd.setHours(endHour, endMinute + GRACE_MINUTES, 0, 0);
 
         // Check if this shift ended before the current cron run
         if (now >= gracePeriodEnd) {
@@ -1288,7 +1261,7 @@ export const markAbsentForUsers = async () => {
               "markAbsent",
               employeeId.toString(),
               (shift._id as Types.ObjectId).toString(),
-              shiftDate.toISOString().split("T")[0]
+              formatLocalDateKey(shiftDate)
             )
           ) {
             continue;
@@ -1323,7 +1296,7 @@ export const markAbsentForUsers = async () => {
             "markAbsent",
             employeeId.toString(),
             (shift._id as Types.ObjectId).toString(),
-            shiftDate.toISOString().split("T")[0]
+            formatLocalDateKey(shiftDate)
           );
 
           // Break out of the days loop once we've processed this shift
@@ -1342,29 +1315,30 @@ export const markAbsentForUsers = async () => {
  * SKIPS WEEKEND DATES - only processes weekdays
  */
 export const autoCheckoutForUsers = async () => {
-  // BUFFER_MINUTES: Grace period after shift end before auto-checkout is triggered
-  // This is NOT the checkout time - it's just used to determine when to process auto-checkout
   const BUFFER_MINUTES = 120;
   const now = new Date();
 
   const shifts = await Shift.find({ isBlocked: false }).populate("employees");
 
   for (const shift of shifts) {
+    const [endHour, endMinute] = shift.endTime.split(":").map(Number);
+
     for (const employeeId of shift.employees) {
       // Check multiple days to find shifts that ended before current cron run
       // We need to check today and previous days to catch all relevant shifts
       for (let daysBack = 0; daysBack <= 7; daysBack++) {
         const shiftDate = new Date(now);
         shiftDate.setDate(now.getDate() - daysBack);
-        shiftDate.setUTCHours(0, 0, 0, 0);
+        shiftDate.setHours(0, 0, 0, 0);
 
         // SKIP WEEKEND DATES - only process weekdays
         if (isWeekend(shiftDate)) {
           continue;
         }
 
-        // Calculate when the buffer period ended for this shift (handles overnight shifts)
-        const bufferPeriodEnd = calculateGracePeriodEnd(shift, shiftDate, BUFFER_MINUTES);
+        // Calculate when the buffer period ended for this shift
+        const shiftEnd = new Date(shiftDate);
+        shiftEnd.setHours(endHour, endMinute + BUFFER_MINUTES, 0, 0);
 
         // Check if this shift ended before the current cron run
         if (now >= bufferPeriodEnd) {
@@ -1374,7 +1348,7 @@ export const autoCheckoutForUsers = async () => {
               "autoCheckout",
               employeeId.toString(),
               (shift._id as Types.ObjectId).toString(),
-              shiftDate.toISOString().split("T")[0]
+              formatLocalDateKey(shiftDate)
             )
           ) {
             continue;
@@ -1399,7 +1373,7 @@ export const autoCheckoutForUsers = async () => {
               actualShiftEndTime.setDate(shiftDate.getDate() + 1);
             }
 
-            actualShiftEndTime.setUTCHours(endHour, endMinute, 0, 0);
+            actualShiftEndTime.setHours(endHour, endMinute, 0, 0);
             attendance.checkOut = actualShiftEndTime;
             await attendance.save();
 
@@ -1413,7 +1387,7 @@ export const autoCheckoutForUsers = async () => {
             "autoCheckout",
             employeeId.toString(),
             (shift._id as Types.ObjectId).toString(),
-            shiftDate.toISOString().split("T")[0]
+            formatLocalDateKey(shiftDate)
           );
 
           // Break out of the days loop once we've processed this shift
