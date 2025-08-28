@@ -49,6 +49,7 @@ mongoose
     // So, I had to keep it here
     // To make sure it keeps working, don't remove this route from here
     // app.post("/api/stripe/handle-webhook", express.raw({ type: "application/json" }), stripeController.webhookHandler);
+
     app.use(requestLogger); // Use the request logger middleware
     // Use morgan for logging requests
     // const accessLogStream = fs.createWriteStream(path.join(__dirname, "access.log"), { flags: "a" });
