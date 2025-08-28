@@ -696,6 +696,145 @@ export class EmailAccountController {
 
           console.log(`🧵 Found ${threads.length} threads for account ${account.emailAddress}`);
 
+          // FIRST-TIME SYNC: If no threads found, trigger auto-sync
+          if (threads.length === 0) {
+            console.log(`🔄 No threads found for account ${account.emailAddress} - checking if first-time sync needed`);
+
+            // Check if first-time sync was already completed
+            if (account.syncState?.firstTimeSyncCompleted) {
+              console.log(`ℹ️ Account ${account.emailAddress} was already synced once - no auto-sync needed`);
+              // Return empty response without triggering sync
+              return res.json({
+                success: true,
+                data: {
+                  threads: [],
+                  totalCount: 0,
+                  account: {
+                    id: account._id,
+                    emailAddress: account.emailAddress,
+                    accountName: account.accountName,
+                  },
+                  viewMode: "threads",
+                  message: "No emails found in this account",
+                },
+              });
+            }
+
+            // Check if account is already being processed to prevent duplicate syncs
+            if (account.syncState?.isProcessing) {
+              console.log(`⚠️ Account ${account.emailAddress} is already being processed - skipping duplicate sync`);
+              return res.json({
+                success: true,
+                data: {
+                  threads: [],
+                  totalCount: 0,
+                  account: {
+                    id: account._id,
+                    emailAddress: account.emailAddress,
+                    accountName: account.accountName,
+                  },
+                  viewMode: "threads",
+                  message: "Sync in progress, please wait...",
+                },
+              });
+            }
+
+            try {
+              // Mark account as processing to prevent duplicate syncs
+              await EmailAccountModel.findByIdAndUpdate(account._id, {
+                $set: {
+                  "syncState.isProcessing": true,
+                  "syncState.firstTimeSyncStarted": new Date(),
+                },
+              });
+              // Import sync services
+              const { ManualEmailSyncService } = await import("@/services/manual-email-sync.service");
+              const { EmailFetchingService } = await import("@/services/email-fetching.service");
+
+              let syncResult;
+
+              // Choose sync method based on account type - LIMITED BATCH ONLY
+              if (account.accountType === "gmail" && account.oauth) {
+                console.log(
+                  `🔄 Starting LIMITED Gmail sync for first-time account (100 emails only): ${account.emailAddress}`
+                );
+                // Use fetchEmailsFromAccount with limit instead of full sync
+                syncResult = await EmailFetchingService.fetchEmailsFromAccount(account, {
+                  limit: 100,
+                  includeBody: true,
+                  folder: "INBOX",
+                });
+              } else {
+                console.log(
+                  `🔄 Starting LIMITED email fetch for IMAP/other account (100 emails only): ${account.emailAddress}`
+                );
+                syncResult = await EmailFetchingService.fetchEmailsFromAccount(account, {
+                  limit: 100,
+                  includeBody: true,
+                  folder: "INBOX",
+                });
+              }
+
+              console.log(`✅ First-time sync completed for ${account.emailAddress}:`, syncResult.success);
+
+              // After sync, retry getting threads
+              if (syncResult.success) {
+                const updatedThreads = await EmailThreadModel.find({
+                  accountId: account._id,
+                })
+                  .sort({ lastMessageAt: -1 })
+                  .skip(parseInt(offset as string))
+                  .limit(parseInt(limit as string))
+                  .lean();
+
+                const updatedTotalCount = await EmailThreadModel.countDocuments({
+                  accountId: account._id,
+                });
+
+                console.log(`🔄 After first-time sync: found ${updatedThreads.length} threads`);
+
+                // Mark sync as completed
+                await EmailAccountModel.findByIdAndUpdate(account._id, {
+                  $set: {
+                    "syncState.isProcessing": false,
+                    "syncState.firstTimeSyncCompleted": new Date(),
+                    "syncState.syncStatus": "partial", // Mark as partial since we only synced 100 emails
+                    "stats.lastSyncAt": new Date(),
+                  },
+                });
+
+                // Return the updated threads
+                return res.json({
+                  success: true,
+                  data: {
+                    threads: updatedThreads,
+                    totalCount: updatedTotalCount,
+                    account: {
+                      id: account._id,
+                      emailAddress: account.emailAddress,
+                      accountName: account.accountName,
+                    },
+                    viewMode: "threads",
+                    wasFirstTimeSync: true,
+                  },
+                });
+              }
+            } catch (syncError: any) {
+              console.error(`❌ First-time sync failed for ${account.emailAddress}:`, syncError.message);
+
+              // Reset processing flag on error
+              await EmailAccountModel.findByIdAndUpdate(account._id, {
+                $set: {
+                  "syncState.isProcessing": false,
+                  "syncState.lastError": syncError.message,
+                  "syncState.lastErrorAt": new Date(),
+                },
+              });
+
+              // Continue with empty response - don't fail the API call
+            }
+          }
+
           // Get total count for pagination
           const totalCount = await EmailThreadModel.countDocuments({
             accountId: account._id,
