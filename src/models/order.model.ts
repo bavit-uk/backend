@@ -7,7 +7,6 @@ import {
   RefundDetailsSchema,
   ReplacementDetailsSchema,
   SuggestedTaskSchema,
-  OrderProductSchema,
 } from "./order-sub-schemas";
 import { generateUniqueId } from "@/utils/generate-unique-id.util";
 import { ENUMS } from "@/constants/enum";
@@ -48,8 +47,8 @@ const orderSchema = new Schema(
     marketplaceFee: { type: Number, default: 0, min: 0 },
 
     // Customer Information
-    customer: { type: Types.ObjectId, ref: "User", required: true, index: true },
-    customerId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    customer: { type: Types.ObjectId, ref: "User", index: true },
+    customerId: { type: Schema.Types.ObjectId, ref: "User", index: true },
     customerDetails: {
       firstName: { type: String, trim: true },
       lastName: { type: String, trim: true },
@@ -80,14 +79,10 @@ const orderSchema = new Schema(
 
     // Financials & Pricing
     items: [OrderItemSchema],
-    products: [OrderProductSchema], // Legacy field for backward compatibility
     subtotal: { type: Number, required: true, min: 0 },
     totalDiscount: { type: Number, default: 0, min: 0 },
-    discount: { type: Number, default: 0, min: 0 }, // Legacy field for backward compatibility
     shippingCost: { type: Number, default: 0, min: 0 },
-    shippingFee: { type: Number, default: 0, min: 0 }, // Legacy field for backward compatibility
     taxAmount: { type: Number, default: 0, min: 0 },
-    tax: { type: Number, default: 0, min: 0 }, // Legacy field for backward compatibility
     grandTotal: { type: Number, required: true, min: 0 },
     currency: { type: String, default: "USD", trim: true },
 

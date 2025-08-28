@@ -1,6 +1,9 @@
 import { generateUniqueId } from "@/utils/generate-unique-id.util";
 import { Schema } from "mongoose";
 import { ENUMS } from "@/constants/enum";
+import { Listing } from "./listing.model";
+import { Inventory } from "./inventory.model";
+import { Stock } from "./stock.model";
 
 // --- Sub-schema: Address (used for Shipping & Billing) ---
 export const AddressSchema = new Schema(
@@ -9,7 +12,7 @@ export const AddressSchema = new Schema(
     street1: { type: String, required: true, trim: true },
     street2: { type: String, trim: true },
     city: { type: String, required: true, trim: true },
-    stateProvince: { type: String, required: true, trim: true },
+    stateProvince: { type: String, trim: true },
     postalCode: { type: String, required: true, trim: true },
     country: { type: String, required: true, trim: true },
     phone: { type: String, trim: true },
@@ -40,7 +43,11 @@ export const BundleComponentSchema = new Schema(
 // --- Sub-schema: OrderItem (for individual products, bundles, configurations) ---
 export const OrderItemSchema = new Schema({
   itemId: { type: String, default: () => generateUniqueId("OI") },
-  productId: { type: Schema.Types.ObjectId, ref: "Producttt", required: true, index: true },
+  listingId: { type: Schema.Types.ObjectId, ref: Listing, index: true },
+  inventoryId: { type: Schema.Types.ObjectId, ref: Inventory, index: true },
+  stockId: { type: Schema.Types.ObjectId, ref: Stock, index: true },
+  externalListingId: { type: String, trim: true },
+  externalListingUrl: { type: String, trim: true },
   sku: { type: String, trim: true },
   name: { type: String, required: true, trim: true },
   description: { type: String, trim: true },
@@ -58,17 +65,6 @@ export const OrderItemSchema = new Schema({
   taxAmount: { type: Number, default: 0, min: 0 },
   finalPrice: { type: Number, required: true, min: 0 },
 });
-
-// --- Sub-schema: Legacy Order Product (for backward compatibility) ---
-export const OrderProductSchema = new Schema(
-  {
-    product: { type: Schema.Types.ObjectId, ref: "Producttt", required: true },
-    quantity: { type: Number, required: true, min: 1 },
-    price: { type: Number, required: true },
-    discount: { type: Number, default: 0 },
-  },
-  { _id: false }
-);
 
 // --- Sub-schema: Discount Applied ---
 export const OrderDiscountSchema = new Schema(

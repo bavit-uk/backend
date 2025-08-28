@@ -62,14 +62,6 @@ const orderItemSchema = z.object({
   finalPrice: z.number().min(0, "Final price must be non-negative"),
 });
 
-// Legacy order product schema (for backward compatibility)
-const orderProductSchema = z.object({
-  product: objectId,
-  quantity: z.number().min(1, "Quantity must be at least 1"),
-  price: z.number().min(0, "Price must be non-negative"),
-  discount: z.number().min(0, "Discount must be non-negative").default(0),
-});
-
 // Discount applied schema
 const discountAppliedSchema = z.object({
   type: discountTypeEnum.default("COUPON"),
@@ -155,14 +147,10 @@ const orderSchema = z.object({
 
   // Financials & Pricing
   items: z.array(orderItemSchema).optional(),
-  products: z.array(orderProductSchema).optional(), // Legacy field for backward compatibility
   subtotal: z.number().min(0, "Subtotal must be non-negative"),
   totalDiscount: z.number().min(0, "Total discount must be non-negative").default(0),
-  discount: z.number().min(0, "Discount must be non-negative").default(0), // Legacy field
   shippingCost: z.number().min(0, "Shipping cost must be non-negative").default(0),
-  shippingFee: z.number().min(0, "Shipping fee must be non-negative").default(0), // Legacy field
   taxAmount: z.number().min(0, "Tax amount must be non-negative").default(0),
-  tax: z.number().min(0, "Tax must be non-negative").default(0), // Legacy field
   grandTotal: z.number().min(0, "Grand total must be non-negative"),
   currency: z.string().trim().default("USD"),
 
@@ -362,6 +350,146 @@ export const orderValidation = {
           status: StatusCodes.BAD_REQUEST,
         });
       }
+    }
+  },
+
+  // Validate order ID for eBay conversion
+  validateEbayOrderId: (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { ebayOrderId } = req.params;
+
+      if (!ebayOrderId || typeof ebayOrderId !== "string" || ebayOrderId.trim().length === 0) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Valid eBay order ID is required",
+          errors: ["eBay order ID must be a non-empty string"],
+        });
+      }
+
+      // eBay order IDs can be alphanumeric and may contain hyphens
+      const ebayOrderIdPattern = /^[a-zA-Z0-9\-_]+$/;
+      if (!ebayOrderIdPattern.test(ebayOrderId)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid eBay order ID format",
+          errors: ["eBay order ID contains invalid characters"],
+        });
+      }
+
+      next();
+    } catch (error) {
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Validation error",
+        errors: ["Internal validation error"],
+      });
+    }
+  },
+
+  // Validate eBay orders query parameters
+  validateEbayOrdersQuery: (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { page, limit, sortBy, sortOrder, startDate, endDate } = req.query;
+
+      // Validate page parameter
+      if (page !== undefined) {
+        const pageNum = parseInt(page as string);
+        if (isNaN(pageNum) || pageNum < 1) {
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            message: "Invalid page parameter",
+            errors: ["Page must be a positive integer"],
+          });
+        }
+      }
+
+      // Validate limit parameter
+      if (limit !== undefined) {
+        const limitNum = parseInt(limit as string);
+        if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            message: "Invalid limit parameter",
+            errors: ["Limit must be a positive integer between 1 and 100"],
+          });
+        }
+      }
+
+      // Validate sortBy parameter
+      if (sortBy !== undefined) {
+        const validSortFields = [
+          "creationDate",
+          "lastModifiedDate",
+          "orderId",
+          "sellerId",
+          "buyer.username",
+          "pricingSummary.total.value",
+          "orderFulfillmentStatus",
+          "orderPaymentStatus",
+        ];
+        if (!validSortFields.includes(sortBy as string)) {
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            message: "Invalid sortBy parameter",
+            errors: [`sortBy must be one of: ${validSortFields.join(", ")}`],
+          });
+        }
+      }
+
+      // Validate sortOrder parameter
+      if (sortOrder !== undefined) {
+        if (!["asc", "desc"].includes(sortOrder as string)) {
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            message: "Invalid sortOrder parameter",
+            errors: ["sortOrder must be either 'asc' or 'desc'"],
+          });
+        }
+      }
+
+      // Validate date parameters
+      if (startDate !== undefined) {
+        const startDateObj = new Date(startDate as string);
+        if (isNaN(startDateObj.getTime())) {
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            message: "Invalid startDate parameter",
+            errors: ["startDate must be a valid date string"],
+          });
+        }
+      }
+
+      if (endDate !== undefined) {
+        const endDateObj = new Date(endDate as string);
+        if (isNaN(endDateObj.getTime())) {
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            message: "Invalid endDate parameter",
+            errors: ["endDate must be a valid date string"],
+          });
+        }
+      }
+
+      // Validate date range logic
+      if (startDate !== undefined && endDate !== undefined) {
+        const startDateObj = new Date(startDate as string);
+        const endDateObj = new Date(endDate as string);
+        if (startDateObj > endDateObj) {
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            message: "Invalid date range",
+            errors: ["startDate cannot be after endDate"],
+          });
+        }
+      }
+
+      next();
+    } catch (error) {
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Validation error",
+        errors: ["Internal validation error"],
+      });
     }
   },
 };

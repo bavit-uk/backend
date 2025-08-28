@@ -104,6 +104,76 @@ export const orderController = {
     }
   },
 
+  getAllOrderLeads: async (req: Request, res: Response) => {
+    try {
+      const {
+        status,
+        sourcePlatform,
+        paymentStatus,
+        customerId,
+        startDate,
+        endDate,
+        page = 1,
+        limit = 10,
+        sortBy = "createdAt",
+        sortOrder = "desc",
+      } = req.query;
+
+      // Validate status if provided
+      if (status && !ENUMS.ORDER_STATUSES.includes(status as any)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid status value",
+        });
+      }
+
+      // Validate sourcePlatform if provided
+      if (sourcePlatform && !ENUMS.SOURCE_PLATFORMS.includes(sourcePlatform as any)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid sourcePlatform value",
+        });
+      }
+
+      // Validate paymentStatus if provided
+      if (paymentStatus && !ENUMS.PAYMENT_STATUSES.includes(paymentStatus as any)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid paymentStatus value",
+        });
+      }
+
+      const filters = {
+        status: status as OrderStatus,
+        sourcePlatform: sourcePlatform as SourcePlatform,
+        paymentStatus: paymentStatus as PaymentStatus,
+        customerId: customerId as string,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        sortBy: sortBy as string,
+        sortOrder: sortOrder as "asc" | "desc",
+        isLead: true,
+      };
+
+      const result = await orderService.getAllOrders(filters);
+
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Orders retrieved successfully",
+        data: result.orders,
+        pagination: result.pagination,
+      });
+    } catch (error: any) {
+      console.error("Error fetching orders:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error.message || "Error fetching orders",
+      });
+    }
+  },
+
   // Get order by ID
   getOrderById: async (req: Request, res: Response) => {
     try {
@@ -535,27 +605,9 @@ export const orderController = {
   createReplacementOrder: async (req: Request, res: Response) => {
     try {
       const { originalOrderId } = req.params;
-      const { reason, items, createdBy } = req.body;
+      const replacementData = req.body;
 
-      if (!originalOrderId) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          success: false,
-          message: "Original order ID is required",
-        });
-      }
-
-      if (!reason || !items || !Array.isArray(items) || items.length === 0) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          success: false,
-          message: "Reason and items array are required",
-        });
-      }
-
-      const replacementOrder = await orderService.createReplacementOrder(originalOrderId, {
-        reason,
-        items,
-        createdBy,
-      });
+      const replacementOrder = await orderService.createReplacementOrder(originalOrderId, replacementData);
 
       return res.status(StatusCodes.CREATED).json({
         success: true,
@@ -564,17 +616,83 @@ export const orderController = {
       });
     } catch (error: any) {
       console.error("Error creating replacement order:", error);
-
-      if (error.message === "Original order not found") {
-        return res.status(StatusCodes.NOT_FOUND).json({
-          success: false,
-          message: "Original order not found",
-        });
-      }
-
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: error.message || "Error creating replacement order",
+      });
+    }
+  },
+
+  // Convert eBay order to normal order
+  convertEbayOrderToOrder: async (req: Request, res: Response) => {
+    try {
+      const { ebayOrderId } = req.params;
+
+      if (!ebayOrderId) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "eBay order ID is required",
+        });
+      }
+
+      const convertedOrder = await orderService.convertEbayOrderToOrder(ebayOrderId);
+
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "eBay order converted to normal order successfully with tasks created",
+        data: convertedOrder,
+      });
+    } catch (error: any) {
+      console.error("Error converting eBay order:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error.message || "Error converting eBay order",
+      });
+    }
+  },
+
+  // Get all eBay orders with filtering and pagination
+  getAllEbayOrders: async (req: Request, res: Response) => {
+    try {
+      const {
+        orderFulfillmentStatus,
+        orderPaymentStatus,
+        sellerId,
+        buyerUsername,
+        startDate,
+        endDate,
+        page = 1,
+        limit = 10,
+        sortBy = "creationDate",
+        sortOrder = "desc",
+      } = req.query;
+
+      const filters = {
+        orderFulfillmentStatus: orderFulfillmentStatus as string,
+        orderPaymentStatus: orderPaymentStatus as string,
+        sellerId: sellerId as string,
+        buyerUsername: buyerUsername as string,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        sortBy: sortBy as string,
+        sortOrder: sortOrder as "asc" | "desc",
+      };
+
+      const result = await orderService.getAllEbayOrders(filters);
+
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: "eBay orders retrieved successfully",
+        data: result.orders,
+        pagination: result.pagination,
+      });
+    } catch (error: any) {
+      console.error("Error fetching eBay orders:", error);
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error.message || "Error fetching eBay orders",
       });
     }
   },

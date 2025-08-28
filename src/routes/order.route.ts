@@ -5,11 +5,14 @@ import { Router } from "express";
 
 export const orderRoutes = (router: Router) => {
   // Apply authentication guard to all order routes
-  router.use(authGuard.isAuth);
+  // router.use(authGuard.isAuth);
 
   // Basic CRUD operations
   router.post("/", orderValidation.createOrder, orderController.createOrder);
   router.get("/", orderController.getAllOrders);
+  router.get("/leads", orderController.getAllOrderLeads);
+  // Get all eBay orders with filtering and pagination
+  router.get("/ebay-orders", orderValidation.validateEbayOrdersQuery, orderController.getAllEbayOrders);
   router.get("/:id", orderValidation.validateOrderId, orderController.getOrderById);
   router.get("/orderId/:orderId", orderController.getOrderByOrderId);
   router.patch("/:id", orderValidation.validateOrderId, orderValidation.updateOrder, orderController.updateOrderById);
@@ -50,5 +53,12 @@ export const orderRoutes = (router: Router) => {
     orderValidation.validateOrderId,
     orderValidation.validateReplacementOrder,
     orderController.createReplacementOrder
+  );
+
+  // eBay order conversion
+  router.post(
+    "/convert-ebay/:ebayOrderId",
+    orderValidation.validateEbayOrderId,
+    orderController.convertEbayOrderToOrder
   );
 };

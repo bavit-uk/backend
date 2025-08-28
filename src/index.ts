@@ -12,6 +12,7 @@ import { requestLogger } from "./middlewares/requestLogger.middleware";
 import { initCron } from "./cron";
 import { ApiDocumentation } from "./utils/api-documentation.util";
 import { documentationConfig } from "./config/documentation.config";
+import { ebayListingService } from "./services";
 // Configure dotenv to use .env file like .env.dev or .env.prod
 dotenv.config({
   path: `.env.${process.env.NODE_ENV || "dev"}`,
@@ -45,6 +46,9 @@ mongoose
     app.use(requestLogger); // Use the request logger middleware
     // Use morgan for logging requests
     // const accessLogStream = fs.createWriteStream(path.join(__dirname, "access.log"), { flags: "a" });
+
+    router.post("/notifications-preferences-one", ebayListingService.captureNotificationPreferencesOne);
+
     app.use(
       apiRateLimiter, // Apply API rate limiting globally
       express.json({ limit: "10mb" }),

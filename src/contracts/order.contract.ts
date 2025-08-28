@@ -69,14 +69,6 @@ export interface IOrderItem {
   finalPrice: number;
 }
 
-// Legacy Product Interface (for backward compatibility)
-export interface IOrderProduct {
-  product: Types.ObjectId;
-  quantity: number;
-  price: number;
-  discount?: number;
-}
-
 // Discount Applied Interface
 export interface IDiscountApplied {
   type: DiscountType;
@@ -159,14 +151,10 @@ export interface IOrder extends Document {
 
   // Financials & Pricing
   items: IOrderItem[];
-  products: IOrderProduct[]; // Legacy field for backward compatibility
   subtotal: number;
   totalDiscount: number;
-  discount: number; // Legacy field for backward compatibility
   shippingCost: number;
-  shippingFee: number; // Legacy field for backward compatibility
   taxAmount: number;
-  tax: number; // Legacy field for backward compatibility
   grandTotal: number;
   currency: string;
 

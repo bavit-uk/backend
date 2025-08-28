@@ -136,6 +136,7 @@ export const orderService = {
       limit?: number;
       sortBy?: string;
       sortOrder?: "asc" | "desc";
+      isLead?: boolean;
     } = {}
   ) => {
     try {
@@ -150,6 +151,7 @@ export const orderService = {
         limit = 10,
         sortBy = "createdAt",
         sortOrder = "desc",
+        isLead = false,
       } = filters;
 
       // Build query
@@ -159,6 +161,55 @@ export const orderService = {
       if (sourcePlatform) query.sourcePlatform = sourcePlatform;
       if (paymentStatus) query.paymentStatus = paymentStatus;
       if (customerId) query.customerId = new Types.ObjectId(customerId);
+      if (isLead) {
+        // Check if any item in the products array is missing stockId, listingId, or inventoryId
+        // If any item is missing these IDs, it's considered a lead order
+        query.$or = [
+          // Check items array (new schema)
+          {
+            items: {
+              $elemMatch: {
+                $or: [
+                  { stockId: { $exists: false } },
+                  { stockId: null },
+                  { listingId: { $exists: false } },
+                  { listingId: null },
+                  { inventoryId: { $exists: false } },
+                  { inventoryId: null },
+                ],
+              },
+            },
+          },
+          // Check products array (legacy schema) - these are always lead orders since they only have product reference
+          {
+            products: { $exists: true, $ne: [] },
+          },
+        ];
+      } else {
+        query.$and = [
+          // Check items array (new schema) - all items must have all required IDs
+          {
+            items: {
+              $not: {
+                $elemMatch: {
+                  $or: [
+                    { stockId: { $exists: false } },
+                    { stockId: null },
+                    { listingId: { $exists: false } },
+                    { listingId: null },
+                    { inventoryId: { $exists: false } },
+                    { inventoryId: null },
+                  ],
+                },
+              },
+            },
+          },
+          // Check products array (legacy schema) - these are always lead orders since they only have product reference
+          {
+            products: { $exists: true, $ne: [] },
+          },
+        ];
+      }
 
       if (startDate || endDate) {
         query.createdAt = {};
@@ -176,8 +227,9 @@ export const orderService = {
       const orders = await Order.find(query)
         .populate("customer", "firstName lastName email")
         .populate("customerId", "firstName lastName email")
-        .populate("items.productId", "name sku")
-        .populate("products.product", "name sku")
+        .populate("items.listingId", "name sku")
+        .populate("items.inventoryId", "name sku")
+        .populate("items.stockId", "name sku")
         .populate("taskIds", "name status")
         .sort(sort)
         .skip(skip)
@@ -205,16 +257,47 @@ export const orderService = {
   // Get order by ID with full population
   getOrderById: async (orderId: string) => {
     try {
-      const order = await Order.findById(orderId)
-        .populate("customer")
-        .populate("customerId")
-        .populate("items.productId")
-        .populate("products.product")
-        .populate("taskIds")
-        .populate("originalOrderId")
-        .populate("replacementDetails.replacementOrderId")
-        .populate("createdBy")
-        .populate("updatedBy");
+      const order = await Order.findById(orderId).populate([
+        {
+          path: "customer",
+          select: "firstName lastName email",
+        },
+        {
+          path: "customerId",
+        },
+        {
+          path: "items.listingId",
+          select: "name sku",
+        },
+        {
+          path: "taskIds",
+          select: "name status",
+        },
+        {
+          path: "originalOrderId",
+          select: "orderId",
+        },
+        {
+          path: "replacementDetails.replacementOrderId",
+          select: "orderId",
+        },
+        {
+          path: "createdBy",
+          select: "firstName lastName email",
+        },
+        {
+          path: "updatedBy",
+          select: "firstName lastName email",
+        },
+      ]);
+      // .populate("customer")
+      // .populate("customerId")
+      // .populate("items.productId")
+      // .populate("taskIds")
+      // .populate("originalOrderId")
+      // .populate("replacementDetails.replacementOrderId")
+      // .populate("createdBy")
+      // .populate("updatedBy");
 
       if (!order) {
         throw new Error("Order not found");
@@ -594,4 +677,349 @@ export const orderService = {
       throw new Error("Failed to create replacement order");
     }
   },
+
+  // Convert eBay order to normal order
+  convertEbayOrderToOrder: async (ebayOrderId: string) => {
+    try {
+      // Import EbayOrder model dynamically to avoid circular dependencies
+      const { EbayOrder } = await import("@/models");
+
+      // Find the eBay order in the database
+      const ebayOrder = await EbayOrder.findOne({
+        $or: [{ orderId: ebayOrderId }, { legacyOrderId: ebayOrderId }],
+      });
+
+      if (!ebayOrder) {
+        throw new Error("eBay order not found");
+      }
+
+      // Check if this eBay order has already been converted
+      const existingOrder = await Order.findOne({
+        externalOrderId: ebayOrder.orderId,
+      });
+
+      if (existingOrder) {
+        throw new Error("This eBay order has already been converted to a normal order");
+      }
+
+      // Map eBay order data to normal order structure
+      const orderData = {
+        sourcePlatform: "EBAY" as const,
+        externalOrderId: ebayOrder.orderId,
+        externalOrderUrl: `https://www.ebay.com/ord/${ebayOrder.orderId}`,
+        marketplaceFee: parseFloat(ebayOrder.totalMarketplaceFee?.value || "0"),
+
+        // Customer information
+        customer: null, // Will need to be set based on business logic
+        customerId: null, // Will need to be set based on business logic
+        customerDetails: {
+          firstName: ebayOrder.buyer?.buyerRegistrationAddress?.fullName?.split(" ")[0] || "",
+          lastName: ebayOrder.buyer?.buyerRegistrationAddress?.fullName?.split(" ").slice(1).join(" ") || "",
+          email: ebayOrder.buyer?.buyerRegistrationAddress?.email || "",
+          phone: ebayOrder.buyer?.buyerRegistrationAddress?.primaryPhone?.phoneNumber || "",
+        },
+        email: ebayOrder.buyer?.buyerRegistrationAddress?.email || "",
+
+        // Order dates
+        orderDate: new Date(ebayOrder.creationDate),
+        placedAt: new Date(ebayOrder.creationDate),
+
+        // Order status mapping
+        status: mapEbayOrderStatus(ebayOrder.orderFulfillmentStatus),
+        paymentStatus: mapEbayPaymentStatus(ebayOrder.orderPaymentStatus),
+
+        // Financial information
+        subtotal: parseFloat(ebayOrder.pricingSummary?.priceSubtotal?.value || "0"),
+        shippingCost: parseFloat(ebayOrder.pricingSummary?.deliveryCost?.value || "0"),
+        grandTotal: parseFloat(ebayOrder.pricingSummary?.total?.value || "0"),
+        currency: ebayOrder.pricingSummary?.total?.currency || "USD",
+
+        // Payment information
+        paymentMethod: ebayOrder.paymentSummary?.payments?.[0]?.paymentMethod || "eBay",
+        transactionId: ebayOrder.paymentSummary?.payments?.[0]?.paymentReferenceId || "",
+
+        // Shipping information
+        shippingAddress: {
+          street1:
+            ebayOrder.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo?.contactAddress?.addressLine1 || "",
+          street2:
+            ebayOrder.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo?.contactAddress?.addressLine2 || "",
+          city: ebayOrder.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo?.contactAddress?.city || "",
+          stateProvince:
+            ebayOrder.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo?.contactAddress?.stateOrProvince || "",
+          postalCode:
+            ebayOrder.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo?.contactAddress?.postalCode || "",
+          country: ebayOrder.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo?.contactAddress?.countryCode || "",
+        },
+
+        // Items
+        items:
+          ebayOrder.lineItems?.map((lineItem: any) => ({
+            itemId: lineItem.lineItemId,
+            name: lineItem.title,
+            quantity: lineItem.quantity,
+            unitPrice: parseFloat(lineItem.lineItemCost?.value || "0"),
+            condition: "New", // Default condition for eBay orders
+            sku: lineItem.legacyItemId || "",
+            itemTotal: parseFloat(lineItem.total?.value || "0"),
+            discountAmount: 0,
+            taxAmount: 0,
+            finalPrice: parseFloat(lineItem.total?.value || "0"),
+          })) || [],
+
+        // Special instructions - include eBay-specific information
+        specialInstructions:
+          ebayOrder.buyerCheckoutNotes ||
+          `eBay Order: ${ebayOrder.orderId}, Legacy ID: ${ebayOrder.legacyOrderId}, Seller: ${ebayOrder.sellerId}, Buyer: ${ebayOrder.buyer?.username}, Converted: ${new Date().toISOString()}`,
+
+        // Tracking information
+        trackingNumber: "",
+        trackingUrl: "",
+        shippingStatus: "Pending",
+      };
+
+      // Create the normal order
+      const newOrder = new Order(orderData);
+      await newOrder.save();
+
+      // Create tasks for the converted order based on workflows
+      try {
+        // 1) Resolve relevant workflows for all item conditions
+        const appliesToOrderType = newOrder.type ?? ("SALE" as any);
+        const itemConditions = Array.from(
+          new Set((newOrder.items || []).map((it: any) => (it?.condition as unknown as string) || ""))
+        ).filter(Boolean);
+
+        const workflows = await ProductTypeWorkflow.find({
+          isActive: true,
+          $or: [{ appliesToOrderType: appliesToOrderType }, { appliesToOrderType: "ANY" }],
+          $and: [
+            {
+              $or: [
+                { appliesToCondition: "any" },
+                ...(itemConditions.length > 0 ? itemConditions.map((c) => ({ appliesToCondition: c })) : []),
+              ],
+            },
+          ],
+        })
+          .populate({ path: "steps.taskTypeId" })
+          .lean();
+
+        // 2) For each item, create tasks based on matching workflows
+        const createdTaskIds: Types.ObjectId[] = [];
+        for (const item of newOrder.items || []) {
+          const itemCondition = (item?.condition as unknown as string) || undefined;
+
+          const matchingForItem = workflows
+            .filter((wf: any) => {
+              return wf.appliesToOrderType === appliesToOrderType || wf.appliesToOrderType === "ANY";
+            })
+            .filter((wf: any) => wf.appliesToCondition === "any" || wf.appliesToCondition === itemCondition);
+
+          // For each physical unit (quantity), create a separate set of tasks
+          const quantityCount = Math.max(Number(item?.quantity ?? 1), 1);
+          for (let unitIndex = 1; unitIndex <= quantityCount; unitIndex++) {
+            for (const wf of matchingForItem) {
+              const steps = [...(wf.steps || [])].sort((a: any, b: any) => a.stepOrder - b.stepOrder);
+              const stepIndexToTaskId: Record<number, Types.ObjectId> = {};
+
+              for (const step of steps) {
+                const taskType: any = step.taskTypeId;
+
+                const baseEstimated = taskType?.defaultEstimatedTimeMinutes ?? 30;
+                const basePriority = taskType?.defaultPriority ?? 2;
+                const baseAssignedRole = taskType?.defaultAssignedRole ?? null;
+                const baseName = taskType?.name ?? "Workflow Task";
+
+                const estimatedTimeMinutes = step.overrideEstimatedTimeMinutes ?? baseEstimated;
+                const priority = step.overridePriority ?? basePriority;
+                const defaultAssignedRole = step.overrideDefaultAssignedRole ?? baseAssignedRole;
+                const name = quantityCount > 1 ? `${baseName} (unit ${unitIndex}/${quantityCount})` : baseName;
+
+                const dependentOnTaskIds: Types.ObjectId[] = [];
+                if (Array.isArray(step.dependsOnSteps) && step.dependsOnSteps.length > 0) {
+                  for (const dep of step.dependsOnSteps) {
+                    const depIndex = parseInt(dep, 10);
+                    const depTaskId = stepIndexToTaskId[depIndex];
+                    if (depTaskId) dependentOnTaskIds.push(depTaskId);
+                  }
+                }
+
+                const taskDoc = await OrderTask.create({
+                  orderId: newOrder._id,
+                  orderItemId: item?.itemId ?? null,
+                  taskTypeId: taskType?._id,
+                  name,
+                  priority,
+                  estimatedTimeMinutes,
+                  status: dependentOnTaskIds.length > 0 ? "Pending" : "Ready",
+                  isCustom: false,
+                  defaultAssignedRole: defaultAssignedRole,
+                  dependentOnTaskIds,
+                  pendingDependenciesCount: dependentOnTaskIds.length,
+                  externalRefId: item?.itemId ? `${item.itemId}:${unitIndex}` : undefined,
+                  logs: [
+                    {
+                      userName: "System",
+                      action: "Task created from workflow for converted eBay order",
+                      details: `Workflow ${wf.name} step ${step.stepOrder} for item ${item?.itemId ?? "n/a"} unit ${unitIndex}/${quantityCount} - Converted from eBay order ${ebayOrder.orderId}`,
+                      timestamp: new Date(),
+                    },
+                  ],
+                });
+
+                stepIndexToTaskId[step.stepOrder] = taskDoc._id as Types.ObjectId;
+                createdTaskIds.push(taskDoc._id as Types.ObjectId);
+              }
+            }
+          }
+        }
+
+        // 3) Update the order with the created task IDs
+        if (createdTaskIds.length > 0) {
+          await Order.findByIdAndUpdate(
+            newOrder._id,
+            { $addToSet: { taskIds: { $each: createdTaskIds } } },
+            { new: true }
+          );
+        }
+      } catch (taskError) {
+        console.error("Error creating tasks for converted eBay order:", taskError);
+        // Don't fail the conversion if task creation fails, just log it
+      }
+
+      return newOrder;
+    } catch (error: any) {
+      throw new Error(error.message || "Error converting eBay order to normal order");
+    }
+  },
+
+  // Get all eBay orders with optional filtering and pagination
+  getAllEbayOrders: async (
+    filters: {
+      orderFulfillmentStatus?: string;
+      orderPaymentStatus?: string;
+      sellerId?: string;
+      buyerUsername?: string;
+      startDate?: Date;
+      endDate?: Date;
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      sortOrder?: "asc" | "desc";
+    } = {}
+  ) => {
+    try {
+      const {
+        orderFulfillmentStatus,
+        orderPaymentStatus,
+        sellerId,
+        buyerUsername,
+        startDate,
+        endDate,
+        page = 1,
+        limit = 10,
+        sortBy = "creationDate",
+        sortOrder = "desc",
+      } = filters;
+
+      // Build query
+      const query: any = {};
+
+      if (orderFulfillmentStatus) query.orderFulfillmentStatus = orderFulfillmentStatus;
+      if (orderPaymentStatus) query.orderPaymentStatus = orderPaymentStatus;
+      if (sellerId) query.sellerId = sellerId;
+      if (buyerUsername) query["buyer.username"] = { $regex: buyerUsername, $options: "i" };
+
+      // Date range filtering
+      if (startDate || endDate) {
+        query.creationDate = {};
+        if (startDate) query.creationDate.$gte = startDate.toISOString();
+        if (endDate) query.creationDate.$lte = endDate.toISOString();
+      }
+
+      // Import Order model to check for converted orders
+      const { Order } = await import("@/models/order.model");
+
+      // Get all converted eBay order IDs
+      const convertedOrders = await Order.find({
+        sourcePlatform: "EBAY",
+        externalOrderId: { $exists: true, $ne: null },
+      })
+        .select("externalOrderId")
+        .lean();
+
+      const convertedOrderIds = convertedOrders.map((order) => order.externalOrderId);
+
+      // Exclude converted orders from the query
+      if (convertedOrderIds.length > 0) {
+        query.orderId = { $nin: convertedOrderIds };
+      }
+
+      // Calculate skip for pagination
+      const skip = (page - 1) * limit;
+
+      // Build sort object
+      const sort: any = {};
+      sort[sortBy] = sortOrder === "asc" ? 1 : -1;
+
+      // Import EbayOrder model dynamically to avoid circular dependencies
+      const { EbayOrder } = await import("@/models/ebay-order.model");
+
+      // Execute query with pagination and sorting
+      const [orders, total] = await Promise.all([
+        EbayOrder.find(query).sort(sort).skip(skip).limit(limit).lean(),
+        EbayOrder.countDocuments(query),
+      ]);
+
+      // Calculate pagination info
+      const totalPages = Math.ceil(total / limit);
+      const hasNextPage = page < totalPages;
+      const hasPrevPage = page > 1;
+
+      return {
+        orders,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalItems: total,
+          itemsPerPage: limit,
+          hasNextPage,
+          hasPrevPage,
+          nextPage: hasNextPage ? page + 1 : null,
+          prevPage: hasPrevPage ? page - 1 : null,
+        },
+      };
+    } catch (error: any) {
+      console.error("Error fetching eBay orders:", error);
+      throw new Error(error.message || "Error fetching eBay orders");
+    }
+  },
 };
+
+// Helper functions for mapping eBay statuses to order statuses
+function mapEbayOrderStatus(ebayStatus: string): string {
+  const statusMap: Record<string, string> = {
+    FULFILLED: "COMPLETED",
+    IN_PROGRESS: "IN_PROGRESS",
+    READY_TO_SHIP: "IN_PROGRESS",
+    SHIPPED: "SHIPPED",
+    DELIVERED: "DELIVERED",
+    CANCELLED: "CANCELLED",
+    ON_HOLD: "ON_HOLD",
+  };
+
+  return statusMap[ebayStatus] || "PENDING_PAYMENT";
+}
+
+function mapEbayPaymentStatus(ebayPaymentStatus: string): string {
+  const paymentStatusMap: Record<string, string> = {
+    PAID: "PAID",
+    PENDING: "PENDING",
+    FAILED: "FAILED",
+    REFUNDED: "REFUNDED",
+    PARTIALLY_REFUNDED: "PARTIALLY_REFUNDED",
+  };
+
+  return paymentStatusMap[ebayPaymentStatus] || "PENDING";
+}
