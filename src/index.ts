@@ -23,6 +23,8 @@ const app: Express = express();
 // Connect to MongoDB and seed data, then start server
 // console.log("🚀 Starting application initialization...");
 
+app.disable("etag");
+
 mongoose
   .run()
   .then(() => {

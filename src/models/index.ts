@@ -26,4 +26,5 @@ export { TaskModel } from "./task.model";
 export { Team } from "./team.model";
 export { Order } from "./order.model";
 export { EbayOrder } from "./ebay-order.model";
+export { EbayListing } from "./ebay-listing.model";
 export { default as FeaturedSale } from "./featured-sale.model";

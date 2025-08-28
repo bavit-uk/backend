@@ -12,9 +12,10 @@ import {
   getStoredEbayAccessToken,
   refreshEbayAccessToken,
 } from "@/utils/ebay-helpers.util";
-import { Listing } from "@/models";
+import { EbayListing, Listing } from "@/models";
 import { IParamsRequest, IQueryRequest } from "@/contracts/request.contract";
 import { EbayNotificationModel } from "@/models/ebay-notification.model";
+import EbayXmlParser from "@/utils/ebay-xml-parser";
 const type: any =
   process.env.EBAY_TOKEN_ENV === "production" || process.env.EBAY_TOKEN_ENV === "sandbox"
     ? process.env.EBAY_TOKEN_ENV
@@ -813,22 +814,14 @@ export const ebayListingService = {
     }
   },
 
-  getOrderDetails: async (req: Request, res: Response): Promise<any> => {
+  getOrderDetailsById: async (req: Request, res: Response): Promise<any> => {
     try {
       const { orderId } = req.params;
-      const credentials = await getStoredEbayAccessToken("true");
-      const ebayUrl = `https://api.ebay.com/sell/fulfillment/v1/order/${orderId}`;
-      const response = await fetch(ebayUrl, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${credentials?.access_token}`,
-        },
-      });
-      const rawResponse = await response.json();
+      const details = await ebayListingService.getOrderDetailsInternal(orderId);
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
         message: ReasonPhrases.OK,
-        data: rawResponse,
+        data: details,
       });
     } catch (error: any) {
       console.error("Error fetching order details:", error.message);
@@ -1063,6 +1056,358 @@ export const ebayListingService = {
     } catch (error) {
       console.error("❌ Error logging account deletion:", error);
       // Don't throw error here as it's not critical
+    }
+  },
+
+  getEbayListingItem: async (itemId: string, accessToken: string): Promise<any> => {
+    try {
+      const alreadyExists = await EbayListing.findOne({ itemId: itemId });
+
+      if (alreadyExists) {
+        console.log(`Found existing listing for item ${itemId}`);
+        return alreadyExists;
+      }
+
+      const url = `https://api.ebay.com/ws/api.dll`;
+
+      const body = `
+      <?xml version="1.0" encoding="utf-8"?>
+        <GetItemRequest xmlns="urn:ebay:apis:eBLBaseComponents">
+	        <ErrorLanguage>en_US</ErrorLanguage>
+	        <WarningLevel>High</WarningLevel>
+          <ItemID>${itemId}</ItemID>
+        </GetItemRequest>
+      `;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "X-EBAY-API-SITEID": "0",
+          "X-EBAY-API-COMPATIBILITY-LEVEL": "1421",
+          "X-EBAY-API-CALL-NAME": "GetItem",
+          "X-EBAY-API-IAF-TOKEN": accessToken,
+        },
+        body: body,
+      });
+
+      if (!response.ok) {
+        throw new Error(`eBay API error: ${response.status} ${response.statusText}`);
+      }
+
+      const rawResponse = await response.text();
+
+      if (!rawResponse || rawResponse.trim() === "") {
+        throw new Error("Empty response from eBay API");
+      }
+
+      try {
+        // Parse the XML response using EbayXmlParser
+        const ebayXmlParser = new EbayXmlParser();
+        const parsedResponse = ebayXmlParser.parseXml(rawResponse);
+
+        if (!parsedResponse || !parsedResponse.GetItemResponse) {
+          throw new Error("Invalid XML structure from eBay API");
+        }
+
+        const clearedJson = ebayXmlParser.toCleanJson(parsedResponse);
+
+        if (!clearedJson || !clearedJson.itemId) {
+          throw new Error("Failed to convert XML to clean JSON structure");
+        }
+
+        console.log("Parsed Response:", clearedJson);
+
+        try {
+          // Store the parsed response in EbayListing
+          await EbayListing.create({
+            ...clearedJson,
+          });
+        } catch (dbError: any) {
+          console.error("Database error when storing eBay listing:", dbError.message);
+          // Log the validation error details for debugging
+          if (dbError.name === "ValidationError") {
+            console.error("Validation error details:", JSON.stringify(dbError.errors, null, 2));
+          }
+          // Still return the data even if storage fails
+          return clearedJson;
+        }
+
+        return clearedJson;
+      } catch (parsingError: any) {
+        console.error("Error parsing eBay XML response:", parsingError.message);
+        console.error("Raw response:", rawResponse.substring(0, 500) + "...");
+        throw new Error(`Failed to parse eBay XML response: ${parsingError.message}`);
+      }
+    } catch (error: any) {
+      console.error("Error fetching eBay listing item:", error.message);
+      throw new Error("Error fetching eBay listing item");
+    }
+  },
+
+  // Helper method to get order details without response object (for internal use)
+  getOrderDetailsInternal: async (orderId: string): Promise<any> => {
+    try {
+      if (!orderId) {
+        throw new Error("Order ID is required");
+      }
+
+      // First, check if the order exists in the database
+      let order = null;
+      let orderSource = "database";
+
+      try {
+        // Import EbayOrder model dynamically to avoid circular dependencies
+        const { EbayOrder } = await import("@/models/ebay-order.model");
+        order = await EbayOrder.findOne({ orderId: orderId }).lean();
+
+        if (order) {
+          console.log(`Found order ${orderId} in database`);
+        }
+      } catch (dbError) {
+        console.error("Error checking database for order:", dbError);
+      }
+
+      // If order not found in database, fetch from eBay
+      if (!order) {
+        try {
+          console.log(`Order ${orderId} not found in database, fetching from eBay...`);
+          const credentials = await getStoredEbayAccessToken("true");
+
+          if (!credentials?.access_token) {
+            throw new Error("No valid eBay access token available");
+          }
+
+          const ebayUrl = `https://api.ebay.com/sell/fulfillment/v1/order/${orderId}`;
+          const response = await fetch(ebayUrl, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${credentials.access_token}`,
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`eBay API error: ${response.status} ${response.statusText}`);
+          }
+
+          const rawResponse = await response.json();
+          order = rawResponse;
+          orderSource = "ebay";
+
+          console.log(`Successfully fetched order ${orderId} from eBay`);
+
+          // Store the order in database for future use
+          try {
+            const { EbayOrder } = await import("@/models/ebay-order.model");
+            await EbayOrder.findOneAndUpdate({ orderId: orderId }, order, { upsert: true, new: true });
+            console.log(`Stored order ${orderId} in database`);
+          } catch (storeError) {
+            console.error("Error storing order in database:", storeError);
+            // Continue even if storage fails
+          }
+        } catch (ebayError: any) {
+          console.error("Error fetching order from eBay:", ebayError.message);
+          throw new Error(`Failed to fetch order from eBay: ${ebayError.message}`);
+        }
+      }
+
+      if (!order) {
+        throw new Error("Order not found in database or eBay");
+      }
+
+      // Now process line items to get listing details
+      const lineItemsWithListings = await Promise.all(
+        (order.lineItems || []).map(async (lineItem: any) => {
+          if (lineItem.legacyItemId) {
+            try {
+              // First check if listing exists in database
+              let listingItem = null;
+              let listingSource = "database";
+
+              try {
+                listingItem = await EbayListing.findOne({ itemId: lineItem.legacyItemId }).lean();
+
+                if (listingItem) {
+                  console.log(`Found listing ${lineItem.legacyItemId} in database`);
+                }
+              } catch (listingDbError) {
+                console.error("Error checking database for listing:", listingDbError);
+              }
+
+              // If listing not found in database, fetch from eBay
+              if (!listingItem) {
+                try {
+                  console.log(`Listing ${lineItem.legacyItemId} not found in database, fetching from eBay...`);
+                  const credentials = await getStoredEbayAccessToken("true");
+
+                  if (!credentials?.access_token) {
+                    throw new Error("No valid eBay access token available");
+                  }
+
+                  listingItem = await ebayListingService.getEbayListingItem(
+                    lineItem.legacyItemId,
+                    credentials.access_token
+                  );
+                  listingSource = "ebay";
+
+                  console.log(`Successfully fetched listing ${lineItem.legacyItemId} from eBay`);
+                } catch (listingEbayError: any) {
+                  console.error(`Error fetching listing ${lineItem.legacyItemId} from eBay:`, listingEbayError.message);
+                  return {
+                    ...lineItem,
+                    listingItem: null,
+                    listingError: listingEbayError.message,
+                    listingSource: "error",
+                  };
+                }
+              }
+
+              return {
+                ...lineItem,
+                listingItem: listingItem || null,
+                listingSource: listingSource,
+              };
+            } catch (error: any) {
+              console.error(`Error processing line item ${lineItem.legacyItemId}:`, error.message);
+              return {
+                ...lineItem,
+                listingItem: null,
+                listingError: error.message,
+                listingSource: "error",
+              };
+            }
+          }
+
+          return {
+            ...lineItem,
+            listingItem: null,
+            listingSource: "no-legacy-item-id",
+          };
+        })
+      );
+
+      // Prepare the response
+      const orderWithListings = {
+        ...order,
+        lineItems: lineItemsWithListings,
+        orderSource: orderSource,
+        metadata: {
+          ...order.metadata,
+          processedAt: new Date().toISOString(),
+          orderSource: orderSource,
+        },
+      };
+
+      return orderWithListings;
+    } catch (error: any) {
+      console.error("Error in getOrderDetailsInternal:", error.message);
+      throw error;
+    }
+  },
+
+  getOrderDetails: async (req: Request, res: Response): Promise<any> => {
+    try {
+      const { orderId } = req.params;
+
+      if (!orderId) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          status: StatusCodes.BAD_REQUEST,
+          message: "Order ID is required",
+        });
+      }
+
+      const orderWithListings = await ebayListingService.getOrderDetailsInternal(orderId);
+
+      return res.status(StatusCodes.OK).json({
+        status: StatusCodes.OK,
+        message: "Order details retrieved successfully",
+        data: orderWithListings,
+        orderSource: orderWithListings.orderSource,
+      });
+    } catch (error: any) {
+      console.error("Error fetching order details:", error.message);
+
+      if (error.message.includes("Order not found")) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          status: StatusCodes.NOT_FOUND,
+          message: "Order not found in database or eBay",
+          error: error.message,
+        });
+      }
+
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        status: StatusCodes.INTERNAL_SERVER_ERROR,
+        message: "Error fetching order details",
+        error: error.message,
+      });
+    }
+  },
+
+  // Get multiple order details at once (for batch processing)
+  getMultipleOrderDetails: async (orderIds: string[]): Promise<any[]> => {
+    try {
+      if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+        throw new Error("Order IDs array is required and must not be empty");
+      }
+
+      console.log(`Processing ${orderIds.length} orders for details...`);
+
+      const ordersWithListings = await Promise.all(
+        orderIds.map(async (orderId: string, index: number) => {
+          try {
+            console.log(`Processing order ${index + 1}/${orderIds.length}: ${orderId}`);
+
+            const orderDetails = await ebayListingService.getOrderDetailsInternal(orderId);
+
+            return {
+              ...orderDetails,
+              processingStatus: "success",
+              processingIndex: index + 1,
+            };
+          } catch (error: any) {
+            console.error(`Error processing order ${orderId}:`, error.message);
+
+            return {
+              orderId: orderId,
+              processingStatus: "error",
+              processingError: error.message,
+              processingIndex: index + 1,
+              lineItems: [],
+              orderSource: "error",
+            };
+          }
+        })
+      );
+
+      const successCount = ordersWithListings.filter((order) => order.processingStatus === "success").length;
+      const errorCount = ordersWithListings.filter((order) => order.processingStatus === "error").length;
+
+      console.log(`Batch processing completed: ${successCount} successful, ${errorCount} errors`);
+
+      return ordersWithListings;
+    } catch (error: any) {
+      console.error("Error in getMultipleOrderDetails:", error.message);
+      throw error;
+    }
+  },
+
+  // Get order details with timeout protection
+  getOrderDetailsWithTimeout: async (orderId: string, timeoutMs: number = 30000): Promise<any> => {
+    try {
+      const orderPromise = ebayListingService.getOrderDetailsInternal(orderId);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs}ms`)), timeoutMs)
+      );
+
+      const result = await Promise.race([orderPromise, timeoutPromise]);
+      return result;
+    } catch (error: any) {
+      if (error.message.includes("timeout")) {
+        console.error(`Order ${orderId} request timed out after ${timeoutMs}ms`);
+        throw new Error(`Order request timed out: ${error.message}`);
+      }
+      throw error;
     }
   },
 };

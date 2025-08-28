@@ -3,6 +3,8 @@ import { StatusCodes } from "http-status-codes";
 import { orderService } from "@/services";
 import { OrderStatus, SourcePlatform, PaymentStatus } from "@/contracts/order.contract";
 import { ENUMS } from "@/constants/enum";
+import { ebayListingService } from "@/services/ebay-listing.service";
+import { getStoredEbayAccessToken } from "@/utils/ebay-helpers.util";
 
 export const orderController = {
   // Create a new order
@@ -682,10 +684,65 @@ export const orderController = {
 
       const result = await orderService.getAllEbayOrders(filters);
 
+      // Fetch eBay listing items for each order
+      const credentials = await getStoredEbayAccessToken("true");
+      const ordersWithListings = await Promise.all(
+        result.orders.map(async (order: any) => {
+          try {
+            // Extract line items that have legacyItemId and legacyVariationId
+
+            const lineItemsWithListings = await Promise.all(
+              (order.lineItems || []).map(async (lineItem: any) => {
+                if (lineItem.legacyItemId) {
+                  try {
+                    // Add timeout to prevent hanging requests
+
+                    const listingItemPromise = ebayListingService.getEbayListingItem(
+                      lineItem.legacyItemId,
+                      credentials?.access_token
+                    );
+
+                    const timeoutPromise = new Promise((_, reject) =>
+                      setTimeout(() => reject(new Error("Request timeout")), 10000)
+                    );
+
+                    const listingItem = await Promise.race([listingItemPromise, timeoutPromise]);
+
+                    return {
+                      ...lineItem,
+                      listingItem: listingItem || null,
+                    };
+                  } catch (error: any) {
+                    console.error(`Error fetching listing item for ${lineItem.legacyItemId}:`, error);
+                    return {
+                      ...lineItem,
+                      listingItem: null,
+                      listingError: error.message,
+                    };
+                  }
+                }
+                return lineItem;
+              })
+            );
+
+            return {
+              ...order,
+              lineItems: lineItemsWithListings,
+            };
+          } catch (error: any) {
+            console.error(`Error processing order ${order.orderId}:`, error);
+            return {
+              ...order,
+              processingError: error.message,
+            };
+          }
+        })
+      );
+
       return res.status(StatusCodes.OK).json({
         success: true,
         message: "eBay orders retrieved successfully",
-        data: result.orders,
+        data: ordersWithListings,
         pagination: result.pagination,
       });
     } catch (error: any) {
