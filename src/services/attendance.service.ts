@@ -6,6 +6,79 @@ import { Location } from "@/models/location.model";
 import { Shift } from "@/models/workshift.model";
 import { LeaveRequest } from "@/models/leave-request.model";
 import { Workmode } from "@/models/workmode.model";
+import { CronProcessingLog } from "@/models/cron-processing-log.model";
+
+// Helper function to check if already processed using database
+const isAlreadyProcessed = async (
+  jobType: string,
+  employeeId: string,
+  shiftId: string,
+  date: string
+): Promise<boolean> => {
+  try {
+    const existingLog = await CronProcessingLog.findOne({
+      jobType,
+      employeeId,
+      shiftId,
+      date,
+    });
+
+    return !!existingLog;
+  } catch (error) {
+    console.error("Error checking processing log:", error);
+    // If there's an error checking, assume not processed to be safe
+    return false;
+  }
+};
+
+// Helper function to mark as processed using database
+const markAsProcessed = async (jobType: string, employeeId: string, shiftId: string, date: string): Promise<void> => {
+  try {
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24); // Expire after 24 hours
+
+    await CronProcessingLog.create({
+      jobType,
+      employeeId,
+      shiftId,
+      date,
+      expiresAt,
+    });
+  } catch (error) {
+    console.error("Error marking as processed:", error);
+    // Don't throw error here as it would prevent the main operation
+  }
+};
+
+// Helper to format a local date as YYYY-MM-DD (using local timezone)
+const formatLocalDateKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+// Helper function to calculate grace period end for a shift
+const calculateGracePeriodEnd = (shift: any, shiftDate: Date, graceMinutes: number): Date => {
+  const [endHour, endMinute] = shift.endTime.split(":").map(Number);
+  const [startHour, startMinute] = shift.startTime.split(":").map(Number);
+
+  // Check if this is an overnight shift
+  const isOvernight = endHour < startHour || (endHour === startHour && endMinute < startMinute);
+
+  const gracePeriodEnd = new Date(shiftDate);
+
+  if (isOvernight) {
+    // For overnight shifts, end time is on the next day
+    gracePeriodEnd.setDate(shiftDate.getDate() + 1);
+    gracePeriodEnd.setHours(endHour, endMinute + graceMinutes, 0, 0);
+  } else {
+    // Regular shift ends same day
+    gracePeriodEnd.setHours(endHour, endMinute + graceMinutes, 0, 0);
+  }
+
+  return gracePeriodEnd;
+};
 
 // Utility function to normalize dates to prevent timezone issues
 const normalizeDate = (date: Date): Date => {
@@ -1181,7 +1254,19 @@ export const markAbsentForUsers = async () => {
         shiftEnd.setHours(endHour, endMinute + GRACE_MINUTES, 0, 0);
 
         // Check if this shift ended before the current cron run
-        if (now >= shiftEnd) {
+        if (now >= gracePeriodEnd) {
+          // Check if already processed
+          if (
+            await isAlreadyProcessed(
+              "markAbsent",
+              employeeId.toString(),
+              (shift._id as Types.ObjectId).toString(),
+              formatLocalDateKey(shiftDate)
+            )
+          ) {
+            continue;
+          }
+
           const attendance = await Attendance.findOne({
             employeeId,
             date: shiftDate,
@@ -1205,6 +1290,14 @@ export const markAbsentForUsers = async () => {
             attendance.shiftId = shift._id as Types.ObjectId;
             await attendance.save();
           }
+
+          // Mark as processed to prevent duplicates
+          await markAsProcessed(
+            "markAbsent",
+            employeeId.toString(),
+            (shift._id as Types.ObjectId).toString(),
+            formatLocalDateKey(shiftDate)
+          );
 
           // Break out of the days loop once we've processed this shift
           // (since we're going backwards in time, this is the most recent occurrence)
@@ -1248,20 +1341,54 @@ export const autoCheckoutForUsers = async () => {
         shiftEnd.setHours(endHour, endMinute + BUFFER_MINUTES, 0, 0);
 
         // Check if this shift ended before the current cron run
-        if (now >= shiftEnd) {
+        if (now >= bufferPeriodEnd) {
+          // Check if already processed
+          if (
+            await isAlreadyProcessed(
+              "autoCheckout",
+              employeeId.toString(),
+              (shift._id as Types.ObjectId).toString(),
+              formatLocalDateKey(shiftDate)
+            )
+          ) {
+            continue;
+          }
+
           const attendance = await Attendance.findOne({
             employeeId,
             date: shiftDate,
           });
 
           if (attendance && attendance.checkIn && !attendance.checkOut) {
-            attendance.checkOut = shiftEnd;
+            // Set checkout time to the actual shift end time, not the buffer period end
+            const [endHour, endMinute] = shift.endTime.split(":").map(Number);
+            const actualShiftEndTime = new Date(shiftDate);
+
+            // Handle overnight shifts
+            if (
+              endHour < parseInt(shift.startTime.split(":")[0]) ||
+              (endHour === parseInt(shift.startTime.split(":")[0]) &&
+                endMinute < parseInt(shift.startTime.split(":")[1]))
+            ) {
+              actualShiftEndTime.setDate(shiftDate.getDate() + 1);
+            }
+
+            actualShiftEndTime.setHours(endHour, endMinute, 0, 0);
+            attendance.checkOut = actualShiftEndTime;
             await attendance.save();
 
             // After auto-checkout, recalculate overtime if we have shift information
             // Note: Overtime values are computed on-the-fly and not stored in the database
             // They will be recalculated each time the record is retrieved
           }
+
+          // Mark as processed to prevent duplicates
+          await markAsProcessed(
+            "autoCheckout",
+            employeeId.toString(),
+            (shift._id as Types.ObjectId).toString(),
+            formatLocalDateKey(shiftDate)
+          );
 
           // Break out of the days loop once we've processed this shift
           // (since we're going backwards in time, this is the most recent occurrence)

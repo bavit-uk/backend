@@ -219,6 +219,7 @@ const seedData = async () => {
       // "ADD_RETURN_POLICIES",
 
       "SETTINGS",
+
     ],
     isBlocked: false,
     createdAt: new Date(),
