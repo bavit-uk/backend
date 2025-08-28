@@ -4,7 +4,6 @@ import { markAbsentCron } from "./attendance";
 import { tokenRefreshCron } from "./token-refresh.cron";
 import { GmailSyncCron } from "./gmail-sync.cron";
 import * as cron from "node-cron";
-import { startRecurringExpenseCron, stopRecurringExpenseCron } from "./recurring-expense.cron";
 
 export function initCron() {
   // Check if cron jobs should be disabled (for maintenance/debugging)
@@ -18,7 +17,6 @@ export function initCron() {
   ebayMessageSync();
   tokenRefreshCron();
   GmailSyncCron.start(); // Start the new Gmail sync cron jobs
-  startRecurringExpenseCron();
 }
 
 /**
@@ -34,7 +32,6 @@ export function stopAllCronJobs() {
 
   // Stop Gmail sync cron specifically
   GmailSyncCron.stop();
-  stopRecurringExpenseCron();
 
   console.log("✅ All cron jobs stopped");
 }

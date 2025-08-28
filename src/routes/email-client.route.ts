@@ -7,12 +7,21 @@ import Joi from "joi";
 // Validation schemas for email client
 const emailClientValidation = {
   sendEmail: Joi.object({
-    to: Joi.alternatives().try(Joi.string().email(), Joi.array().items(Joi.string().email())).required(),
+    to: Joi.alternatives().try(
+      Joi.string().email(),
+      Joi.array().items(Joi.string().email())
+    ).required(),
     subject: Joi.string().required(),
     text: Joi.string().optional(),
     html: Joi.string().optional(),
-    cc: Joi.alternatives().try(Joi.string().email(), Joi.array().items(Joi.string().email())).optional(),
-    bcc: Joi.alternatives().try(Joi.string().email(), Joi.array().items(Joi.string().email())).optional(),
+    cc: Joi.alternatives().try(
+      Joi.string().email(),
+      Joi.array().items(Joi.string().email())
+    ).optional(),
+    bcc: Joi.alternatives().try(
+      Joi.string().email(),
+      Joi.array().items(Joi.string().email())
+    ).optional(),
     attachments: Joi.array().optional(),
     replyTo: Joi.string().email().optional(),
     // Add threading fields for proper email threading
@@ -22,15 +31,12 @@ const emailClientValidation = {
   }),
 
   replyToEmail: Joi.object({
-    originalMessageId: Joi.string().required(),
-    to: Joi.alternatives().try(Joi.string().email(), Joi.array().items(Joi.string().email())).required(),
-    subject: Joi.string().optional(),
+    originalEmailId: Joi.string().required(),
+    subject: Joi.string().required(),
     text: Joi.string().optional(),
     html: Joi.string().optional(),
-    cc: Joi.alternatives().try(Joi.string().email(), Joi.array().items(Joi.string().email())).optional(),
-    bcc: Joi.alternatives().try(Joi.string().email(), Joi.array().items(Joi.string().email())).optional(),
     attachments: Joi.array().optional(),
-    replyTo: Joi.string().email().optional(),
+    threadId: Joi.string().optional(),
   }),
 
   forwardEmail: Joi.object({
@@ -75,7 +81,7 @@ export const emailClient = (router: Router) => {
     "/reply/:accountId",
     validateParams(emailClientValidation.accountId),
     validateRequest(emailClientValidation.replyToEmail),
-    EmailClientController.sendReply
+    EmailClientController.replyToEmail
   );
 
   router.post(

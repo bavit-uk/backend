@@ -25,9 +25,6 @@ export const tickerControler = {
         platform,
         orderReference,
         orderStatus,
-        resolutions,
-        notes,
-        category
       } = req.body;
 
       // Get user ID from token for timeline tracking
@@ -48,7 +45,11 @@ export const tickerControler = {
       const newTicket = await ticketService.createTicket(
         title,
         client,
-        assignedTo ? (Array.isArray(assignedTo) ? assignedTo.map(id => new Types.ObjectId(id)) : [new Types.ObjectId(assignedTo)]) : undefined,
+        assignedTo
+          ? Array.isArray(assignedTo)
+            ? assignedTo.map((id) => new Types.ObjectId(id))
+            : [new Types.ObjectId(assignedTo)]
+          : undefined,
         new Date(createDate),
         new Date(dueDate),
         status,
@@ -61,22 +62,19 @@ export const tickerControler = {
         platform,
         orderReference,
         orderStatus,
-        userId,
-        resolutions,
-        notes,
-        category
+        userId
       );
 
       res.status(StatusCodes.CREATED).json({
         success: true,
         message: "Ticket created successfully",
-        data: newTicket
+        data: newTicket,
       });
     } catch (error: any) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error creating ticket",
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -106,16 +104,26 @@ export const tickerControler = {
         });
       }
 
-      const uploadedImages = Array.isArray(req.files)
-        ? (req.files as any[]).map((f) => f.location)
-        : [];
+      // Check if ticket exists and get its status
+      const ticket = await ticketService.getById(id);
+      if (!ticket) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Ticket not found",
+        });
+      }
 
-      const updatedTicket = await ticketService.addNote(
-        id,
-        description.trim(),
-        userId,
-        uploadedImages
-      );
+      // Prevent adding notes to closed tickets
+      if (ticket.status === "Closed") {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Cannot add notes to closed tickets",
+        });
+      }
+
+      const uploadedImages = Array.isArray(req.files) ? (req.files as any[]).map((f) => f.location) : [];
+
+      const updatedTicket = await ticketService.addNote(id, description.trim(), userId, uploadedImages);
 
       return res.status(StatusCodes.OK).json({
         success: true,
@@ -156,7 +164,7 @@ export const tickerControler = {
 
       // Convert string IDs to ObjectId if present
       if (updateData.assignedTo) {
-        updateData.assignedTo = Array.isArray(updateData.assignedTo) 
+        updateData.assignedTo = Array.isArray(updateData.assignedTo)
           ? updateData.assignedTo.map((id: string) => new Types.ObjectId(id))
           : [new Types.ObjectId(updateData.assignedTo)];
       }
@@ -174,7 +182,7 @@ export const tickerControler = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error updating ticket",
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -192,7 +200,7 @@ export const tickerControler = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error deleting ticket",
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -205,7 +213,7 @@ export const tickerControler = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error getting tickets",
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -220,7 +228,7 @@ export const tickerControler = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error getting ticket",
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -264,7 +272,7 @@ export const tickerControler = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error changing status",
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -293,7 +301,7 @@ export const tickerControler = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error changing priority",
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -320,7 +328,7 @@ export const tickerControler = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error changing role",
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -357,17 +365,27 @@ export const tickerControler = {
         });
       }
 
-      // If upload middleware attached files, map their URLs for resolution images
-      const uploadedImages = Array.isArray(req.files)
-        ? (req.files as any[]).map((f) => f.location)
-        : [];
+      // Check if ticket exists and get its status
+      const ticket = await ticketService.getById(id);
+      if (!ticket) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "Ticket not found",
+        });
+      }
 
-      const resolvedTicket = await ticketService.addResolution(
-        id,
-        description,
-        userId,
-        uploadedImages
-      );
+      // Prevent adding resolutions to closed tickets
+      if (ticket.status === "Closed") {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Cannot add resolution to closed tickets",
+        });
+      }
+
+      // If upload middleware attached files, map their URLs for resolution images
+      const uploadedImages = Array.isArray(req.files) ? (req.files as any[]).map((f) => f.location) : [];
+
+      const resolvedTicket = await ticketService.addResolution(id, description, userId, uploadedImages);
 
       return res.status(StatusCodes.OK).json({
         success: true,
@@ -394,11 +412,7 @@ export const tickerControler = {
         data: deletedResolutionTicket,
       });
     } catch (error: any) {
-      res.status(
-        error.message.includes('not found')
-          ? StatusCodes.NOT_FOUND
-          : StatusCodes.INTERNAL_SERVER_ERROR
-      ).json({
+      res.status(error.message.includes("not found") ? StatusCodes.NOT_FOUND : StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: error.message || "Error deleting resolution",
       });
@@ -437,11 +451,7 @@ export const tickerControler = {
         });
       }
 
-      const updatedTicket = await ticketService.updateResolution(
-        id,
-        description,
-        userId
-      );
+      const updatedTicket = await ticketService.updateResolution(id, description, userId);
 
       return res.status(StatusCodes.OK).json({
         success: true,
@@ -449,11 +459,7 @@ export const tickerControler = {
         data: updatedTicket,
       });
     } catch (error: any) {
-      res.status(
-        error.message.includes('not found')
-          ? StatusCodes.NOT_FOUND
-          : StatusCodes.INTERNAL_SERVER_ERROR
-      ).json({
+      res.status(error.message.includes("not found") ? StatusCodes.NOT_FOUND : StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: error.message || "Error updating resolution",
       });
@@ -472,11 +478,7 @@ export const tickerControler = {
         data: resolutions,
       });
     } catch (error: any) {
-      res.status(
-        error.message.includes('not found')
-          ? StatusCodes.NOT_FOUND
-          : StatusCodes.INTERNAL_SERVER_ERROR
-      ).json({
+      res.status(error.message.includes("not found") ? StatusCodes.NOT_FOUND : StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: error.message || "Error retrieving resolutions",
       });
@@ -494,11 +496,7 @@ export const tickerControler = {
         data: updatedTicket,
       });
     } catch (error: any) {
-      res.status(
-        error.message.includes('not found')
-          ? StatusCodes.NOT_FOUND
-          : StatusCodes.INTERNAL_SERVER_ERROR
-      ).json({
+      res.status(error.message.includes("not found") ? StatusCodes.NOT_FOUND : StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: error.message || "Error deleting resolution",
       });
@@ -517,7 +515,7 @@ export const tickerControler = {
       }
 
       // Get the uploaded file URLs from DigitalOcean Spaces
-      const uploadedImages = (req.files as any[]).map(file => file.location);
+      const uploadedImages = (req.files as any[]).map((file) => file.location);
 
       // Update the ticket with the new image URLs
       const updatedTicket = await ticketService.addImagesToTicket(id, uploadedImages);
@@ -527,14 +525,14 @@ export const tickerControler = {
         message: "Images uploaded successfully",
         data: {
           ticket: updatedTicket,
-          uploadedImages: uploadedImages
-        }
+          uploadedImages: uploadedImages,
+        },
       });
     } catch (error: any) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error uploading images",
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -560,7 +558,11 @@ export const tickerControler = {
       }
 
       // Convert string IDs to ObjectId if present
-      const assignedToIds = assignedTo ? (Array.isArray(assignedTo) ? assignedTo.map((id: string) => new Types.ObjectId(id)) : [new Types.ObjectId(assignedTo)]) : [];
+      const assignedToIds = assignedTo
+        ? Array.isArray(assignedTo)
+          ? assignedTo.map((id: string) => new Types.ObjectId(id))
+          : [new Types.ObjectId(assignedTo)]
+        : [];
 
       const updatedTicket = await ticketService.updateAssignment(id, assignedToIds, userId);
 
@@ -573,7 +575,7 @@ export const tickerControler = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error updating assignment",
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -582,7 +584,7 @@ export const tickerControler = {
   addComment: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { content, parentCommentId } = req.body;
+      const { content, parentCommentId, images } = req.body;
 
       const authHeader = req.headers["authorization"];
       const token = authHeader && authHeader.split(" ")[1];
@@ -604,7 +606,7 @@ export const tickerControler = {
         });
       }
 
-      const updatedTicket = await ticketService.addComment(id, content.trim(), userId, parentCommentId);
+      const updatedTicket = await ticketService.addComment(id, content.trim(), userId, parentCommentId, images);
 
       res.status(StatusCodes.OK).json({
         success: true,
@@ -615,7 +617,7 @@ export const tickerControler = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error adding comment",
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -656,7 +658,7 @@ export const tickerControler = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error updating comment",
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -689,8 +691,85 @@ export const tickerControler = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Error deleting comment",
-        error: error.message
+        error: error.message,
       });
     }
-  }
+  },
+
+  // Manual escalation methods
+  manualEscalate: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      const authHeader = req.headers["authorization"];
+      const token = authHeader && authHeader.split(" ")[1];
+
+      if (!token || typeof token !== "string") {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid verification token",
+        });
+      }
+
+      const decoded = jwtVerify(token);
+      const userId = decoded.id.toString();
+
+      const updatedTicket = await ticketService.manualEscalate(id, userId);
+
+      res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Ticket manually escalated successfully",
+        data: updatedTicket,
+      });
+    } catch (error: any) {
+      res
+        .status(
+          error.message.includes("not found") || error.message.includes("already")
+            ? StatusCodes.BAD_REQUEST
+            : StatusCodes.INTERNAL_SERVER_ERROR
+        )
+        .json({
+          success: false,
+          message: error.message || "Error escalating ticket",
+        });
+    }
+  },
+
+  deEscalate: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      const authHeader = req.headers["authorization"];
+      const token = authHeader && authHeader.split(" ")[1];
+
+      if (!token || typeof token !== "string") {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "Invalid verification token",
+        });
+      }
+
+      const decoded = jwtVerify(token);
+      const userId = decoded.id.toString();
+
+      const updatedTicket = await ticketService.deEscalate(id, userId);
+
+      res.status(StatusCodes.OK).json({
+        success: true,
+        message: "Ticket de-escalated successfully",
+        data: updatedTicket,
+      });
+    } catch (error: any) {
+      res
+        .status(
+          error.message.includes("not found") || error.message.includes("not manually")
+            ? StatusCodes.BAD_REQUEST
+            : StatusCodes.INTERNAL_SERVER_ERROR
+        )
+        .json({
+          success: false,
+          message: error.message || "Error de-escalating ticket",
+        });
+    }
+  },
 };

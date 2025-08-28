@@ -78,7 +78,15 @@ export const expenseController = {
 
   getAllExpenses: async (req: Request, res: Response) => {
     try {
-      const expenses = await expenseService.getAllExpenses();
+      const { category, startDate, endDate, minAmount, maxAmount } = req.query;
+
+      const expenses = await expenseService.getAllExpenses({
+        ...(category && { category: category as string }),
+        ...(startDate && { startDate: new Date(startDate as string) }),
+        ...(endDate && { endDate: new Date(endDate as string) }),
+        ...(minAmount && { minAmount: Number(minAmount) }),
+        ...(maxAmount && { maxAmount: Number(maxAmount) }),
+      });
 
       res.status(StatusCodes.OK).json({
         success: true,
@@ -90,69 +98,6 @@ export const expenseController = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Failed to fetch expenses",
-      });
-    }
-  },
-
-  /**
-   * @desc    Search expenses with pagination and filters
-   * @route   GET /api/expense/search
-   * @access  Public
-   */
-  searchExpenses: async (req: Request, res: Response) => {
-    try {
-      const { 
-        searchQuery, 
-        isBlocked, 
-        category, 
-        expenseType, 
-        payrollType, 
-        page = 1, 
-        limit = 10 
-      } = req.query;
-
-      // Parse and validate parameters
-      const parsedPage = parseInt(page as string) || 1;
-      const parsedLimit = parseInt(limit as string) || 10;
-      const parsedIsBlocked = isBlocked !== undefined ? isBlocked === 'true' : undefined;
-      const parsedCategory = category as string;
-      const parsedExpenseType = expenseType as string;
-      const parsedPayrollType = payrollType as string;
-
-      // Validate pagination parameters
-      if (parsedPage < 1) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          success: false,
-          message: "Page must be greater than 0"
-        });
-      }
-
-      if (parsedLimit < 1 || parsedLimit > 100) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          success: false,
-          message: "Limit must be between 1 and 100"
-        });
-      }
-
-      const result = await expenseService.searchExpenses({
-        searchQuery: searchQuery as string,
-        isBlocked: parsedIsBlocked,
-        category: parsedCategory,
-        expenseType: parsedExpenseType,
-        payrollType: parsedPayrollType,
-        page: parsedPage,
-        limit: parsedLimit
-      });
-
-      res.status(StatusCodes.OK).json({ 
-        success: true, 
-        data: result
-      });
-    } catch (error) {
-      console.error("Error searching expenses:", error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ 
-        success: false,
-        message: "Error searching expenses" 
       });
     }
   },
@@ -214,6 +159,22 @@ export const expenseController = {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: "Failed to delete expense",
+      });
+    }
+  },
+
+  getExpenseStatistics: async (req: Request, res: Response) => {
+    try {
+      const stats = await expenseService.getExpenseStatistics();
+      res.status(StatusCodes.OK).json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      console.error("Error fetching expense statistics:", error);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Failed to fetch expense statistics",
       });
     }
   },

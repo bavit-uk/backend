@@ -512,7 +512,7 @@ export const userController = {
         limit: parseInt(limit as string, 10), // Convert limit to number
       };
 
-      // console.log("filtersfilters : ", filters);
+      console.log("filtersfilters : ", filters);
 
       // Call the service to search and filter the users
       const users = await userService.searchAndFilterUsers(filters);
@@ -679,7 +679,6 @@ export const userController = {
         profileData.annualLeaveEntitlement !== undefined &&
         profileData.annualLeaveCarriedForward !== undefined &&
         profileData.annualLeaveYear !== undefined;
-        // Note: skills field removed from completion check - commented out for future use
 
       res.status(StatusCodes.OK).json({
         message: isCompleteSubmission ? "Profile completion updated successfully" : "Profile data saved successfully",

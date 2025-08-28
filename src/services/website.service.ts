@@ -444,12 +444,12 @@ export const websiteService = {
           brand: brand,
           category: (listing as any).productInfo?.productCategory
             ? {
-              id: (listing as any).productInfo.productCategory._id,
-              name: (listing as any).productInfo.productCategory.name || "",
-              description: (listing as any).productInfo.productCategory.description || "",
-              image: (listing as any).productInfo.productCategory.image || "",
-              tags: (listing as any).productInfo.productCategory.tags || [],
-            }
+                id: (listing as any).productInfo.productCategory._id,
+                name: (listing as any).productInfo.productCategory.name || "",
+                description: (listing as any).productInfo.productCategory.description || "",
+                image: (listing as any).productInfo.productCategory.image || "",
+                tags: (listing as any).productInfo.productCategory.tags || [],
+              }
             : null,
           description: description,
           condition: cleanCondition,
@@ -470,13 +470,13 @@ export const websiteService = {
                 // Include populated variation details if available
                 variationDetails: variation.variationId
                   ? {
-                    id: variation.variationId._id,
-                    attributes: variation.variationId.attributes || {},
-                    isSelected: variation.variationId.isSelected || false,
-                    isBundleVariation: variation.variationId.isBundleVariation || false,
-                    createdAt: variation.variationId.createdAt,
-                    updatedAt: variation.variationId.updatedAt,
-                  }
+                      id: variation.variationId._id,
+                      attributes: variation.variationId.attributes || {},
+                      isSelected: variation.variationId.isSelected || false,
+                      isBundleVariation: variation.variationId.isBundleVariation || false,
+                      createdAt: variation.variationId.createdAt,
+                      updatedAt: variation.variationId.updatedAt,
+                    }
                   : null,
               })) || [],
             currency: "GBP", // Default currency
@@ -956,12 +956,12 @@ export const websiteService = {
           brand: brand,
           category: listing.productInfo?.productCategory
             ? {
-              id: listing.productInfo.productCategory._id,
-              name: listing.productInfo.productCategory.name || "",
-              description: listing.productInfo.productCategory.description || "",
-              image: listing.productInfo.productCategory.image || "",
-              tags: listing.productInfo.productCategory.tags || [],
-            }
+                id: listing.productInfo.productCategory._id,
+                name: listing.productInfo.productCategory.name || "",
+                description: listing.productInfo.productCategory.description || "",
+                image: listing.productInfo.productCategory.image || "",
+                tags: listing.productInfo.productCategory.tags || [],
+              }
             : null,
           description: description,
           condition: cleanCondition,
@@ -981,13 +981,13 @@ export const websiteService = {
                 offerImages: variation.offerImages || [],
                 variationDetails: variation.variationId
                   ? {
-                    id: variation.variationId._id,
-                    attributes: variation.variationId.attributes || {},
-                    isSelected: variation.variationId.isSelected || false,
-                    isBundleVariation: variation.variationId.isBundleVariation || false,
-                    createdAt: variation.variationId.createdAt,
-                    updatedAt: variation.variationId.updatedAt,
-                  }
+                      id: variation.variationId._id,
+                      attributes: variation.variationId.attributes || {},
+                      isSelected: variation.variationId.isSelected || false,
+                      isBundleVariation: variation.variationId.isBundleVariation || false,
+                      createdAt: variation.variationId.createdAt,
+                      updatedAt: variation.variationId.updatedAt,
+                    }
                   : null,
               })) || [],
             currency: "GBP",
@@ -1392,12 +1392,12 @@ export const websiteService = {
         brand: brand,
         category: listing.productInfo?.productCategory
           ? {
-            id: listing.productInfo.productCategory._id,
-            name: listing.productInfo.productCategory.name || "",
-            description: listing.productInfo.productCategory.description || "",
-            image: listing.productInfo.productCategory.image || "",
-            tags: listing.productInfo.productCategory.tags || [],
-          }
+              id: listing.productInfo.productCategory._id,
+              name: listing.productInfo.productCategory.name || "",
+              description: listing.productInfo.productCategory.description || "",
+              image: listing.productInfo.productCategory.image || "",
+              tags: listing.productInfo.productCategory.tags || [],
+            }
           : null,
         description: description,
         condition: cleanCondition,
@@ -1418,13 +1418,13 @@ export const websiteService = {
               // Include populated variation details if available
               variationDetails: variation.variationId
                 ? {
-                  id: variation.variationId._id,
-                  attributes: variation.variationId.attributes || {},
-                  isSelected: variation.variationId.isSelected || false,
-                  isBundleVariation: variation.variationId.isBundleVariation || false,
-                  createdAt: variation.variationId.createdAt,
-                  updatedAt: variation.variationId.updatedAt,
-                }
+                    id: variation.variationId._id,
+                    attributes: variation.variationId.attributes || {},
+                    isSelected: variation.variationId.isSelected || false,
+                    isBundleVariation: variation.variationId.isBundleVariation || false,
+                    createdAt: variation.variationId.createdAt,
+                    updatedAt: variation.variationId.updatedAt,
+                  }
                 : null,
             })) || [],
           currency: "GBP", // Default currency
@@ -1488,32 +1488,27 @@ export const websiteService = {
       isActive: true,
       startDate: { $lte: new Date() },
       endDate: { $gte: new Date() },
-      ...filter
+      ...filter,
     };
 
     const query = dealsModel
       .find(baseFilter)
-      .select('-__v')
+      .select("-__v")
       .sort(sort)
       .skip((page - 1) * limit)
       .limit(limit);
 
     // Apply population based on selection type
-    if (baseFilter.selectionType === 'products') {
-      query.populate('products');
-    } else if (baseFilter.selectionType === 'categories') {
-      query.populate('categories');
+    if (baseFilter.selectionType === "products") {
+      query.populate("products");
+    } else if (baseFilter.selectionType === "categories") {
+      query.populate("categories");
     } else {
       // Populate both if no specific type is requested
-      query
-        .populate('products')
-        .populate('categories');
+      query.populate("products").populate("categories");
     }
 
-    const [docs, total] = await Promise.all([
-      query.exec(),
-      dealsModel.countDocuments(baseFilter)
-    ]);
+    const [docs, total] = await Promise.all([query.exec(), dealsModel.countDocuments(baseFilter)]);
 
     const pages = Math.ceil(total / limit);
     const hasNextPage = page < pages;
@@ -1526,7 +1521,7 @@ export const websiteService = {
       pages,
       limit,
       hasNextPage,
-      hasPrevPage
+      hasPrevPage,
     };
   },
 };

@@ -10,16 +10,14 @@ const objectId = z.instanceof(Types.ObjectId).or(z.string().regex(/^[0-9a-fA-F]{
 
 export const supplierCategoryValidation = {
   addCategory: async (
-    req: IBodyRequest<{ name: string; description: string; image: string; productCategories?: string[]; productType: string }>,
+    req: IBodyRequest<{ name: string; description: string; image: string }>,
     res: Response,
     next: NextFunction
   ) => {
     const schema: ZodSchema = z.object({
       name: z.string().trim().min(3, "Category name is required and should be at least 3 characters long"),
       description: z.string().trim().min(5, "Description is required and should be at least 5 characters long"),
-      image: z.string().nonempty("Image is required"),
-      productCategories: z.array(objectId).optional(),
-      productType: z.enum(['new', 'scrap'], { required_error: "Product type is required" })
+      image: z.string().nonempty("Image is required")
     });
     try {
       const validatedData = schema.parse(req.body);
@@ -44,7 +42,7 @@ export const supplierCategoryValidation = {
   },
 
   editCategory: async (
-    req: IBodyRequest<Partial<{ name: string; description: string; image: string; productCategories?: string[]; productType: string }>>,
+    req: IBodyRequest<Partial<{ name: string; description: string; image: string }>>,
     res: Response,
     next: NextFunction
   ) => {
@@ -56,8 +54,6 @@ export const supplierCategoryValidation = {
         .min(5, "Description is required and should be at least 5 characters long")
         .optional(),
       image: z.string().optional(),
-      productCategories: z.array(objectId).optional(),
-      productType: z.enum(['new', 'scrap']).optional(),
     });
     try {
       const validatedData = schema.parse(req.body);
