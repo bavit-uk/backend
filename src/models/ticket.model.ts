@@ -173,6 +173,14 @@ const TicketSchema = new Schema<ITicket>(
         type: Schema.Types.ObjectId,
         default: null,
       },
+      images: {
+        type: [String],
+        validate: {
+          validator: (urls: string[]) => urls.length <= 6,
+          message: "Cannot attach more than 6 images to a comment",
+        },
+        default: [],
+      },
     }],
   },
   {
