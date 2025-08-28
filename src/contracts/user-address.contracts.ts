@@ -12,7 +12,6 @@ export interface IUserAddress extends Document {
   isActive: boolean;
   longitude: number;
   latitude: number;
-  originalLocationMapSearch?: string; // Store the original location map search value
 }
 
 export type UserAddressModel = Model<IUserAddress>;

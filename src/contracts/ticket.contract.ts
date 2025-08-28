@@ -14,15 +14,6 @@ export interface ITimelineEntry {
   changedBy: Types.ObjectId;
   assignedUsers?: Types.ObjectId[]; // For assignment changes
   resolutionDescription?: string; // For resolution entries
-  resolutionImages?: string[]; // For resolution images
-}
-
-export interface INote {
-  image?: string[];
-  description?: string;
-  notedBy: Types.ObjectId;
-  notedAt: Date;
-  _id?: Types.ObjectId;
 }
 
 export interface IComment {
@@ -33,6 +24,7 @@ export interface IComment {
   updatedAt?: Date;
   replies?: IComment[];
   parentComment?: Types.ObjectId; // For replies
+  images?: string[];
 }
 
 export interface ITicket extends Document {
@@ -62,8 +54,6 @@ export interface ITicket extends Document {
   platform?: string; // Platform name (e.g., "Amazon", "eBay", "Shopify")
   orderReference?: string; // Order reference number
   orderStatus?: "Fulfilled" | "Not Fulfilled"; // Order fulfillment status
-  category?: string; // Category for escalated complaints
-  notes?: INote[];
 }
 
 export type TicketModel = Model<ITicket>;

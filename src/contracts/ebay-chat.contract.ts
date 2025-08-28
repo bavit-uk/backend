@@ -56,16 +56,16 @@ export interface IEbayChatService {
   getConversations(sellerUsername: string): Promise<IEbayConversation[]>;
   markAsRead(messageId: string): Promise<IEbayChat | null>;
   markConversationAsRead(ebayItemId: string, buyerUsername: string): Promise<void>;
-  
+
   // eBay API integration
   syncEbayMessages(sellerUsername: string): Promise<void>;
   sendEbayMessage(messageData: Partial<IEbayChat>): Promise<boolean>;
-  
+
   // Utility functions
   getUnreadCount(sellerUsername: string): Promise<number>;
   searchMessages(query: string, sellerUsername: string): Promise<IEbayChat[]>;
   updateConversation(ebayItemId: string, buyerUsername: string, sellerUsername: string, updateData: Partial<IEbayConversation>): Promise<void>;
-  
+
   // Helper methods for eBay API integration
   getOrdersFromEbay(accessToken: string): Promise<any[]>;
   getMessagesFromEbay(accessToken: string, itemId: string): Promise<IEbayChat[]>;

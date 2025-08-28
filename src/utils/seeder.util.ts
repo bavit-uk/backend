@@ -5,7 +5,6 @@ import dotenv from "dotenv";
 import { IntegrationTokenModel } from "@/models/integration-token.model";
 import { cleanupTokenCollections } from "./cleanup-tokens.util";
 import { TokenInitializationService } from "@/services/token-initialization.service";
-import { seedSystemExpenseCategories } from "@/scripts/seed-system-categories";
 dotenv.config();
 // Sample seed data for UserCategory, SuperAdmin, and ProductCategories
 const seedData = async () => {
@@ -14,12 +13,12 @@ const seedData = async () => {
 
   // Initialize tokens using the new service if environment variables are available
   try {
-    // console.log("🔧 Attempting to initialize tokens from credentials...");
+    console.log("🔧 Attempting to initialize tokens from credentials...");
     const envValidation = TokenInitializationService.validateEnvironmentVariables();
 
     if (envValidation.valid) {
       await TokenInitializationService.initializeAllTokens();
-      // console.log("✅ Tokens initialized from credentials");
+      console.log("✅ Tokens initialized from credentials");
     } else {
       console.log("⚠️ Some environment variables missing, falling back to seeder...");
       await seedIntegrationTokens();
@@ -61,12 +60,11 @@ const seedData = async () => {
       "ADD_LISTING",
       "MANAGE_DISCOUNTS",
 
+      "ORDER_PIPELINE",
+
       "MANAGE_BUNDLES",
       "ADD_BUNDLES",
       "VIEW_BUNDLES",
-
-      "ORDER_PIPELINE_MANAGEMENT",
-      "ORDER_MANAGEMENT",
 
       "GAMERS_COMMUNITY",
       "VIEW_BLOGS_CATEGORY",
@@ -125,7 +123,7 @@ const seedData = async () => {
       "VIEW_EXPENSE",
       "VIEW_REVENUE",
       "ADD_REVENUE",
-      "VIEW_REPORT",
+      "VIEW_INVENTORY_PURCHASES",
 
       "MANAGE_GUIDES",
       "VIEW_GUIDES_CATEGORY",
@@ -173,39 +171,29 @@ const seedData = async () => {
       "ADD_LISTING",
       "MANAGE_DISCOUNTS",
 
-      "VIEW_BLOGS_CATEGORY",
-      "ADD_BLOGS_CATEGORY",
-      "VIEW_BLOGS",
-      "ADD_BLOGS",
-      "VIEW_GAMERS_COMMUNITY",
-      "ADD_GAMERS_COMMUNITY",
       "COMPLAINTS_MANAGEMENET",
       "VIEW_COMPLAINTS_CATEGORY",
       "ADD_COMPLAINTS_CATEGORY",
       "VIEW_COMPLAINTS",
       "ADD_COMPLAINTS",
-      "MANAGE_GUIDES",
-      "VIEW_GUIDES_CATEGORY",
-      "ADD_GUIDE_CATEGORY",
-      "VIEW_GUIDES",
-      "ADD_GUIDES",
-      "LEADS_MANAGEMENT",
-      "ADD_LEADS_CATEGORIES",
-      "VIEW_LEADS_CATEGORIES",
-      "ADD_LEADS",
+
+      // "LEADS_MANAGEMENT",
+      // "ADD_LEADS_CATEGORIES",
+      // "VIEW_LEADS_CATEGORIES",
+      // "ADD_LEADS",
       // "VIEW_LEADS",
 
       "MANAGE_BUNDLES",
       "ADD_BUNDLES",
       "VIEW_BUNDLES",
 
-      "GAMERS_COMMUNITY",
-      "VIEW_BLOGS_CATEGORY",
-      "ADD_BLOGS_CATEGORY",
-      "VIEW_BLOGS",
-      "ADD_BLOGS",
-      "VIEW_GAMERS_COMMUNITY",
-      "ADD_GAMERS_COMMUNITY",
+      // "GAMERS_COMMUNITY",
+      // "VIEW_BLOGS_CATEGORY",
+      // "ADD_BLOGS_CATEGORY",
+      // "VIEW_BLOGS",
+      // "ADD_BLOGS",
+      // "VIEW_GAMERS_COMMUNITY",
+      // "ADD_GAMERS_COMMUNITY",
 
       "HR_MANAGEMENET",
       "VIEW_EMPLOYEES",
@@ -219,17 +207,6 @@ const seedData = async () => {
       "VIEW_TICKET",
 
       "MANAGE_DOCUMENTS",
-
-      "MANAGE_ACCOUNTING",
-      "ADD_EXPENSE_CATEGORY",
-      "VIEW_EXPENSE_CATEGORY",
-      "VIEW_RECURRING_EXPENSE",
-      "ADD_RECURRING_EXPENSE",
-      "ADD_EXPENSE",
-      "VIEW_EXPENSE",
-      "VIEW_REVENUE",
-      "ADD_REVENUE",
-      "VIEW_REPORT",
 
       // "MANAGE_POLICIES",
       // "VIEW_CUSTOM_POLICIES",
@@ -272,7 +249,7 @@ const seedData = async () => {
       await userCategory.save();
       console.log("Super Admin User Category updated.");
     } else {
-      // console.log("Super Admin User Category already exists and matches.");
+      console.log("Super Admin User Category already exists and matches.");
     }
   }
   if (!adminUserCategory) {
@@ -287,9 +264,9 @@ const seedData = async () => {
     ) {
       adminUserCategory.set(adminCategoryData);
       await adminUserCategory.save();
-      // console.log("Admin User Category updated.");
+      console.log("Admin User Category updated.");
     } else {
-      // console.log("Admin User Category already exists and matches.");
+      console.log("Admin User Category already exists and matches.");
     }
   }
 
@@ -381,9 +358,9 @@ const seedData = async () => {
     ) {
       supplierCategory.set(supplierCategoryData);
       await supplierCategory.save();
-      // console.log("Supplier User Category updated.");
+      console.log("Supplier User Category updated.");
     } else {
-      // console.log("Supplier User Category already exists and matches.");
+      console.log("Supplier User Category already exists and matches.");
     }
   }
   const actualPassword: any = process.env.SYS_PASS; // Hardcoded password for seeding
@@ -479,9 +456,6 @@ const seedData = async () => {
       console.log("admin user already exists and matches.");
     }
   }
-
-  // Seed system expense categories
-  await seedSystemExpenseCategories();
 
   console.log("Seeder completed.");
 };

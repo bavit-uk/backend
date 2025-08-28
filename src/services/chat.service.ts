@@ -175,28 +175,7 @@ export const ChatService = {
 
     const filteredGroupConversations = groupConversations.filter(group => !archivedIds.has(group._id));
 
-    // Calculate unread counts for group conversations
-    const groupConversationsWithUnreadCounts = await Promise.all(
-      filteredGroupConversations.map(async (group) => {
-        const unreadCount = await ChatModel.countDocuments({
-          chatRoom: group._id,
-          sender: { $ne: userId },
-          status: { $ne: MessageStatus.READ }
-        });
-
-        return {
-          _id: group._id,
-          name: group.name,
-          isGroup: true,
-          lastMessage: group.lastMessage,
-          lastMessageAt: group.lastMessageAt,
-          participants: group.participants,
-          unreadCount: unreadCount
-        };
-      })
-    );
-
-    return [...filteredConversations, ...groupConversationsWithUnreadCounts];
+    return [...filteredConversations, ...filteredGroupConversations];
   },
 
   getPendingConversations: async (userId: string): Promise<any[]> => {
@@ -210,13 +189,6 @@ export const ChatService = {
         // Get group details
         const group = await ChatRoomModel.findById(status.conversationId);
         if (group) {
-          // Calculate unread count for group
-          const unreadCount = await ChatModel.countDocuments({
-            chatRoom: status.conversationId,
-            sender: { $ne: userId },
-            status: { $ne: MessageStatus.READ }
-          });
-
           pendingConversations.push({
             _id: group._id,
             name: group.name,
@@ -224,7 +196,7 @@ export const ChatService = {
             lastMessage: group.lastMessage,
             lastMessageAt: group.lastMessageAt,
             participants: group.participants,
-            unreadCount: unreadCount
+            unreadCount: 0 // Pending conversations are already read
           });
         }
       } else {
@@ -261,13 +233,6 @@ export const ChatService = {
         // Get group details
         const group = await ChatRoomModel.findById(status.conversationId);
         if (group) {
-          // Calculate unread count for group
-          const unreadCount = await ChatModel.countDocuments({
-            chatRoom: status.conversationId,
-            sender: { $ne: userId },
-            status: { $ne: MessageStatus.READ }
-          });
-
           archivedConversations.push({
             _id: group._id,
             name: group.name,
@@ -275,7 +240,7 @@ export const ChatService = {
             lastMessage: group.lastMessage,
             lastMessageAt: group.lastMessageAt,
             participants: group.participants,
-            unreadCount: unreadCount
+            unreadCount: 0
           });
         }
       } else {
@@ -428,23 +393,6 @@ export const ChatService = {
 
     // Update conversation status
     await ConversationStatusService.updateLastReadAt(userId, otherUserId);
-  },
-
-  markGroupConversationAsRead: async (userId: string, groupId: string): Promise<void> => {
-    await ChatModel.updateMany(
-      {
-        chatRoom: groupId,
-        sender: { $ne: userId },
-        status: { $ne: MessageStatus.READ }
-      },
-      {
-        status: MessageStatus.READ,
-        readAt: new Date()
-      }
-    );
-
-    // Update conversation status
-    await ConversationStatusService.updateLastReadAt(userId, groupId);
   },
 
   editMessage: async (messageId: string, newContent: string, userId: string): Promise<IChat | null> => {

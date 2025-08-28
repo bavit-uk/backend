@@ -34,7 +34,6 @@ export interface IProcessedPayroll extends Document {
   processedAt?: Date;
   notes?: string;
   pdfUrl?: string; // File path, URL, or blob reference
-  receiptImage?: string; // Receipt image URL for proof of payment
   createdAt: Date;
   updatedAt: Date;
 }

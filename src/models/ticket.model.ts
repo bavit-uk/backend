@@ -119,10 +119,6 @@ const TicketSchema = new Schema<ITicket>(
       resolutionDescription: {
         type: String,
         default: undefined
-      },
-      resolutionImages: {
-        type: [String],
-        default: undefined
       }
     }],
     isEscalated: {
@@ -154,11 +150,6 @@ const TicketSchema = new Schema<ITicket>(
       type: String,
       enum: ["Fulfilled", "Not Fulfilled"],
     },
-    category: {
-      type: String,
-      trim: true,
-      default: "Ticket",
-    },
     // Comments field
     comments: [{
       content: {
@@ -182,32 +173,15 @@ const TicketSchema = new Schema<ITicket>(
         type: Schema.Types.ObjectId,
         default: null,
       },
-    }],
-    // Notes field (similar to complaint notes)
-    notes: [
-      {
-        image: {
-          type: [String],
-          validate: {
-            validator: (urls: string[]) => urls.length <= 10,
-            message: "Cannot attach more than 10 files",
-          },
-          default: [],
+      images: {
+        type: [String],
+        validate: {
+          validator: (urls: string[]) => urls.length <= 6,
+          message: "Cannot attach more than 6 images to a comment",
         },
-        description: {
-          type: String,
-          trim: true,
-        },
-        notedBy: {
-          type: Schema.Types.ObjectId,
-          ref: "User",
-        },
-        notedAt: {
-          type: Date,
-          default: Date.now,
-        },
+        default: [],
       },
-    ],
+    }],
   },
   {
     timestamps: true,

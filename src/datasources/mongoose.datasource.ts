@@ -8,16 +8,10 @@ export const mongoose = {
         process.exit(1);
       }
 
-      // Check if already connected
-      if (connection.readyState === 1) {
-        console.log("Already connected to MongoDB");
-        return;
-      }
-
       await connect(process.env.MONGO_URI);
       console.log("Connected to MongoDB");
     } catch (error) {
-      console.error("MongoDB connection error:", error);
+      console.error(error);
       process.exit(1);
     }
   },
