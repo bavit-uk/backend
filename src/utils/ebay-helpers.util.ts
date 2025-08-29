@@ -294,6 +294,7 @@ const handleClientToken = async () => {
     return newToken;
   } else {
     console.log("🔑 [CLIENT] Returning client token");
+    console.log(CLIENT_TOKEN);
     return CLIENT_TOKEN;
   }
 };

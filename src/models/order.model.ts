@@ -55,7 +55,7 @@ const orderSchema = new Schema(
       email: { type: String, trim: true },
       phone: { type: String, trim: true },
     },
-    email: { type: String, lowercase: true, required: true },
+    email: { type: String, lowercase: true },
 
     // Dates & Timestamps
     orderDate: { type: Date, default: Date.now },

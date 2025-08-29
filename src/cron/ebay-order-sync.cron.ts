@@ -34,6 +34,7 @@ export const ebayOrderSyncCron = () => {
       }
 
       // Determine sync strategy and fetch orders
+      // Note: All sync strategies now include both new and existing orders to ensure updates happen
       const syncResult = await performSmartSync(token);
 
       // Update cron log with success
@@ -91,7 +92,7 @@ export const ebayOrderSyncCron = () => {
     }
   });
 
-  console.log("📅 eBay order sync cron job scheduled (every 30 minutes)");
+  console.log("📅 eBay order sync cron job scheduled (every 10 minutes)");
 };
 
 /**
@@ -269,8 +270,10 @@ async function performPartialBackfillSync(token: any, metadata: any): Promise<an
 
     console.log(`📊 Page ${page + 1}: ${newOrders.length} new, ${orders.length - newOrders.length} existing`);
 
+    // Include ALL orders (both new and existing) to ensure updates happen
+    allOrders.push(...orders);
+
     if (newOrders.length > 0) {
-      allOrders.push(...newOrders);
       consecutiveExistingPages = 0; // Reset counter
     } else {
       consecutiveExistingPages++;
@@ -288,7 +291,7 @@ async function performPartialBackfillSync(token: any, metadata: any): Promise<an
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
 
-  console.log(`✅ Partial backfill sync completed. Fetched ${allOrders.length} new orders`);
+  console.log(`✅ Partial backfill sync completed. Fetched ${allOrders.length} orders (including updates)`);
   return allOrders;
 }
 
@@ -322,9 +325,13 @@ async function performIncrementalSync(token: any, metadata: any): Promise<any[]>
     });
 
     if (newOrders.length > 0) {
-      allOrders.push(...newOrders);
       console.log(`📦 Found ${newOrders.length} new orders on page ${page + 1}`);
     }
+
+    // Include ALL orders (both new and existing) to ensure updates happen
+    // This ensures that even if an order wasn't created after last sync,
+    // any changes to existing orders (status updates, fulfillment changes, etc.) are captured
+    allOrders.push(...orders);
 
     // If this page had no new orders, we're likely done with recent changes
     if (newOrders.length === 0) {
@@ -340,7 +347,7 @@ async function performIncrementalSync(token: any, metadata: any): Promise<any[]>
     }
   }
 
-  console.log(`✅ Incremental sync completed. Fetched ${allOrders.length} new orders`);
+  console.log(`✅ Incremental sync completed. Fetched ${allOrders.length} orders (including updates)`);
   return allOrders;
 }
 
@@ -375,8 +382,9 @@ async function processAndStoreOrders(ebayOrders: any[]) {
   let skippedOrders = 0;
   let failedOrders = 0;
   const totalOrders = ebayOrders.length;
+  let orderLeadsCreated = 0;
 
-  console.log(`🔄 Processing ${totalOrders} orders...`);
+  console.log(`🔄 Processing ${totalOrders} orders (will create new ones and update existing ones)...`);
 
   // Process orders in batches for better performance
   const batchSize = 50;
@@ -392,13 +400,16 @@ async function processAndStoreOrders(ebayOrders: any[]) {
           });
 
           if (existingOrder) {
-            // Update existing order
+            // Update existing order to reflect any changes from eBay
             await updateExistingOrder(String(existingOrder._id), ebayOrder);
             updatedOrders++;
+            console.log(`🔄 Updated existing order: ${ebayOrder.orderId}`);
           } else {
             // Create new order
             await createNewOrder(ebayOrder);
             newOrders++;
+            orderLeadsCreated++;
+            console.log(`✅ Created new order: ${ebayOrder.orderId}`);
           }
         } catch (error) {
           console.error(`Error processing order ${ebayOrder.orderId}:`, error);
@@ -410,9 +421,15 @@ async function processAndStoreOrders(ebayOrders: any[]) {
     // Log progress for large batches
     if (totalOrders > 100) {
       const processed = Math.min(i + batchSize, totalOrders);
-      console.log(`📊 Progress: ${processed}/${totalOrders} orders processed`);
+      console.log(
+        `📊 Progress: ${processed}/${totalOrders} orders processed (${newOrders} new, ${updatedOrders} updated)`
+      );
     }
   }
+
+  console.log(
+    `📊 Final processing results: ${newOrders} new orders, ${updatedOrders} updated orders, ${failedOrders} failed`
+  );
 
   return {
     totalOrders,
@@ -420,6 +437,7 @@ async function processAndStoreOrders(ebayOrders: any[]) {
     updatedOrders,
     skippedOrders,
     failedOrders,
+    orderLeadsCreated,
   };
 }
 
@@ -431,12 +449,21 @@ async function createNewOrder(ebayOrder: any) {
     // Transform eBay order data to match our EbayOrder model
     const orderData = transformEbayOrderData(ebayOrder);
 
-    // Create the order
-    const newOrder = new EbayOrder(orderData);
-    await newOrder.save();
+    // Create the eBay order
+    const newEbayOrder = new EbayOrder(orderData);
+    await newEbayOrder.save();
 
-    console.log(`✅ Created new eBay order: ${newOrder.orderId}`);
-  } catch (error) {
+    console.log(`✅ Created new eBay order: ${newEbayOrder.orderId}`);
+
+    // Automatically convert to order lead
+    try {
+      await convertEbayOrderToOrderLead(newEbayOrder);
+      console.log(`✅ Automatically converted eBay order ${newEbayOrder.orderId} to order lead`);
+    } catch (conversionError: any) {
+      console.error(`⚠️  Failed to convert eBay order ${newEbayOrder.orderId} to order lead:`, conversionError.message);
+      // Don't fail the main sync if conversion fails
+    }
+  } catch (error: any) {
     console.error(`Error creating eBay order ${ebayOrder.orderId}:`, error);
     throw error;
   }
@@ -453,9 +480,34 @@ async function updateExistingOrder(orderId: string, ebayOrder: any) {
     // Update the order, excluding fields that shouldn't change
     const { orderId: _, ...updateData } = orderData;
 
+    // Get the existing order to compare what changed
+    const existingOrder = await EbayOrder.findById(orderId);
+
     await EbayOrder.findByIdAndUpdate(orderId, updateData, { new: true });
 
-    console.log(`🔄 Updated existing eBay order: ${ebayOrder.orderId}`);
+    // Log what was updated (optional - can be commented out for performance)
+    if (existingOrder) {
+      const changes = [];
+      if (existingOrder.orderFulfillmentStatus !== orderData.orderFulfillmentStatus) {
+        changes.push(
+          `fulfillment status: ${existingOrder.orderFulfillmentStatus} → ${orderData.orderFulfillmentStatus}`
+        );
+      }
+      if (existingOrder.orderPaymentStatus !== orderData.orderPaymentStatus) {
+        changes.push(`payment status: ${existingOrder.orderPaymentStatus} → ${orderData.orderPaymentStatus}`);
+      }
+      if (existingOrder.lastModifiedDate?.toString() !== orderData.lastModifiedDate?.toString()) {
+        changes.push(`last modified date updated`);
+      }
+
+      if (changes.length > 0) {
+        console.log(`🔄 Updated existing eBay order: ${ebayOrder.orderId} - Changes: ${changes.join(", ")}`);
+      } else {
+        console.log(`🔄 Updated existing eBay order: ${ebayOrder.orderId} (no significant changes detected)`);
+      }
+    } else {
+      console.log(`🔄 Updated existing eBay order: ${ebayOrder.orderId}`);
+    }
   } catch (error) {
     console.error(`Error updating eBay order ${orderId}:`, error);
     throw error;
@@ -646,4 +698,137 @@ function transformEbayOrderData(ebayOrder: any) {
     // Buyer checkout notes
     buyerCheckoutNotes: ebayOrder.buyerCheckoutNotes || "",
   };
+}
+
+/**
+ * Convert eBay order to order lead automatically
+ */
+async function convertEbayOrderToOrderLead(ebayOrder: any) {
+  try {
+    // Import Order model dynamically to avoid circular dependencies
+    const { Order } = await import("@/models");
+
+    // Check if this eBay order has already been converted
+    const existingOrder = await Order.findOne({
+      externalOrderId: ebayOrder.orderId,
+    });
+
+    if (existingOrder) {
+      console.log(`ℹ️  eBay order ${ebayOrder.orderId} already converted to order lead`);
+      return existingOrder;
+    }
+
+    // Map eBay order data to order lead structure
+    const orderData = {
+      sourcePlatform: "EBAY" as const,
+      externalOrderId: ebayOrder.orderId,
+      externalOrderUrl: `https://www.ebay.com/ord/${ebayOrder.orderId}`,
+      marketplaceFee: parseFloat(ebayOrder.totalMarketplaceFee?.value || "0"),
+
+      // Customer information
+      customer: null, // Will need to be set based on business logic
+      customerId: null, // Will need to be set based on business logic
+      customerDetails: {
+        firstName: ebayOrder.buyer?.buyerRegistrationAddress?.fullName?.split(" ")[0] || "",
+        lastName: ebayOrder.buyer?.buyerRegistrationAddress?.fullName?.split(" ").slice(1).join(" ") || "",
+        email: ebayOrder.buyer?.buyerRegistrationAddress?.email || "",
+        phone: ebayOrder.buyer?.buyerRegistrationAddress?.primaryPhone?.phoneNumber || "",
+      },
+      email: ebayOrder.buyer?.buyerRegistrationAddress?.email || "",
+
+      // Order dates
+      orderDate: new Date(ebayOrder.creationDate),
+      placedAt: new Date(ebayOrder.creationDate),
+
+      // Order status mapping
+      status: mapEbayOrderStatus(ebayOrder.orderFulfillmentStatus),
+      paymentStatus: mapEbayPaymentStatus(ebayOrder.orderPaymentStatus),
+
+      // Financial information
+      subtotal: parseFloat(ebayOrder.pricingSummary?.priceSubtotal?.value || "0"),
+      shippingCost: parseFloat(ebayOrder.pricingSummary?.deliveryCost?.value || "0"),
+      grandTotal: parseFloat(ebayOrder.pricingSummary?.total?.value || "0"),
+      currency: ebayOrder.pricingSummary?.total?.currency || "USD",
+
+      // Payment information
+      paymentMethod: ebayOrder.paymentSummary?.payments?.[0]?.paymentMethod || "eBay",
+      transactionId: ebayOrder.paymentSummary?.payments?.[0]?.paymentReferenceId || "",
+
+      // Shipping information
+      shippingAddress: {
+        street1: ebayOrder.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo?.contactAddress?.addressLine1 || "",
+        street2: ebayOrder.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo?.contactAddress?.addressLine2 || "",
+        city: ebayOrder.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo?.contactAddress?.city || "",
+        stateProvince:
+          ebayOrder.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo?.contactAddress?.stateOrProvince || "",
+        postalCode: ebayOrder.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo?.contactAddress?.postalCode || "",
+        country: ebayOrder.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo?.contactAddress?.countryCode || "",
+      },
+
+      // Items - these will be lead items since they don't have inventory/listing/stock IDs
+      items:
+        ebayOrder.lineItems?.map((lineItem: any) => ({
+          itemId: lineItem.lineItemId,
+          name: lineItem.title,
+          quantity: lineItem.quantity,
+          unitPrice: parseFloat(lineItem.lineItemCost?.value || "0"),
+          condition: "New", // Default condition for eBay orders
+          sku: lineItem.legacyItemId || "",
+          itemTotal: parseFloat(lineItem.total?.value || "0"),
+          discountAmount: 0,
+          taxAmount: 0,
+          finalPrice: parseFloat(lineItem.total?.value || "0"),
+          // Note: No listingId, inventoryId, or stockId - this makes it a lead order
+        })) || [],
+
+      // Special instructions - include eBay-specific information
+      specialInstructions:
+        ebayOrder.buyerCheckoutNotes ||
+        `eBay Order: ${ebayOrder.orderId}, Legacy ID: ${ebayOrder.legacyOrderId}, Seller: ${ebayOrder.sellerId}, Buyer: ${ebayOrder.buyer?.username}, Auto-converted: ${new Date().toISOString()}`,
+
+      // Tracking information
+      trackingNumber: "",
+      trackingUrl: "",
+      shippingStatus: "Pending",
+    };
+
+    // Create the order lead
+    const newOrder = new Order(orderData);
+    await newOrder.save();
+
+    console.log(`✅ Created order lead from eBay order: ${ebayOrder.orderId} -> ${newOrder.orderId}`);
+    return newOrder;
+  } catch (error: any) {
+    console.error(`Error converting eBay order ${ebayOrder.orderId} to order lead:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Helper functions for mapping eBay statuses to order statuses
+ */
+function mapEbayOrderStatus(ebayStatus: string): string {
+  const statusMap: Record<string, string> = {
+    FULFILLED: "COMPLETED",
+    IN_PROGRESS: "IN_PROGRESS",
+    READY_TO_SHIP: "IN_PROGRESS",
+    SHIPPED: "SHIPPED",
+    DELIVERED: "DELIVERED",
+    CANCELLED: "CANCELLED",
+    ON_HOLD: "ON_HOLD",
+  };
+
+  return statusMap[ebayStatus] || "PENDING_PAYMENT";
+}
+
+function mapEbayPaymentStatus(ebayPaymentStatus: string): string {
+  const paymentStatusMap: Record<string, string> = {
+    PAID: "PAID",
+    PENDING: "PENDING",
+    FAILED: "FAILED",
+    REFUNDED: "REFUNDED",
+    PARTIALLY_REFUNDED: "PARTIALLY_REFUNDED",
+  };
+
+  return paymentStatusMap[ebayPaymentStatus] || "PENDING";
 }

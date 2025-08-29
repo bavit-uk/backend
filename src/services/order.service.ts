@@ -3,6 +3,9 @@ import { OrderTask } from "@/models/order-task.model";
 import { ProductTypeWorkflow } from "@/models/product-type-workflow.model";
 import { IOrder, IOrderUpdatePayload, OrderStatus, SourcePlatform, PaymentStatus } from "@/contracts/order.contract";
 import { Types } from "mongoose";
+import { EbayOrder } from "@/models";
+import { getStoredEbayAccessToken } from "@/utils/ebay-helpers.util";
+import { ebayListingService } from "./ebay-listing.service";
 
 export const orderService = {
   // Create a new order
@@ -131,7 +134,21 @@ export const orderService = {
       }
 
       const populatedOrder = await Order.findById(newOrder._id)
-        .populate("taskIds", "name status priority estimatedTimeMinutes orderItemId")
+        .populate({
+          path: "taskIds",
+          select:
+            "name status priority dueDate notes estimatedTimeMinutes actualTimeMinutes completedAt assignedToUserId assignedToUserName isAutomated externalRefId dependentOnTaskIds pendingDependenciesCount isCustom defaultAssignedRole createdAt updatedAt",
+          populate: [
+            {
+              path: "assignedToUserId",
+              select: "firstName lastName email",
+            },
+            {
+              path: "defaultAssignedRole",
+              select: "name",
+            },
+          ],
+        })
         .lean();
 
       return populatedOrder ?? newOrder;
@@ -204,27 +221,34 @@ export const orderService = {
           },
         ];
       } else {
-        query.$and = [
-          // Check items array (new schema) - all items must have all required IDs
+        query.$or = [
           {
-            items: {
-              $not: {
-                $elemMatch: {
-                  $or: [
-                    { stockId: { $exists: false } },
-                    { stockId: null },
-                    { listingId: { $exists: false } },
-                    { listingId: null },
-                    { inventoryId: { $exists: false } },
-                    { inventoryId: null },
-                  ],
+            $and: [
+              // Check items array (new schema) - all items must have all required IDs
+              {
+                items: {
+                  $not: {
+                    $elemMatch: {
+                      $or: [
+                        { stockId: { $exists: false } },
+                        { stockId: null },
+                        { listingId: { $exists: false } },
+                        { listingId: null },
+                        { inventoryId: { $exists: false } },
+                        { inventoryId: null },
+                      ],
+                    },
+                  },
                 },
               },
-            },
+              // Check products array (legacy schema) - these are always lead orders since they only have product reference
+              {
+                products: { $exists: true, $ne: [] },
+              },
+            ],
           },
-          // Check products array (legacy schema) - these are always lead orders since they only have product reference
           {
-            products: { $exists: true, $ne: [] },
+            sourcePlatform: "STOREFRONT",
           },
         ];
       }
@@ -236,8 +260,10 @@ export const orderService = {
       }
 
       // Build sort object
-      const sort: any = {};
-      sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+      const sort: any = {
+        orderDate: -1,
+      };
+      // sort[sortBy] = sortOrder === "desc" ? -1 : 1;
 
       // Calculate skip value for pagination
       const skip = (page - 1) * limit;
@@ -248,7 +274,21 @@ export const orderService = {
         .populate("items.listingId", "name sku")
         .populate("items.inventoryId", "name sku")
         .populate("items.stockId", "name sku")
-        .populate("taskIds", "name status")
+        .populate({
+          path: "taskIds",
+          select:
+            "name status priority dueDate notes estimatedTimeMinutes actualTimeMinutes completedAt assignedToUserId assignedToUserName isAutomated externalRefId dependentOnTaskIds pendingDependenciesCount isCustom defaultAssignedRole createdAt updatedAt",
+          populate: [
+            {
+              path: "assignedToUserId",
+              select: "firstName lastName email",
+            },
+            {
+              path: "defaultAssignedRole",
+              select: "role",
+            },
+          ],
+        })
         .sort(sort)
         .skip(skip)
         .limit(limit)
@@ -257,8 +297,37 @@ export const orderService = {
       // Get total count for pagination
       const total = await Order.countDocuments(query);
 
+      // Check for eBay orders and attach eBay order details
+      const ordersWithEbayDetails = await Promise.all(
+        orders.map(async (order) => {
+          // Check if this is an eBay order
+          if (order.sourcePlatform === "EBAY" && order.externalOrderId) {
+            try {
+              // Fetch the corresponding eBay order details
+              const ebayOrder = await EbayOrder.findOne({
+                orderId: order.externalOrderId,
+              }).lean();
+
+              if (ebayOrder) {
+                // Enhance eBay order with listing details
+                const ebayOrderWithListings = await enhanceEbayOrderWithListings(ebayOrder);
+
+                return {
+                  ...order,
+                  ebayOrderDetails: ebayOrderWithListings,
+                };
+              }
+            } catch (error) {
+              console.error(`Error fetching eBay order details for order ${order._id}:`, error);
+            }
+          }
+
+          return order;
+        })
+      );
+
       return {
-        orders,
+        orders: ordersWithEbayDetails,
         pagination: {
           page,
           limit,
@@ -289,7 +358,18 @@ export const orderService = {
         },
         {
           path: "taskIds",
-          select: "name status",
+          select:
+            "name status priority dueDate notes estimatedTimeMinutes actualTimeMinutes completedAt assignedToUserId assignedToUserName isAutomated externalRefId dependentOnTaskIds pendingDependenciesCount isCustom defaultAssignedRole createdAt updatedAt",
+          populate: [
+            {
+              path: "assignedToUserId",
+              select: "firstName lastName email",
+            },
+            {
+              path: "defaultAssignedRole",
+              select: "name",
+            },
+          ],
         },
         {
           path: "originalOrderId",
@@ -320,6 +400,29 @@ export const orderService = {
       if (!order) {
         throw new Error("Order not found");
       }
+
+      // Check if this is an eBay order and attach eBay order details
+      if (order.sourcePlatform === "EBAY" && order.externalOrderId) {
+        try {
+          // Fetch the corresponding eBay order details
+          const ebayOrder = await EbayOrder.findOne({
+            orderId: order.externalOrderId,
+          }).lean();
+
+          if (ebayOrder) {
+            // Enhance eBay order with listing details
+            const ebayOrderWithListings = await enhanceEbayOrderWithListings(ebayOrder);
+
+            return {
+              ...order.toObject(),
+              ebayOrderDetails: ebayOrderWithListings,
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching eBay order details for order ${order._id}:`, error);
+        }
+      }
+
       return order;
     } catch (error) {
       console.error("Error fetching order:", error);
@@ -335,7 +438,21 @@ export const orderService = {
         .populate("customerId")
         .populate("items.productId")
         .populate("products.product")
-        .populate("taskIds")
+        .populate({
+          path: "taskIds",
+          select:
+            "name status priority dueDate notes estimatedTimeMinutes actualTimeMinutes completedAt assignedToUserId assignedToUserName isAutomated externalRefId dependentOnTaskIds pendingDependenciesCount isCustom defaultAssignedRole createdAt updatedAt",
+          populate: [
+            {
+              path: "assignedToUserId",
+              select: "firstName lastName email",
+            },
+            {
+              path: "defaultAssignedRole",
+              select: "name",
+            },
+          ],
+        })
         .populate("originalOrderId")
         .populate("replacementDetails.replacementOrderId")
         .populate("createdBy")
@@ -344,6 +461,29 @@ export const orderService = {
       if (!order) {
         throw new Error("Order not found");
       }
+
+      // Check if this is an eBay order and attach eBay order details
+      if (order.sourcePlatform === "EBAY" && order.externalOrderId) {
+        try {
+          // Fetch the corresponding eBay order details
+          const ebayOrder = await EbayOrder.findOne({
+            orderId: order.externalOrderId,
+          }).lean();
+
+          if (ebayOrder) {
+            // Enhance eBay order with listing details
+            const ebayOrderWithListings = await enhanceEbayOrderWithListings(ebayOrder);
+
+            return {
+              ...order.toObject(),
+              ebayOrderDetails: ebayOrderWithListings,
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching eBay order details for order ${order._id}:`, error);
+        }
+      }
+
       return order;
     } catch (error) {
       console.error("Error fetching order by orderId:", error);
@@ -362,11 +502,49 @@ export const orderService = {
         .populate("customer", "firstName lastName email")
         .populate("customerId", "firstName lastName email")
         .populate("items.productId", "name sku")
-        .populate("products.product", "name sku");
+        .populate("products.product", "name sku")
+        .populate({
+          path: "taskIds",
+          select:
+            "name status priority dueDate notes estimatedTimeMinutes actualTimeMinutes completedAt assignedToUserId assignedToUserName isAutomated externalRefId dependentOnTaskIds pendingDependenciesCount isCustom defaultAssignedRole createdAt updatedAt",
+          populate: [
+            {
+              path: "assignedToUserId",
+              select: "firstName lastName email",
+            },
+            {
+              path: "defaultAssignedRole",
+              select: "name",
+            },
+          ],
+        });
 
       if (!updatedOrder) {
         throw new Error("Order not found");
       }
+
+      // Check if this is an eBay order and attach eBay order details
+      if (updatedOrder.sourcePlatform === "EBAY" && updatedOrder.externalOrderId) {
+        try {
+          // Fetch the corresponding eBay order details
+          const ebayOrder = await EbayOrder.findOne({
+            orderId: updatedOrder.externalOrderId,
+          }).lean();
+
+          if (ebayOrder) {
+            // Enhance eBay order with listing details
+            const ebayOrderWithListings = await enhanceEbayOrderWithListings(ebayOrder);
+
+            return {
+              ...updatedOrder.toObject(),
+              ebayOrderDetails: ebayOrderWithListings,
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching eBay order details for order ${updatedOrder._id}:`, error);
+        }
+      }
+
       return updatedOrder;
     } catch (error) {
       console.error("Error updating order:", error);
@@ -399,7 +577,23 @@ export const orderService = {
       const updatedOrder = await Order.findByIdAndUpdate(orderId, updateData, {
         new: true,
         runValidators: true,
-      }).populate("customer", "firstName lastName email");
+      })
+        .populate("customer", "firstName lastName email")
+        .populate({
+          path: "taskIds",
+          select:
+            "name status priority dueDate notes estimatedTimeMinutes actualTimeMinutes completedAt assignedToUserId assignedToUserName isAutomated externalRefId dependentOnTaskIds pendingDependenciesCount isCustom defaultAssignedRole createdAt updatedAt",
+          populate: [
+            {
+              path: "assignedToUserId",
+              select: "firstName lastName email",
+            },
+            {
+              path: "defaultAssignedRole",
+              select: "name",
+            },
+          ],
+        });
 
       if (!updatedOrder) {
         throw new Error("Order not found");
@@ -433,6 +627,21 @@ export const orderService = {
       const orders = await Order.find({ customerId: new Types.ObjectId(customerId) })
         .populate("items.productId", "name sku")
         .populate("products.product", "name sku")
+        .populate({
+          path: "taskIds",
+          select:
+            "name status priority dueDate notes estimatedTimeMinutes actualTimeMinutes completedAt assignedToUserId assignedToUserName isAutomated externalRefId dependentOnTaskIds pendingDependenciesCount isCustom defaultAssignedRole createdAt updatedAt",
+          populate: [
+            {
+              path: "assignedToUserId",
+              select: "firstName lastName email",
+            },
+            {
+              path: "defaultAssignedRole",
+              select: "name",
+            },
+          ],
+        })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -440,8 +649,37 @@ export const orderService = {
 
       const total = await Order.countDocuments({ customerId: new Types.ObjectId(customerId) });
 
+      // Check for eBay orders and attach eBay order details
+      const ordersWithEbayDetails = await Promise.all(
+        orders.map(async (order) => {
+          // Check if this is an eBay order
+          if (order.sourcePlatform === "EBAY" && order.externalOrderId) {
+            try {
+              // Fetch the corresponding eBay order details
+              const ebayOrder = await EbayOrder.findOne({
+                orderId: order.externalOrderId,
+              }).lean();
+
+              if (ebayOrder) {
+                // Enhance eBay order with listing details
+                const ebayOrderWithListings = await enhanceEbayOrderWithListings(ebayOrder);
+
+                return {
+                  ...order,
+                  ebayOrderDetails: ebayOrderWithListings,
+                };
+              }
+            } catch (error) {
+              console.error(`Error fetching eBay order details for order ${order._id}:`, error);
+            }
+          }
+
+          return order;
+        })
+      );
+
       return {
-        orders,
+        orders: ordersWithEbayDetails,
         pagination: {
           page,
           limit,
@@ -465,6 +703,21 @@ export const orderService = {
         .populate("customerId", "firstName lastName email")
         .populate("items.productId", "name sku")
         .populate("products.product", "name sku")
+        .populate({
+          path: "taskIds",
+          select:
+            "name status priority dueDate notes estimatedTimeMinutes actualTimeMinutes completedAt assignedToUserId assignedToUserName isAutomated externalRefId dependentOnTaskIds pendingDependenciesCount isCustom defaultAssignedRole createdAt updatedAt",
+          populate: [
+            {
+              path: "assignedToUserId",
+              select: "firstName lastName email",
+            },
+            {
+              path: "defaultAssignedRole",
+              select: "name",
+            },
+          ],
+        })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -472,8 +725,37 @@ export const orderService = {
 
       const total = await Order.countDocuments({ status });
 
+      // Check for eBay orders and attach eBay order details
+      const ordersWithEbayDetails = await Promise.all(
+        orders.map(async (order) => {
+          // Check if this is an eBay order
+          if (order.sourcePlatform === "EBAY" && order.externalOrderId) {
+            try {
+              // Fetch the corresponding eBay order details
+              const ebayOrder = await EbayOrder.findOne({
+                orderId: order.externalOrderId,
+              }).lean();
+
+              if (ebayOrder) {
+                // Enhance eBay order with listing details
+                const ebayOrderWithListings = await enhanceEbayOrderWithListings(ebayOrder);
+
+                return {
+                  ...order,
+                  ebayOrderDetails: ebayOrderWithListings,
+                };
+              }
+            } catch (error) {
+              console.error(`Error fetching eBay order details for order ${order._id}:`, error);
+            }
+          }
+
+          return order;
+        })
+      );
+
       return {
-        orders,
+        orders: ordersWithEbayDetails,
         pagination: {
           page,
           limit,
@@ -497,6 +779,21 @@ export const orderService = {
         .populate("customerId", "firstName lastName email")
         .populate("items.productId", "name sku")
         .populate("products.product", "name sku")
+        .populate({
+          path: "taskIds",
+          select:
+            "name status priority dueDate notes estimatedTimeMinutes actualTimeMinutes completedAt assignedToUserId assignedToUserName isAutomated externalRefId dependentOnTaskIds pendingDependenciesCount isCustom defaultAssignedRole createdAt updatedAt",
+          populate: [
+            {
+              path: "assignedToUserId",
+              select: "firstName lastName email",
+            },
+            {
+              path: "defaultAssignedRole",
+              select: "name",
+            },
+          ],
+        })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -504,8 +801,37 @@ export const orderService = {
 
       const total = await Order.countDocuments({ sourcePlatform });
 
+      // Check for eBay orders and attach eBay order details
+      const ordersWithEbayDetails = await Promise.all(
+        orders.map(async (order) => {
+          // Check if this is an eBay order
+          if (order.sourcePlatform === "EBAY" && order.externalOrderId) {
+            try {
+              // Fetch the corresponding eBay order details
+              const ebayOrder = await EbayOrder.findOne({
+                orderId: order.externalOrderId,
+              }).lean();
+
+              if (ebayOrder) {
+                // Enhance eBay order with listing details
+                const ebayOrderWithListings = await enhanceEbayOrderWithListings(ebayOrder);
+
+                return {
+                  ...order,
+                  ebayOrderDetails: ebayOrderWithListings,
+                };
+              }
+            } catch (error) {
+              console.error(`Error fetching eBay order details for order ${order._id}:`, error);
+            }
+          }
+
+          return order;
+        })
+      );
+
       return {
-        orders,
+        orders: ordersWithEbayDetails,
         pagination: {
           page,
           limit,
@@ -541,6 +867,21 @@ export const orderService = {
         .populate("customerId", "firstName lastName email")
         .populate("items.productId", "name sku")
         .populate("products.product", "name sku")
+        .populate({
+          path: "taskIds",
+          select:
+            "name status priority dueDate notes estimatedTimeMinutes actualTimeMinutes completedAt assignedToUserId assignedToUserName isAutomated externalRefId dependentOnTaskIds pendingDependenciesCount isCustom defaultAssignedRole createdAt updatedAt",
+          populate: [
+            {
+              path: "assignedToUserId",
+              select: "firstName lastName email",
+            },
+            {
+              path: "defaultAssignedRole",
+              select: "name",
+            },
+          ],
+        })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -548,8 +889,37 @@ export const orderService = {
 
       const total = await Order.countDocuments(searchQuery);
 
+      // Check for eBay orders and attach eBay order details
+      const ordersWithEbayDetails = await Promise.all(
+        orders.map(async (order) => {
+          // Check if this is an eBay order
+          if (order.sourcePlatform === "EBAY" && order.externalOrderId) {
+            try {
+              // Fetch the corresponding eBay order details
+              const ebayOrder = await EbayOrder.findOne({
+                orderId: order.externalOrderId,
+              }).lean();
+
+              if (ebayOrder) {
+                // Enhance eBay order with listing details
+                const ebayOrderWithListings = await enhanceEbayOrderWithListings(ebayOrder);
+
+                return {
+                  ...order,
+                  ebayOrderDetails: ebayOrderWithListings,
+                };
+              }
+            } catch (error) {
+              console.error(`Error fetching eBay order details for order ${order._id}:`, error);
+            }
+          }
+
+          return order;
+        })
+      );
+
       return {
-        orders,
+        orders: ordersWithEbayDetails,
         pagination: {
           page,
           limit,
@@ -699,9 +1069,6 @@ export const orderService = {
   // Convert eBay order to normal order
   convertEbayOrderToOrder: async (ebayOrderId: string) => {
     try {
-      // Import EbayOrder model dynamically to avoid circular dependencies
-      const { EbayOrder } = await import("@/models");
-
       // Find the eBay order in the database
       const ebayOrder = await EbayOrder.findOne({
         $or: [{ orderId: ebayOrderId }, { legacyOrderId: ebayOrderId }],
@@ -956,9 +1323,6 @@ export const orderService = {
         if (endDate) query.creationDate.$lte = endDate.toISOString();
       }
 
-      // Import Order model to check for converted orders
-      const { Order } = await import("@/models/order.model");
-
       // Get all converted eBay order IDs
       const convertedOrders = await Order.find({
         sourcePlatform: "EBAY",
@@ -980,9 +1344,6 @@ export const orderService = {
       // Build sort object
       const sort: any = {};
       sort[sortBy] = sortOrder === "asc" ? 1 : -1;
-
-      // Import EbayOrder model dynamically to avoid circular dependencies
-      const { EbayOrder } = await import("@/models/ebay-order.model");
 
       // Execute query with pagination and sorting
       const [orders, total] = await Promise.all([
@@ -1085,7 +1446,22 @@ export const orderService = {
         .populate("items.listingId", "title description")
         .populate("items.inventoryId", "sku name")
         .populate("items.stockId", "quantity location")
-        .populate("products.product", "name sku");
+        .populate("products.product", "name sku")
+        .populate({
+          path: "taskIds",
+          select:
+            "name status priority dueDate notes estimatedTimeMinutes actualTimeMinutes completedAt assignedToUserId assignedToUserName isAutomated externalRefId dependentOnTaskIds pendingDependenciesCount isCustom defaultAssignedRole createdAt updatedAt",
+          populate: [
+            {
+              path: "assignedToUserId",
+              select: "firstName lastName email",
+            },
+            {
+              path: "defaultAssignedRole",
+              select: "name",
+            },
+          ],
+        });
 
       return updatedOrder;
     } catch (error: any) {
@@ -1120,4 +1496,59 @@ function mapEbayPaymentStatus(ebayPaymentStatus: string): string {
   };
 
   return paymentStatusMap[ebayPaymentStatus] || "PENDING";
+}
+
+// Helper function to enhance eBay orders with listing item details
+async function enhanceEbayOrderWithListings(ebayOrder: any) {
+  try {
+    // Get eBay credentials
+    const credentials = await getStoredEbayAccessToken("true");
+
+    if (!credentials?.access_token) {
+      console.warn("No eBay access token available for fetching listing details");
+      return ebayOrder;
+    }
+
+    // Enhance line items with listing details
+    const lineItemsWithListings = await Promise.all(
+      (ebayOrder.lineItems || []).map(async (lineItem: any) => {
+        if (lineItem.legacyItemId) {
+          try {
+            // Add timeout to prevent hanging requests
+            const listingItemPromise = ebayListingService.getEbayListingItem(
+              lineItem.legacyItemId,
+              credentials.access_token
+            );
+
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("Request timeout")), 10000)
+            );
+
+            const listingItem = await Promise.race([listingItemPromise, timeoutPromise]);
+
+            return {
+              ...lineItem,
+              listingItem: listingItem || null,
+            };
+          } catch (error: any) {
+            console.error(`Error fetching listing item for ${lineItem.legacyItemId}:`, error);
+            return {
+              ...lineItem,
+              listingItem: null,
+              listingError: error.message,
+            };
+          }
+        }
+        return lineItem;
+      })
+    );
+
+    return {
+      ...ebayOrder,
+      lineItems: lineItemsWithListings,
+    };
+  } catch (error: any) {
+    console.error("Error enhancing eBay order with listings:", error);
+    return ebayOrder;
+  }
 }
